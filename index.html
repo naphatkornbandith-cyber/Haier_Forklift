@@ -606,7 +606,7 @@
                   <span class="section-num-badge">3</span>
                   <div>
                     <h3>ส่วนที่ 3: ข้อมูลผู้ขับรถที่ขึ้นทะเบียน</h3>
-                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน, สังกัด, แผนก และตรวจสอบใบรับรองความปลอดภัยด้วย AI</p>
+                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน, สังกัด และแผนกที่ปฏิบัติงาน</p>
                   </div>
                 </div>
               </div>
@@ -648,119 +648,6 @@
                   <label class="form-label" for="reg-notes">หมายเหตุเพิ่มเติม</label>
                   <input type="text" id="reg-notes" class="form-control" 
                          placeholder="รายละเอียดหรือข้อสังเกตเพิ่มเติมเกี่ยวกับการตรวจสภาพ...">
-                </div>
-              </div>
-
-              <!-- AI Verification Scanner Component -->
-              <div class="ai-cert-panel">
-                <div class="ai-panel-header">
-                  <div>
-                    <span class="ai-badge"><i class="fa-solid fa-microchip"></i> AI Document Vision</span>
-                    <h4 style="font-size:1.1rem; font-weight:700; color:#fff; margin-top:0.35rem;">
-                      การตรวจสอบใบรับรองการฝึกอบรมการขับขี่รถยก (Forklift Safety Certificate)
-                    </h4>
-                    <p style="font-size:0.8rem; color:var(--text-secondary);">
-                      ใช้ AI วิเคราะห์และยืนยันว่าเป็นใบรับรองที่ถูกต้องตามมาตรฐานความปลอดภัย หรือบันทึก "รอดำเนินการ" อัตโนมัติหากไม่มีภาพแนบ
-                    </p>
-                  </div>
-
-                  <div class="ai-sample-helpers">
-                    <button type="button" id="btn-sample-nichiyu" class="btn btn-secondary btn-sm" title="ทดสอบใบเซอร์ นิชิยู เอเชีย (Reach Truck)">
-                      <i class="fa-solid fa-file-shield" style="color:var(--haier-cyan);"></i> ใบเซอร์ นิชิยู (Reach Truck)
-                    </button>
-                    <button type="button" id="btn-sample-operator" class="btn btn-secondary btn-sm" title="ทดสอบใบเซอร์ Forklift Operator สากล">
-                      <i class="fa-solid fa-award" style="color:#38bdf8;"></i> ใบเซอร์ Forklift สากล
-                    </button>
-                    <button type="button" id="btn-sample-mismatch" class="btn btn-secondary btn-sm" title="ทดสอบกรณีชื่อคนขับไม่ตรงกับใบเซอร์">
-                      <i class="fa-solid fa-user-xmark" style="color:#f87171;"></i> ลองชื่อไม่ตรงกัน (ไม่ผ่าน)
-                    </button>
-                    <button type="button" id="btn-sample-invalid-cert" class="btn btn-secondary btn-sm" title="ทดสอบแนบภาพอื่นที่ไม่ใช่ใบรับรอง">
-                      <i class="fa-solid fa-circle-xmark" style="color:var(--status-repair);"></i> ภาพอื่น (ไม่ถูกต้อง)
-                    </button>
-                    <button type="button" id="btn-sample-no-cert" class="btn btn-secondary btn-sm" title="ทดสอบกรณีไม่แนบภาพ">
-                      <i class="fa-solid fa-eraser"></i> ไม่แนบภาพ (รอดำเนินการ)
-                    </button>
-                  </div>
-                </div>
-
-                <div class="ai-cert-body">
-                  <!-- Upload / Preview Box with Laser Scanner Line -->
-                  <div class="cert-upload-zone" id="cert-upload-zone" onclick="document.getElementById('reg-cert-upload').click()">
-                    <input type="file" id="reg-cert-upload" accept="image/*" style="display:none;">
-                    <div class="scanner-laser-line" id="reg-cert-laser"></div>
-                    <img id="reg-cert-preview" class="cert-preview-img" alt="Certificate Preview">
-                    
-                    <div id="cert-upload-placeholder" style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; text-align:center; padding:1.5rem;">
-                      <i class="fa-solid fa-file-shield" style="font-size:2.8rem; color:var(--haier-cyan);"></i>
-                      <div style="font-weight:600; color:#fff;">คลิกเพื่ออัปโหลดภาพใบรับรองการอบรม</div>
-                      <div style="font-size:0.75rem; color:var(--text-muted); max-width:250px;">
-                        หากไม่มีภาพแนบ ระบบจะบันทึกสถานะว่า <strong style="color:#c4b5fd;">"รอดำเนินการ"</strong> ตามเงื่อนไข
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- AI Analysis Details -->
-                  <div class="ai-analysis-details">
-                    <div class="ai-status-card">
-                      <div class="ai-status-title">ผลการวิเคราะห์โดยระบบ AI</div>
-                      
-                      <div id="reg-ai-status" class="ai-status-output status-pending">
-                        <i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ (ยังไม่แนบภาพใบรับรอง)
-                      </div>
-
-                      <div class="ai-confidence-bar">
-                        <div id="reg-ai-confidence-fill" class="ai-confidence-fill"></div>
-                      </div>
-                      
-                      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;">
-                        <span>ความมั่นใจในการจำแนก (Confidence)</span>
-                        <span id="reg-ai-confidence-text">พร้อมวิเคราะห์</span>
-                      </div>
-
-                      <!-- 4-Pillars AI Audit Checklist -->
-                      <div class="ai-criteria-checklist" id="reg-ai-checklist">
-                        <div class="ai-criterion-row crit-pending" id="crit-institute">
-                          <i class="fa-solid fa-building criterion-icon"></i>
-                          <div class="criterion-content">
-                            <div class="criterion-label">1. สถาบันฝึกอบรมที่ได้รับการรับรอง</div>
-                            <div class="criterion-detail" id="crit-detail-institute">รอการอัปโหลดภาพใบรับรอง</div>
-                          </div>
-                        </div>
-
-                        <div class="ai-criterion-row crit-pending" id="crit-course">
-                          <i class="fa-solid fa-truck-ramp-box criterion-icon"></i>
-                          <div class="criterion-content">
-                            <div class="criterion-label">2. หลักสูตรการอบรมรถยก (ทุกประเภท)</div>
-                            <div class="criterion-detail" id="crit-detail-course">รอการอัปโหลดภาพใบรับรอง</div>
-                          </div>
-                        </div>
-
-                        <div class="ai-criterion-row crit-pending" id="crit-name">
-                          <i class="fa-solid fa-id-badge criterion-icon"></i>
-                          <div class="criterion-content">
-                            <div class="criterion-label">3. ตรวจสอบชื่อผู้ผ่านการอบรมตรงกับคนขับ</div>
-                            <div class="criterion-detail" id="crit-detail-name">รอการอัปโหลดภาพใบรับรอง</div>
-                          </div>
-                        </div>
-
-                        <div class="ai-criterion-row crit-pending" id="crit-layout">
-                          <i class="fa-solid fa-file-contract criterion-icon"></i>
-                          <div class="criterion-content">
-                            <div class="criterion-label">4. รูปแบบโครงสร้างวุฒิบัตรและลายเซ็นรับรอง</div>
-                            <div class="criterion-detail" id="crit-detail-layout">รอการอัปโหลดภาพใบรับรอง</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <p id="reg-ai-details" style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.75rem; line-height:1.4;">
-                        ไม่มีภาพแนบใบรับรอง พนักงานจะถูกบันทึกในระบบด้วยสถานะ "รอดำเนินการ"
-                      </p>
-
-                      <div id="reg-ai-tags" class="ai-detected-tags">
-                        <!-- Keywords badges populated dynamically -->
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
