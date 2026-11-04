@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
       vehicleType,
       energyType,
       liftingCapacity,
-      ownerCompany: ownerCompany || 'Haier Electric Appliances (Thailand) Co., Ltd.',
+      ownerCompany: ownerCompany || 'Haier Electric (Thailand) Company Limited',
       subcontractor: subcontractor || (isSub ? 'ผู้รับเหมาช่วง' : 'Haier Owned'),
       isSubcontractor: isSub,
       registrationDate: new Date().toISOString().split('T')[0],
