@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haier Forklift - ระบบสำรวจและขึ้นทะเบียนรถโฟล์คลิฟท์อัจฉริยะ</title>
+  <meta name="description" content="แบบฟอร์มสำรวจและระบบบริหารจัดการรถ Forklift ไฮเออร์ (Haier Forklift Management System) พร้อมระบบ AI ตรวจสอบใบรับรองผู้ขับขี่ และระบบแจ้งเตือนตรวจเช็คก๊าซ LPG ประจำปี">
+
+  <!-- Google Fonts: Prompt & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Custom Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Top Navigation Header -->
+    <header class="main-header">
+      <div class="header-inner">
+        <div class="brand-section">
+          <div class="brand-logo-badge">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+            <span>Haier</span>
+          </div>
+          <div class="brand-text">
+            <h1>Haier <span class="highlight">Forklift</span></h1>
+            <p>ระบบสำรวจ ตรวจสภาพ และบริหารจัดการรถยกอัจฉริยะ (Fleet Survey & Safety System)</p>
+          </div>
+        </div>
+
+        <div class="header-status-meta">
+          <div class="factory-badge">
+            <span class="status-dot-pulse"></span>
+            <span>โรงงานไฮเออร์ (ประเทศไทย) ชลบุรี</span>
+          </div>
+          <div class="time-display" id="current-time-display">--:--:--</div>
+          <button id="btn-reset-data" class="btn btn-secondary btn-sm" title="รีเซ็ตข้อมูลตัวอย่างเพื่อการทดสอบ">
+            <i class="fa-solid fa-arrow-rotate-right"></i> รีเซ็ตตัวอย่าง
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs-bar">
+      <div class="nav-tabs-inner">
+        <button class="tab-btn active" data-tab="dashboard-tab" id="nav-btn-dashboard">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>แดชบอร์ดภาพรวม</span>
+        </button>
+
+        <button class="tab-btn" data-tab="register-tab" id="nav-btn-register">
+          <i class="fa-solid fa-square-plus"></i>
+          <span>ลงทะเบียนรถ Forklift</span>
+        </button>
+
+        <button class="tab-btn" data-tab="alerts-tab" id="nav-btn-alerts">
+          <i class="fa-solid fa-bell"></i>
+          <span>ศูนย์แจ้งเตือน</span>
+          <span class="tab-badge badge-alert" id="alert-tab-badge" style="display:none;">0</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- App Content Wrapper -->
+    <main class="main-content">
+
+      <!-- ================================================================== -->
+      <!-- TAB 1: DASHBOARD (หน้า Dash Board) -->
+      <!-- ================================================================== -->
+      <section id="dashboard-tab" class="tab-content active">
+        
+        <!-- Section Header -->
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">
+              <i class="fa-solid fa-chart-pie"></i> แดชบอร์ดภาพรวมรถ Forklift
+            </h2>
+            <p class="section-subtitle">
+              ตรวจสอบสถานะความพร้อม บันทึกการตรวจสภาพ และค้นหาข้อมูลรถโฟล์คลิฟท์ในสายการผลิต
+            </p>
+          </div>
+          <button class="btn btn-primary" data-switch-tab="register-tab">
+            <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
+          </button>
+        </div>
+
+        <!-- LPG Notification Banner (Shown when alerts active) -->
+        <div id="lpg-alert-banner" class="lpg-alert-banner" style="display:none;">
+          <div class="lpg-alert-left">
+            <i class="fa-solid fa-triangle-exclamation lpg-alert-icon"></i>
+            <div class="lpg-alert-text">
+              <h4>การแจ้งเตือนความปลอดภัยระบบก๊าซ LPG</h4>
+              <p id="lpg-banner-text">พบรถ Forklift พลังงาน LPG ใกล้หรือเลยกำหนดตรวจเช็ครอบ 1 ปี</p>
+            </div>
+          </div>
+          <button class="btn btn-warning btn-sm" data-switch-tab="alerts-tab">
+            <i class="fa-solid fa-list-check"></i> ดูรายละเอียดการแจ้งเตือน
+          </button>
+        </div>
+
+        <!-- KPI Metrics Grid -->
+        <div class="stats-grid">
+          <!-- Total -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">รถ Forklift ทั้งหมด</span>
+              <div class="stat-icon icon-blue"><i class="fa-solid fa-truck-ramp-box"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-total">0</div>
+            <div class="stat-footer"><i class="fa-solid fa-circle-info"></i> ในระบบโรงงานไฮเออร์</div>
+          </div>
+
+          <!-- Ready -->
+          <div class="stat-card card-ready">
+            <div class="stat-header">
+              <span class="stat-title">สถานะ: พร้อมใช้งาน</span>
+              <div class="stat-icon icon-green"><i class="fa-solid fa-circle-check"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-ready">0</div>
+            <div class="stat-footer" style="color:var(--status-ready);"><i class="fa-solid fa-check"></i> พร้อมปฏิบัติงานทันที</div>
+          </div>
+
+          <!-- Under Maintenance -->
+          <div class="stat-card card-repair">
+            <div class="stat-header">
+              <span class="stat-title">สถานะ: ส่งซ่อม / ปรับปรุง</span>
+              <div class="stat-icon icon-red"><i class="fa-solid fa-wrench"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-repair">0</div>
+            <div class="stat-footer highlight-red"><i class="fa-solid fa-triangle-exclamation"></i> ชำรุด/งดใช้งานชั่วคราว</div>
+          </div>
+
+          <!-- LPG 1-Year Alert -->
+          <div class="stat-card card-lpg">
+            <div class="stat-header">
+              <span class="stat-title">เตือนตรวจเช็คก๊าซ LPG</span>
+              <div class="stat-icon icon-yellow"><i class="fa-solid fa-fire"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-lpg-alert">0</div>
+            <div class="stat-footer highlight-warn"><i class="fa-solid fa-clock"></i> ล่วงหน้า 1 ด. / เลยกำหนด</div>
+          </div>
+
+          <!-- Incomplete Data -->
+          <div class="stat-card card-incomplete">
+            <div class="stat-header">
+              <span class="stat-title">ข้อมูลไม่สมบูรณ์</span>
+              <div class="stat-icon icon-red"><i class="fa-solid fa-clipboard-question"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-incomplete">0</div>
+            <div class="stat-footer highlight-red"><i class="fa-solid fa-circle-dot"></i> ขาดรูป / รอตรวจใบขับขี่</div>
+          </div>
+
+          <!-- Driver Cert Pending -->
+          <div class="stat-card card-pending">
+            <div class="stat-header">
+              <span class="stat-title">ใบรับรองรอดำเนินการ</span>
+              <div class="stat-icon icon-purple"><i class="fa-solid fa-hourglass-half"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-pending-cert">0</div>
+            <div class="stat-footer" style="color:#c4b5fd;"><i class="fa-solid fa-id-card"></i> ผู้ขับยังไม่แนบภาพใบเซอร์</div>
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls Panel -->
+        <div class="filter-panel">
+          <!-- Search Bar: (เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, เจ้าของรถ) -->
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="search-input" class="search-input" 
+                   placeholder="ค้นหาข้อมูลรถ: เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, หรือเจ้าของรถ/ซัพพลายเออร์...">
+          </div>
+
+          <!-- Filter Pills / Categories Tabs -->
+          <div class="filter-row">
+            <div class="filter-categories">
+              <button class="filter-pill active" data-filter="all">
+                <i class="fa-solid fa-border-all"></i> ทั้งหมด
+              </button>
+              <button class="filter-pill" data-filter="electric">
+                <i class="fa-solid fa-bolt"></i> ไฟฟ้า (Electric)
+              </button>
+              <button class="filter-pill" data-filter="lpg">
+                <i class="fa-solid fa-fire-flame-simple"></i> ก๊าซ LPG
+              </button>
+              <button class="filter-pill" data-filter="diesel">
+                <i class="fa-solid fa-gas-pump"></i> ดีเซล (Diesel)
+              </button>
+              <button class="filter-pill" data-filter="haier">
+                <i class="fa-solid fa-building"></i> รถบริษัท Haier
+              </button>
+              <button class="filter-pill" data-filter="subcontractor">
+                <i class="fa-solid fa-handshake"></i> ซัพพลายเออร์ (Sub)
+              </button>
+              <button class="filter-pill" data-filter="ready">
+                <i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน
+              </button>
+              <button class="filter-pill" data-filter="repair">
+                <i class="fa-solid fa-wrench"></i> ส่งซ่อม
+              </button>
+              <button class="filter-pill" data-filter="lpg-alert">
+                <i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> แจ้งเตือน LPG 1 ปี
+              </button>
+              <button class="filter-pill" data-filter="incomplete">
+                <i class="fa-solid fa-clipboard-question" style="color:#f87171;"></i> ข้อมูลไม่ครบ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fleet Table -->
+        <div class="table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">เลขทะเบียนรถ</th>
+                <th>ประเภทรถ / พิกัดยก</th>
+                <th style="width: 170px;">ประเภทพลังงาน</th>
+                <th>เจ้าของรถ (บริษัท/ซัพ)</th>
+                <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
+                <th style="width: 130px;">สถานะ</th>
+                <th style="width: 250px; text-align: center;">จัดการข้อมูล</th>
+              </tr>
+            </thead>
+            <tbody id="fleet-table-body">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TAB 2: REGISTER FORKLIFT (ลงทะเบียนรถ Forklift) -->
+      <!-- ================================================================== -->
+      <section id="register-tab" class="tab-content">
+        
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">
+              <i class="fa-solid fa-file-circle-plus"></i> แบบฟอร์มขึ้นทะเบียนและสำรวจรถ Forklift
+            </h2>
+            <p class="section-subtitle">
+              กรอกข้อมูลขึ้นทะเบียน ตรวจสอบสภาพรถ 3 มุมมอง และประเมินใบรับรองผู้ขับขี่ด้วยระบบ AI
+            </p>
+          </div>
+          <button class="btn btn-secondary" data-switch-tab="dashboard-tab">
+            <i class="fa-solid fa-arrow-left"></i> กลับสู่หน้าแดชบอร์ด
+          </button>
+        </div>
+
+        <div class="form-container">
+          <form id="forklift-reg-form">
+
+            <!-- ------------------------------------------------------------ -->
+            <!-- ส่วนที่ 1: ลงทะเบียนรถ Forklift -->
+            <!-- ------------------------------------------------------------ -->
+            <div class="form-section-card">
+              <div class="form-section-header">
+                <div class="section-badge-title">
+                  <span class="section-num-badge">1</span>
+                  <div>
+                    <h3>ส่วนที่ 1: ลงทะเบียนรถ Forklift</h3>
+                    <p class="form-hint">ระบุเลขทะเบียนรถ (ห้ามซ้ำ), ประเภทรถ, แหล่งพลังงาน, พิกัดยกน้ำหนัก และสังกัดเจ้าของรถ</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <!-- เลขทะเบียนรถ -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-plate">
+                    เลขทะเบียนรถ <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-plate" class="form-control" 
+                         placeholder="เช่น FL-H08, 1กข-9923, FL-LPG-09" required>
+                  <span class="form-hint">ระบบจะตรวจสอบความซ้ำซ้อนของเลขทะเบียนแบบ Real-time ทันที</span>
+                  
+                  <!-- Duplicate Plate Callout -->
+                  <div id="duplicate-plate-alert" class="duplicate-plate-callout">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:1.2rem;"></i>
+                    <div>
+                      <div id="duplicate-alert-msg">เลขทะเบียนนี้เคยลงทะเบียนแล้วในระบบ</div>
+                      <div style="margin-top:0.35rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-switch-tab="dashboard-tab">
+                          <i class="fa-solid fa-arrow-up-right-from-square"></i> ไปแก้ไขข้อมูลผู้ขับและสถานะใน Dash Board
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ประเภทรถ -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-type">
+                    ประเภทรถ Forklift <span class="required">*</span>
+                  </label>
+                  <select id="reg-type" class="form-control" required>
+                    <option value="รถโฟล์คลิฟท์ไฟฟ้า (Electric Counterbalance)">รถโฟล์คลิฟท์ไฟฟ้า (Electric Counterbalance)</option>
+                    <option value="รถโฟล์คลิฟท์ไฟฟ้าแบบยืนขับ (Reach Truck)">รถโฟล์คลิฟท์ไฟฟ้าแบบยืนขับ (Reach Truck)</option>
+                    <option value="รถโฟล์คลิฟท์เครื่องยนต์ (Engine Counterbalance)">รถโฟล์คลิฟท์เครื่องยนต์ (Engine Counterbalance)</option>
+                    <option value="รถลากพาเลทไฟฟ้า (Electric Pallet Stacker)">รถลากพาเลทไฟฟ้า (Electric Pallet Stacker)</option>
+                    <option value="รถโฟล์คลิฟท์ขนาดใหญ่ (Heavy Forklift)">รถโฟล์คลิฟท์ขนาดใหญ่ (Heavy Forklift)</option>
+                  </select>
+                </div>
+
+                <!-- ประเภทพลังงาน -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-energy">
+                    ประเภทพลังงาน <span class="required">*</span>
+                  </label>
+                  <select id="reg-energy" class="form-control" required>
+                    <option value="ไฟฟ้า">ไฟฟ้า (Electric Battery / Lithium-ion)</option>
+                    <option value="LPG">ก๊าซ LPG (LPG Gas)</option>
+                    <option value="ดีเซล">ดีเซล (Diesel Engine)</option>
+                    <option value="เบนซิน">เบนซิน (Gasoline)</option>
+                  </select>
+                  <div id="reg-lpg-note" style="display:none; font-size:0.78rem; color:#fbbf24; margin-top:0.3rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> รถประเภทพลังงาน LPG จะมีระบบคำนวณและแจ้งเตือนตรวจเช็คในรอบ 1 ปีโดยอัตโนมัติ (แจ้งล่วงหน้า 1 เดือน)
+                  </div>
+                </div>
+
+                <!-- ความสามารถในการยกน้ำหนัก -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-capacity">
+                    ความสามารถในการยกน้ำหนัก (Lifting Capacity) <span class="required">*</span>
+                  </label>
+                  <select id="reg-capacity" class="form-control" required>
+                    <option value="1.5 ตัน">1.5 ตัน (1,500 kg)</option>
+                    <option value="2.0 ตัน">2.0 ตัน (2,000 kg)</option>
+                    <option value="2.5 ตัน" selected>2.5 ตัน (2,500 kg)</option>
+                    <option value="3.0 ตัน">3.0 ตัน (3,000 kg)</option>
+                    <option value="3.5 ตัน">3.5 ตัน (3,500 kg)</option>
+                    <option value="5.0 ตัน">5.0 ตัน (5,000 kg)</option>
+                    <option value="มากกว่า 5 ตัน">มากกว่า 5 ตัน</option>
+                  </select>
+                </div>
+
+                <!-- เจ้าของรถ (ชื่อบริษัท และซัพ) -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-owner-type">
+                    ประเภทกรรมสิทธิ์ / เจ้าของรถ <span class="required">*</span>
+                  </label>
+                  <select id="reg-owner-type" class="form-control">
+                    <option value="company">รถของบริษัท Haier เอง (Company Owned)</option>
+                    <option value="subcontractor">รถเช่า / รถของซัพพลายเออร์ (Subcontractor / Rental)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="reg-owner-company">
+                    ชื่อบริษัทเจ้าของรถ <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-owner-company" class="form-control" 
+                         value="Haier Electric Appliances (Thailand) Co., Ltd." required>
+                </div>
+
+                <div class="form-group form-group-full">
+                  <label class="form-label" for="reg-subcontractor">
+                    ชื่อซัพพลายเออร์ / บริษัทผู้ให้บริการ (Subcontractor / Vendor)
+                  </label>
+                  <input type="text" id="reg-subcontractor" class="form-control" 
+                         placeholder="ระบุชื่อซัพพลายเออร์ เช่น บจก. ไทย โฟล์คลิฟท์ โลจิสติกส์ หรือใส่ 'รถบริษัท Haier'">
+                </div>
+              </div>
+            </div>
+
+            <!-- ------------------------------------------------------------ -->
+            <!-- ส่วนที่ 2: กรอกข้อมูลการตรวจเช็คขณะขึ้นทะเบียน -->
+            <!-- ------------------------------------------------------------ -->
+            <div class="form-section-card">
+              <div class="form-section-header">
+                <div class="section-badge-title">
+                  <span class="section-num-badge">2</span>
+                  <div>
+                    <h3>ส่วนที่ 2: กรอกข้อมูลการตรวจเช็คขณะขึ้นทะเบียน</h3>
+                    <p class="form-hint">บันทึกผล Checklist ความปลอดภัย, แนบภาพถ่าย 3 มุมบังคับ และระบุสถานะความพร้อม</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Inspection Date -->
+              <div class="form-grid" style="margin-bottom: 1.5rem;">
+                <div class="form-group">
+                  <label class="form-label" for="reg-inspect-date">
+                    วันที่ตรวจเช็คสภาพรถ <span class="required">*</span>
+                  </label>
+                  <input type="date" id="reg-inspect-date" class="form-control" required>
+                  <span class="form-hint">ใช้วันที่ปัจจุบันเป็นค่าเริ่มต้น เพื่อคำนวณรอบตรวจ 1 ปี</span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    สถานะการใช้งานรถ Forklift <span class="required">*</span>
+                  </label>
+                  <div class="radio-cards-grid">
+                    <label class="radio-card-label">
+                      <input type="radio" name="reg-status" id="status-ready" value="พร้อมใช้งาน" checked>
+                      <div class="radio-card-content">
+                        <i class="fa-solid fa-circle-check radio-card-icon" style="color:var(--status-ready);"></i>
+                        <span class="radio-card-text">พร้อมใช้งาน</span>
+                      </div>
+                    </label>
+
+                    <label class="radio-card-label">
+                      <input type="radio" name="reg-status" id="status-repair" value="ส่งซ่อม">
+                      <div class="radio-card-content">
+                        <i class="fa-solid fa-wrench radio-card-icon" style="color:var(--status-repair);"></i>
+                        <span class="radio-card-text">ส่งซ่อม</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Checklist -->
+              <div class="checklist-toolbar">
+                <h4 style="font-size:0.95rem; font-weight:600; color:#fff;">
+                  <i class="fa-solid fa-list-check" style="color:var(--haier-cyan);"></i> รายการตรวจสอบสภาพรถ Forklift (Safety Checklist)
+                </h4>
+                <button type="button" id="btn-pass-all-checklist" class="btn btn-secondary btn-sm">
+                  <i class="fa-solid fa-check-double"></i> เลือกผ่านทุกข้อ (Pass All)
+                </button>
+              </div>
+
+              <div class="checklist-container" style="margin-bottom: 1.75rem;">
+                <!-- 1. Forks & Mast -->
+                <div class="check-item-row" data-check-key="forks">
+                  <div class="check-item-info">
+                    <span class="check-item-num">1</span>
+                    <div>
+                      <div class="check-item-name">งายกและเสากระโดง (Forks & Lift Mast)</div>
+                      <div class="check-item-desc">ไม่คดงอ ไม่มีรอยแตกร้าว โซ่ยกตึงเท่ากัน ล็อคงาแน่นหนา</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+
+                <!-- 2. Brakes -->
+                <div class="check-item-row" data-check-key="brakes">
+                  <div class="check-item-info">
+                    <span class="check-item-num">2</span>
+                    <div>
+                      <div class="check-item-name">ระบบเบรกและเบรกมือ (Brakes & Handbrake)</div>
+                      <div class="check-item-desc">ระยะเหยียบเบรกปกติ เบรกมือล็อคอยู่ ไม่ลื่นไถล</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+
+                <!-- 3. Hydraulics -->
+                <div class="check-item-row" data-check-key="hydraulics">
+                  <div class="check-item-info">
+                    <span class="check-item-num">3</span>
+                    <div>
+                      <div class="check-item-name">ระบบไฮดรอลิกและการรั่วซึม (Hydraulic & Fluid Leaks)</div>
+                      <div class="check-item-desc">กระบอกไฮดรอลิกยกขึ้น-ลงราบรื่น ไม่พบน้ำมันรั่วซึมใต้ท้องรถ</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+
+                <!-- 4. Tires -->
+                <div class="check-item-row" data-check-key="tires">
+                  <div class="check-item-info">
+                    <span class="check-item-num">4</span>
+                    <div>
+                      <div class="check-item-name">สภาพยางรถและน็อตล้อ (Tires & Wheel Nuts)</div>
+                      <div class="check-item-desc">ดอกยางไม่สึกเกินเกณฑ์ น็อตล้อขันแน่นครบทุกตัว</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+
+                <!-- 5. Lights & Horn -->
+                <div class="check-item-row" data-check-key="lightsHorn">
+                  <div class="check-item-info">
+                    <span class="check-item-num">5</span>
+                    <div>
+                      <div class="check-item-name">สัญญาณไฟ แตร และไฟ Blue Light (Lights & Horn)</div>
+                      <div class="check-item-desc">ไฟหน้า ไฟท้าย ไฟวับวาบ แตร และสัญญาณถอยหลังทำงานสมบูรณ์</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+
+                <!-- 6. Safety Guards -->
+                <div class="check-item-row" data-check-key="seatbeltGuard">
+                  <div class="check-item-info">
+                    <span class="check-item-num">6</span>
+                    <div>
+                      <div class="check-item-name">เข็มขัดนิรภัยและโครงหลังคา (Seatbelt & Overhead Guard)</div>
+                      <div class="check-item-desc">เข็มขัดนิรภัยล็อคแน่น โครงเหล็กป้องกันศีรษะมั่นคงแข็งแรง</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+
+                <!-- 7. Energy / Tank -->
+                <div class="check-item-row" data-check-key="energySystem">
+                  <div class="check-item-info">
+                    <span class="check-item-num">7</span>
+                    <div>
+                      <div class="check-item-name">ถังก๊าซ LPG/สายรัด หรือ สภาพแบตเตอรี่ (Energy Storage)</div>
+                      <div class="check-item-desc">สายรัดถังแน่นหนา สายแก๊สไม่ปริแตก หรือขั้วแบตเตอรี่สะอาดไม่มีคราบขี้เกลือ</div>
+                    </div>
+                  </div>
+                  <div class="check-item-options">
+                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
+                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3 Vehicle Photos Section -->
+              <div class="checklist-toolbar">
+                <div>
+                  <h4 style="font-size:0.95rem; font-weight:600; color:#fff;">
+                    <i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> แนบภาพถ่ายสภาพรถ Forklift (บังคับ 3 มุมมอง)
+                  </h4>
+                  <p class="form-hint">ด้านหน้ารถ, ด้านข้างรถ และด้านหน้าที่เห็นทั้งคัน เพื่อใช้เป็นหลักฐานการตรวจรับ</p>
+                </div>
+                <button type="button" id="btn-sample-photos" class="btn btn-secondary btn-sm">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> ใช้ภาพตัวอย่างสำหรับทดสอบ
+                </button>
+              </div>
+
+              <div class="photos-upload-grid">
+                <!-- 1. ด้านหน้ารถ -->
+                <div class="photo-box" id="box-photo-front">
+                  <input type="file" id="input-photo-front" accept="image/*" style="display:none;">
+                  <img class="photo-box-preview" style="display:none;" alt="ภาพด้านหน้ารถ">
+                  <div class="photo-box-content">
+                    <i class="fa-solid fa-truck-front photo-box-icon"></i>
+                    <div class="photo-box-title">1. ด้านหน้ารถ (Front View)</div>
+                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ</div>
+                  </div>
+                  <div class="photo-overlay-actions">
+                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo">
+                      <i class="fa-solid fa-trash"></i> ลบรูป
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 2. ด้านข้างรถ -->
+                <div class="photo-box" id="box-photo-side">
+                  <input type="file" id="input-photo-side" accept="image/*" style="display:none;">
+                  <img class="photo-box-preview" style="display:none;" alt="ภาพด้านข้างรถ">
+                  <div class="photo-box-content">
+                    <i class="fa-solid fa-truck-moving photo-box-icon"></i>
+                    <div class="photo-box-title">2. ด้านข้างรถ (Side View)</div>
+                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ</div>
+                  </div>
+                  <div class="photo-overlay-actions">
+                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo">
+                      <i class="fa-solid fa-trash"></i> ลบรูป
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 3. ด้านหน้าที่เห็นทั้งคัน -->
+                <div class="photo-box" id="box-photo-full">
+                  <input type="file" id="input-photo-full" accept="image/*" style="display:none;">
+                  <img class="photo-box-preview" style="display:none;" alt="ภาพด้านหน้าที่เห็นทั้งคัน">
+                  <div class="photo-box-content">
+                    <i class="fa-solid fa-truck photo-box-icon"></i>
+                    <div class="photo-box-title">3. ด้านหน้าที่เห็นทั้งคัน (Full Front)</div>
+                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ</div>
+                  </div>
+                  <div class="photo-overlay-actions">
+                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo">
+                      <i class="fa-solid fa-trash"></i> ลบรูป
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- ------------------------------------------------------------ -->
+            <!-- ส่วนที่ 3: ข้อมูลผู้ขับรถที่ขึ้นทะเบียน -->
+            <!-- ------------------------------------------------------------ -->
+            <div class="form-section-card">
+              <div class="form-section-header">
+                <div class="section-badge-title">
+                  <span class="section-num-badge">3</span>
+                  <div>
+                    <h3>ส่วนที่ 3: ข้อมูลผู้ขับรถที่ขึ้นทะเบียน</h3>
+                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน, สังกัด, แผนก และตรวจสอบใบรับรองความปลอดภัยด้วย AI</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid" style="margin-bottom:1.5rem;">
+                <div class="form-group">
+                  <label class="form-label" for="reg-driver-name">
+                    ชื่อ-นามสกุล ผู้ขับขี่ <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-driver-name" class="form-control" 
+                         placeholder="เช่น นายธวัชชัย บุญส่ง" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="reg-driver-empid">
+                    รหัสพนักงาน (Employee ID) <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-driver-empid" class="form-control" 
+                         placeholder="เช่น HR-9204 หรือ SUB-1088" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="reg-driver-company">
+                    สังกัด (ชื่อบริษัท และซัพพลายเออร์) <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-driver-company" class="form-control" 
+                         value="Haier Electric Appliances (Thailand)" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="reg-driver-dept">
+                    แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-driver-dept" class="form-control" 
+                         placeholder="เช่น คลังสินค้าสำเร็จรูป WH-A, แผนกประกอบ Assembly Line" required>
+                </div>
+
+                <div class="form-group form-group-full">
+                  <label class="form-label" for="reg-notes">หมายเหตุเพิ่มเติม</label>
+                  <input type="text" id="reg-notes" class="form-control" 
+                         placeholder="รายละเอียดหรือข้อสังเกตเพิ่มเติมเกี่ยวกับการตรวจสภาพ...">
+                </div>
+              </div>
+
+              <!-- AI Verification Scanner Component -->
+              <div class="ai-cert-panel">
+                <div class="ai-panel-header">
+                  <div>
+                    <span class="ai-badge"><i class="fa-solid fa-microchip"></i> AI Document Vision</span>
+                    <h4 style="font-size:1.1rem; font-weight:700; color:#fff; margin-top:0.35rem;">
+                      การตรวจสอบใบรับรองการฝึกอบรมการขับขี่รถยก (Forklift Safety Certificate)
+                    </h4>
+                    <p style="font-size:0.8rem; color:var(--text-secondary);">
+                      ใช้ AI วิเคราะห์และยืนยันว่าเป็นใบรับรองที่ถูกต้องตามมาตรฐานความปลอดภัย หรือบันทึก "รอดำเนินการ" อัตโนมัติหากไม่มีภาพแนบ
+                    </p>
+                  </div>
+
+                  <div class="ai-sample-helpers">
+                    <button type="button" id="btn-sample-valid-cert" class="btn btn-secondary btn-sm" title="ทดสอบแนบใบรับรองถูกต้อง">
+                      <i class="fa-solid fa-circle-check" style="color:var(--status-ready);"></i> ลองใบเซอร์ถูกต้อง
+                    </button>
+                    <button type="button" id="btn-sample-invalid-cert" class="btn btn-secondary btn-sm" title="ทดสอบแนบภาพอื่นที่ไม่ใช่ใบรับรอง">
+                      <i class="fa-solid fa-circle-xmark" style="color:var(--status-repair);"></i> ลองภาพไม่ถูกต้อง
+                    </button>
+                    <button type="button" id="btn-sample-no-cert" class="btn btn-secondary btn-sm" title="ทดสอบกรณีไม่แนบภาพ">
+                      <i class="fa-solid fa-eraser"></i> ไม่แนบภาพ (รอดำเนินการ)
+                    </button>
+                  </div>
+                </div>
+
+                <div class="ai-cert-body">
+                  <!-- Upload / Preview Box with Laser Scanner Line -->
+                  <div class="cert-upload-zone" id="cert-upload-zone" onclick="document.getElementById('reg-cert-upload').click()">
+                    <input type="file" id="reg-cert-upload" accept="image/*" style="display:none;">
+                    <div class="scanner-laser-line" id="reg-cert-laser"></div>
+                    <img id="reg-cert-preview" class="cert-preview-img" alt="Certificate Preview">
+                    
+                    <div id="cert-upload-placeholder" style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; text-align:center; padding:1.5rem;">
+                      <i class="fa-solid fa-file-shield" style="font-size:2.8rem; color:var(--haier-cyan);"></i>
+                      <div style="font-weight:600; color:#fff;">คลิกเพื่ออัปโหลดภาพใบรับรองการอบรม</div>
+                      <div style="font-size:0.75rem; color:var(--text-muted); max-width:250px;">
+                        หากไม่มีภาพแนบ ระบบจะบันทึกสถานะว่า <strong style="color:#c4b5fd;">"รอดำเนินการ"</strong> ตามเงื่อนไข
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- AI Analysis Details -->
+                  <div class="ai-analysis-details">
+                    <div class="ai-status-card">
+                      <div class="ai-status-title">ผลการวิเคราะห์โดยระบบ AI</div>
+                      
+                      <div id="reg-ai-status" class="ai-status-output status-pending">
+                        <i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ (ยังไม่แนบภาพใบรับรอง)
+                      </div>
+
+                      <div class="ai-confidence-bar">
+                        <div id="reg-ai-confidence-fill" class="ai-confidence-fill"></div>
+                      </div>
+                      
+                      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;">
+                        <span>ความมั่นใจในการจำแนก (Confidence)</span>
+                        <span id="reg-ai-confidence-text">พร้อมวิเคราะห์</span>
+                      </div>
+
+                      <p id="reg-ai-details" style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.75rem; line-height:1.4;">
+                        ไม่มีภาพแนบใบรับรอง พนักงานจะถูกบันทึกในระบบด้วยสถานะ "รอดำเนินการ"
+                      </p>
+
+                      <div id="reg-ai-tags" class="ai-detected-tags">
+                        <!-- Keywords badges populated dynamically -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Form Actions -->
+            <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1.5rem;">
+              <button type="button" class="btn btn-secondary" data-switch-tab="dashboard-tab">
+                ยกเลิก
+              </button>
+              <button type="submit" id="btn-submit-registration" class="btn btn-primary" style="padding:0.75rem 2rem;">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลการขึ้นทะเบียนรถ Forklift
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TAB 3: NOTIFICATIONS & ALERTS (แท็บ แจ้งเตือน) -->
+      <!-- ================================================================== -->
+      <section id="alerts-tab" class="tab-content">
+        
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">
+              <i class="fa-solid fa-bell"></i> ศูนย์แจ้งเตือนความปลอดภัยและการสำรวจ
+            </h2>
+            <p class="section-subtitle">
+              แจ้งเตือนรถก๊าซ LPG ใกล้หรือเลยกำหนดตรวจ 1 ปี (ล่วงหน้า 1 เดือนและค้างอยู่จนกว่าจะตรวจล่าสุด) และรายการที่กรอกข้อมูลยังไม่ครบ
+            </p>
+          </div>
+          <button class="btn btn-secondary" data-switch-tab="dashboard-tab">
+            <i class="fa-solid fa-arrow-left"></i> กลับแดชบอร์ด
+          </button>
+        </div>
+
+        <div class="alerts-tab-grid">
+          
+          <!-- Category 1: LPG 1-Year Inspection Alerts -->
+          <div class="alert-category-card">
+            <div class="alert-card-header">
+              <h3 style="color:#fbbf24;">
+                <i class="fa-solid fa-fire"></i> รถก๊าซ LPG ครบกำหนดตรวจเช็คในรอบ 1 ปี
+              </h3>
+              <span class="badge-energy energy-lpg"><i class="fa-solid fa-shield-halved"></i> ข้อกำหนดความปลอดภัย</span>
+            </div>
+            
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
+              * แจ้งเตือนล่วงหน้า 1 เดือน (30 วัน) และจะคงอยู่ต่อเนื่องจนกว่าจะมีการกรอกข้อมูลตรวจเช็คล่าสุด ถึงแม้ว่าจะเลยกำหนดเวลามาแล้วก็ตาม
+            </p>
+
+            <div id="lpg-alerts-list" class="alert-items-list">
+              <!-- Dynamically populated LPG alerts -->
+            </div>
+          </div>
+
+          <!-- Category 2: Incomplete Data Alerts -->
+          <div class="alert-category-card">
+            <div class="alert-card-header">
+              <h3 style="color:#f87171;">
+                <i class="fa-solid fa-triangle-exclamation"></i> รายการที่กรอกข้อมูลยังไม่ครบถ้วน
+              </h3>
+              <span class="status-badge badge-repair">ข้อมูลไม่สมบูรณ์</span>
+            </div>
+
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
+              * แจ้งเตือนรถที่ขาดภาพถ่าย 3 มุมมอง, ยังไม่ระบุผู้ขับ หรือใบรับรองการอบรมยังอยู่ในสถานะ "รอดำเนินการ"
+            </p>
+
+            <div id="incomplete-alerts-list" class="alert-items-list">
+              <!-- Dynamically populated incomplete alerts -->
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <div>
+          <strong>Haier Forklift Management System</strong> &copy; 2026 Haier Group (Thailand) Co., Ltd. All Rights Reserved.
+        </div>
+        <div style="display:flex; gap:1rem;">
+          <span><i class="fa-solid fa-shield-halved"></i> มาตรฐานความปลอดภัย จป. วิชาชีพ</span>
+          <span><i class="fa-solid fa-robot"></i> AI Powered OCR Verifier</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODALS -->
+  <!-- ==================================================================== -->
+
+  <!-- 1. Modal: View Vehicle Details -->
+  <div id="modal-view-details" class="modal-backdrop">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-file-invoice"></i> รายละเอียดข้อมูลรถ Forklift</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="view-modal-body">
+        <!-- Content injected dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-modal-close">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal: Edit Driver (แก้ไขข้อมูลผู้ขับ) -->
+  <div id="modal-edit-driver" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-user-pen"></i> แก้ไขข้อมูลผู้ขับขี่รถ Forklift</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="form-edit-driver">
+        <div class="modal-body">
+          <input type="hidden" id="edit-driver-id">
+          <div style="background:rgba(0,160,233,0.1); border-left:3px solid var(--haier-cyan); padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:1.25rem;">
+            ทะเบียนรถ: <strong id="edit-driver-forklift-plate" class="plate-tag" style="margin-left:0.5rem;">-</strong>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="edit-driver-name">ชื่อ-นามสกุล ผู้ขับขี่ <span class="required">*</span></label>
+            <input type="text" id="edit-driver-name" class="form-control" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="edit-driver-empid">รหัสพนักงาน <span class="required">*</span></label>
+            <input type="text" id="edit-driver-empid" class="form-control" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="edit-driver-company">สังกัด (ชื่อบริษัท / ซัพพลายเออร์) <span class="required">*</span></label>
+            <input type="text" id="edit-driver-company" class="form-control" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1.25rem;">
+            <label class="form-label" for="edit-driver-dept">แผนก <span class="required">*</span></label>
+            <input type="text" id="edit-driver-dept" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ภาพใบรับรองการฝึกอบรม (AI Re-Verification)</label>
+            <input type="file" id="edit-cert-upload" accept="image/*" class="form-control" style="padding:0.4rem;">
+            <div id="edit-cert-status-text" style="font-size:0.8rem; color:#c4b5fd; margin-top:0.4rem;">
+              สถานะ: รอดำเนินการ
+            </div>
+            <div style="margin-top:0.5rem; text-align:center;">
+              <img id="edit-cert-preview" style="max-height:120px; border-radius:6px; border:1px solid var(--surface-border); display:none;" alt="Preview">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-close">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> บันทึกการแก้ไขผู้ขับ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Modal: Update Status & Inspection (แก้ไขสถานะ & บันทึกตรวจเช็คล่าสุด) -->
+  <div id="modal-update-status" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-screwdriver-wrench"></i> แก้ไขสถานะและบันทึกการตรวจสภาพล่าสุด</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="form-update-status">
+        <div class="modal-body">
+          <input type="hidden" id="update-status-id">
+          
+          <div style="background:rgba(0,160,233,0.1); border-left:3px solid var(--haier-cyan); padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:1.25rem;">
+            ทะเบียนรถ: <strong id="update-status-plate" class="plate-tag" style="margin-left:0.5rem;">-</strong>
+          </div>
+
+          <!-- Alert Note if LPG -->
+          <div id="update-lpg-alert-section" style="display:none; background:rgba(245, 158, 11, 0.12); border-left:3px solid #fbbf24; padding:0.75rem; border-radius:4px; margin-bottom:1.25rem;">
+            <div style="font-weight:600; color:#fbbf24;"><i class="fa-solid fa-fire"></i> การตรวจเช็คระบบก๊าซ LPG ประจำปี</div>
+            <div id="update-lpg-text" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;"></div>
+            <div style="font-size:0.75rem; color:#fef08a; margin-top:0.35rem;">
+              * เมื่อท่านระบุวันที่ตรวจเช็คล่าสุดในรอบปัจจุบัน การแจ้งเตือนจะถูกรีเซ็ตและนับรอบ 1 ปีใหม่อัตโนมัติ
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="update-status-select">สถานะความพร้อมของรถ <span class="required">*</span></label>
+            <select id="update-status-select" class="form-control" required>
+              <option value="พร้อมใช้งาน">พร้อมใช้งาน (Ready for Operation)</option>
+              <option value="ส่งซ่อม">ส่งซ่อม / ชำรุด (Under Maintenance)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="update-inspection-date">วันที่ตรวจสภาพล่าสุด (Latest Inspection Date) <span class="required">*</span></label>
+            <input type="date" id="update-inspection-date" class="form-control" required>
+            <span class="form-hint">กำหนดให้เป็นวันที่ตรวจสภาพจริงรอบล่าสุดเพื่อปลดล็อคการแจ้งเตือน</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="update-notes">บันทึกข้อความ / รายการซ่อมบำรุง</label>
+            <textarea id="update-notes" class="form-control" rows="3" placeholder="ระบุอาการชำรุด หรือชิ้นส่วนที่ตรวจเปลี่ยน..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-close">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-clipboard-check"></i> บันทึกข้อมูลตรวจเช็ค</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Javascript Modules -->
+  <script src="js/data.js"></script>
+  <script src="js/ai-verifier.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

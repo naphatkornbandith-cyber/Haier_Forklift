@@ -1,0 +1,412 @@
+/**
+ * Haier Forklift Management System - Data Store & Helper Utilities
+ * Handles LocalStorage persistence, LPG 1-Year inspection logic, and Incomplete data checks.
+ */
+
+const STORAGE_KEY = 'HAIER_FORKLIFT_FLEET_DATA_V1';
+
+// Default SVG Mock Images for clean display
+const SVG_ASSETS = {
+  forkliftFront: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="100%" height="100%" fill="%230f274a"/><rect x="80" y="40" width="20" height="200" fill="%2338bdf8"/><rect x="300" y="40" width="20" height="200" fill="%2338bdf8"/><rect x="100" y="70" width="200" height="15" fill="%2300c2ff"/><rect x="100" y="150" width="200" height="15" fill="%2300c2ff"/><rect x="140" y="210" width="12" height="70" fill="%2394a3b8"/><rect x="248" y="210" width="12" height="70" fill="%2394a3b8"/><rect x="100" y="110" width="200" height="100" rx="12" fill="%23005a9e"/><circle cx="130" cy="140" r="14" fill="%23f8fafc"/><circle cx="270" cy="140" r="14" fill="%23f8fafc"/><text x="200" y="175" fill="%23ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Haier Forklift</text><text x="200" y="280" fill="%2338bdf8" font-family="sans-serif" font-size="14" text-anchor="middle">ภาพด้านหน้ารถ (Front View)</text></svg>`,
+  
+  forkliftSide: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="100%" height="100%" fill="%230f274a"/><rect x="290" y="30" width="15" height="220" fill="%2338bdf8"/><rect x="280" y="235" width="90" height="15" fill="%2394a3b8"/><path d="M70,220 L70,120 L160,120 L210,80 L280,80 L280,220 Z" fill="%23005a9e"/><rect x="180" y="90" width="75" height="45" rx="4" fill="%231e293b"/><circle cx="110" cy="235" r="32" fill="%23020617" stroke="%2364748b" stroke-width="8"/><circle cx="255" cy="235" r="32" fill="%23020617" stroke="%2364748b" stroke-width="8"/><text x="175" y="180" fill="%23ffffff" font-family="sans-serif" font-size="14" font-weight="bold">HAIER</text><text x="200" y="285" fill="%2338bdf8" font-family="sans-serif" font-size="14" text-anchor="middle">ภาพด้านข้างรถ (Side View)</text></svg>`,
+  
+  forkliftFull: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="100%" height="100%" fill="%230a192f"/><rect x="20" y="240" width="360" height="8" fill="%23334155"/><rect x="240" y="40" width="16" height="210" fill="%2300c2ff"/><rect x="256" y="40" width="16" height="210" fill="%2300c2ff"/><rect x="240" y="230" width="110" height="15" fill="%2394a3b8"/><path d="M50,220 L50,110 L150,110 L190,60 L240,60 L240,220 Z" fill="%23005a9e"/><circle cx="90" cy="230" r="30" fill="%230f172a" stroke="%2364748b" stroke-width="6"/><circle cx="215" cy="230" r="30" fill="%230f172a" stroke="%2364748b" stroke-width="6"/><text x="140" y="165" fill="%23ffffff" font-family="sans-serif" font-size="13" font-weight="bold">Haier Smart Fleet</text><text x="200" y="280" fill="%2338bdf8" font-family="sans-serif" font-size="14" text-anchor="middle">ภาพด้านหน้าที่เห็นทั้งคัน (Full Front)</text></svg>`,
+
+  validCert: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="350" viewBox="0 0 500 350"><rect width="100%" height="100%" fill="%23fdfbf7"/><rect x="15" y="15" width="470" height="320" fill="none" stroke="%23005a9e" stroke-width="6"/><rect x="22" y="22" width="456" height="306" fill="none" stroke="%23eab308" stroke-width="2"/><text x="250" y="65" fill="%23005a9e" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">หนังสือรับรองการฝึกอบรม</text><text x="250" y="90" fill="%23334155" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">หลักสูตร การทำงานเกี่ยวกับรถยกอย่างปลอดภัย (Forklift Safety Operator)</text><text x="250" y="115" fill="%2364748b" font-family="sans-serif" font-size="11" text-anchor="middle">ตามมาตรฐานกรมสวัสดิการและคุ้มครองแรงงาน กระทรวงแรงงาน</text><line x1="80" y1="130" x2="420" y2="130" stroke="%23cbd5e1" stroke-width="1"/><text x="250" y="165" fill="%230f172a" font-family="sans-serif" font-size="14" text-anchor="middle">เอกสารรับรองว่าผู้ถือบัตรนี้ได้ผ่านการอบรมภาคทฤษฎีและปฏิบัติแล้ว</text><circle cx="390" cy="265" r="35" fill="none" stroke="%23dc2626" stroke-width="3"/><text x="390" y="260" fill="%23dc2626" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle">CERTIFIED</text><text x="390" y="275" fill="%23dc2626" font-family="sans-serif" font-size="9" text-anchor="middle">PASS 100%</text><line x1="80" y1="280" x2="220" y2="280" stroke="%230f172a" stroke-width="1.5"/><text x="150" y="298" fill="%23475569" font-family="sans-serif" font-size="11" text-anchor="middle">ผู้มีอำนาจลงนาม / วิทยากร</text><text x="250" y="325" fill="%2394a3b8" font-family="sans-serif" font-size="9" text-anchor="middle">DOC REF: HR-SAFETY-FL-2025/CERT-891</text></svg>`,
+
+  invalidCert: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="350" viewBox="0 0 500 350"><rect width="100%" height="100%" fill="%23e2e8f0"/><text x="250" y="160" fill="%2364748b" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">ภาพถ่ายทั่วไป / ใบเสร็จรับเงิน</text><text x="250" y="190" fill="%2394a3b8" font-family="sans-serif" font-size="13" text-anchor="middle">(ไม่พบข้อมูลหรือตราสัญลักษณ์การอบรมรถยก)</text></svg>`
+};
+
+// Initial Seed Data with varied real-world scenarios
+const INITIAL_FORKLIFTS = [
+  {
+    id: 'FL-001',
+    plateNumber: 'FL-H01',
+    vehicleType: 'รถโฟล์คลิฟท์ไฟฟ้า (Electric Counterbalance)',
+    energyType: 'ไฟฟ้า',
+    liftingCapacity: '2.5 ตัน',
+    ownerCompany: 'Haier Electric Appliances (Thailand) Co., Ltd.',
+    subcontractor: 'บจก. ไฮเออร์ แอพพลายแอนซ์ (รถบริษัท)',
+    isSubcontractor: false,
+    registrationDate: '2025-06-15',
+    lastInspectionDate: '2026-05-10',
+    status: 'พร้อมใช้งาน',
+    photos: {
+      front: SVG_ASSETS.forkliftFront,
+      side: SVG_ASSETS.forkliftSide,
+      fullFront: SVG_ASSETS.forkliftFull
+    },
+    checklist: {
+      forks: true,
+      brakes: true,
+      hydraulics: true,
+      tires: true,
+      lightsHorn: true,
+      seatbeltGuard: true,
+      energySystem: true
+    },
+    driver: {
+      name: 'สมชาย มั่นคง',
+      empId: 'HR-8821',
+      company: 'Haier Thailand',
+      department: 'คลังสินค้าสำเร็จรูป (Finished Goods WH-1)',
+      hasTrained: true,
+      certImage: SVG_ASSETS.validCert,
+      certStatus: 'ผ่านการรับรอง' // 'ผ่านการรับรอง', 'รอดำเนินการ', 'ไม่ถูกต้อง'
+    },
+    notes: 'สภาพใหม่ ใช้งานเบิกจ่ายสินค้าโซน A'
+  },
+  {
+    id: 'FL-002',
+    plateNumber: 'FL-LPG-02',
+    vehicleType: 'รถโฟล์คลิฟท์เครื่องยนต์ (Engine Counterbalance)',
+    energyType: 'LPG',
+    liftingCapacity: '3.0 ตัน',
+    ownerCompany: 'Haier Electric Appliances (Thailand) Co., Ltd.',
+    subcontractor: 'บจก. สยาม แมททีเรียล แฮนด์ลิ่ง (ซัพพลายเออร์เช่า)',
+    isSubcontractor: true,
+    registrationDate: '2025-11-20',
+    lastInspectionDate: '2025-11-20', // Approaching 1 year! (Current local time: ~Nov 2026 -> ~11.5 - 12 months)
+    status: 'พร้อมใช้งาน',
+    photos: {
+      front: SVG_ASSETS.forkliftFront,
+      side: SVG_ASSETS.forkliftSide,
+      fullFront: SVG_ASSETS.forkliftFull
+    },
+    checklist: {
+      forks: true,
+      brakes: true,
+      hydraulics: true,
+      tires: true,
+      lightsHorn: true,
+      seatbeltGuard: true,
+      energySystem: true
+    },
+    driver: {
+      name: 'ประเสริฐ ชำนาญขับ',
+      empId: 'SUB-4019',
+      company: 'Siam Material Handling',
+      department: 'แผนกขนถ่ายสินค้าภายนอก (Outdoor Yard)',
+      hasTrained: true,
+      certImage: SVG_ASSETS.validCert,
+      certStatus: 'ผ่านการรับรอง'
+    },
+    notes: 'ใช้สำหรับขนตู้คอนเทนเนอร์ลานภายนอก ติดตั้งถังแก๊สคู่'
+  },
+  {
+    id: 'FL-003',
+    plateNumber: 'FL-LPG-03',
+    vehicleType: 'รถโฟล์คลิฟท์เครื่องยนต์ (Engine Counterbalance)',
+    energyType: 'LPG',
+    liftingCapacity: '3.5 ตัน',
+    ownerCompany: 'Thai Forklift Logistics & Services Co., Ltd.',
+    subcontractor: 'บจก. ไทย โฟล์คลิฟท์ โลจิสติกส์',
+    isSubcontractor: true,
+    registrationDate: '2025-08-10',
+    lastInspectionDate: '2025-08-10', // OVERDUE for 1-year inspection! (> 365 days ago)
+    status: 'พร้อมใช้งาน',
+    photos: {
+      front: SVG_ASSETS.forkliftFront,
+      side: SVG_ASSETS.forkliftSide,
+      fullFront: SVG_ASSETS.forkliftFull
+    },
+    checklist: {
+      forks: true,
+      brakes: true,
+      hydraulics: true,
+      tires: true,
+      lightsHorn: true,
+      seatbeltGuard: true,
+      energySystem: true
+    },
+    driver: {
+      name: 'กิตติศักดิ์ บุญชู',
+      empId: 'SUB-2033',
+      company: 'Thai Forklift Logistics',
+      department: 'แผนกบรรจุหีบห่อ (Packing Plant)',
+      hasTrained: true,
+      certImage: SVG_ASSETS.validCert,
+      certStatus: 'ผ่านการรับรอง'
+    },
+    notes: 'เกินกำหนดตรวจแก๊ส LPG 1 ปีแล้ว! ต้องตรวจเช็คด่วน'
+  },
+  {
+    id: 'FL-004',
+    plateNumber: 'FL-E-04',
+    vehicleType: 'รถโฟล์คลิฟท์ไฟฟ้าแบบยืนขับ (Reach Truck)',
+    energyType: 'ไฟฟ้า',
+    liftingCapacity: '1.5 ตัน',
+    ownerCompany: 'Haier Electric Appliances (Thailand) Co., Ltd.',
+    subcontractor: 'บจก. ไฮเออร์ แอพพลายแอนซ์',
+    isSubcontractor: false,
+    registrationDate: '2026-02-14',
+    lastInspectionDate: '2026-02-14',
+    status: 'ส่งซ่อม',
+    photos: {
+      front: SVG_ASSETS.forkliftFront,
+      side: SVG_ASSETS.forkliftSide,
+      fullFront: SVG_ASSETS.forkliftFull
+    },
+    checklist: {
+      forks: false, // Hydraulic leak
+      brakes: true,
+      hydraulics: false,
+      tires: true,
+      lightsHorn: true,
+      seatbeltGuard: true,
+      energySystem: true
+    },
+    driver: {
+      name: 'วีระชัย สิทธิโชค',
+      empId: 'HR-9104',
+      company: 'Haier Thailand',
+      department: 'คลังสินค้าชิ้นส่วนแอร์ (AC Parts Warehouse)',
+      hasTrained: true,
+      certImage: SVG_ASSETS.validCert,
+      certStatus: 'ผ่านการรับรอง'
+    },
+    notes: 'กระบอกไฮดรอลิกเสากระโดงมีน้ำมันซึม กำลังรออะไหล่จากศูนย์ซ่อม'
+  },
+  {
+    id: 'FL-005',
+    plateNumber: 'FL-D-05',
+    vehicleType: 'รถโฟล์คลิฟท์ดีเซล (Diesel Forklift)',
+    energyType: 'ดีเซล',
+    liftingCapacity: '5.0 ตัน',
+    ownerCompany: 'Chonburi Heavy Equipment Rent Co., Ltd.',
+    subcontractor: 'บจก. ชลบุรี เฮฟวี่ อิควิปเมนท์',
+    isSubcontractor: true,
+    registrationDate: '2026-04-01',
+    lastInspectionDate: '2026-04-01',
+    status: 'พร้อมใช้งาน',
+    // Incomplete data: missing side photo, driver cert is pending
+    photos: {
+      front: SVG_ASSETS.forkliftFront,
+      side: '', // MISSING
+      fullFront: SVG_ASSETS.forkliftFull
+    },
+    checklist: {
+      forks: true,
+      brakes: true,
+      hydraulics: true,
+      tires: true,
+      lightsHorn: true,
+      seatbeltGuard: true,
+      energySystem: true
+    },
+    driver: {
+      name: 'อนุชา ศรีสวัสดิ์',
+      empId: 'SUB-5512',
+      company: 'Chonburi Heavy',
+      department: 'แผนกหล่อโครงเหล็ก (Press & Stamping)',
+      hasTrained: false,
+      certImage: '', // NO IMAGE -> Status: รอดำเนินการ
+      certStatus: 'รอดำเนินการ'
+    },
+    notes: 'ข้อมูลยังไม่สมบูรณ์: ขาดภาพถ่ายด้านข้าง และพนักงานขับรถอยู่ระหว่างส่งเอกสารอบรม'
+  }
+];
+
+class ForkliftDataStore {
+  constructor() {
+    this.init();
+  }
+
+  init() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      this.saveAll(INITIAL_FORKLIFTS);
+    }
+  }
+
+  getAll() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : INITIAL_FORKLIFTS;
+    } catch (e) {
+      console.error('Failed to load fleet data:', e);
+      return INITIAL_FORKLIFTS;
+    }
+  }
+
+  saveAll(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to save fleet data:', e);
+    }
+  }
+
+  getById(id) {
+    const all = this.getAll();
+    return all.find(item => item.id === id || item.plateNumber.toLowerCase() === id.toLowerCase());
+  }
+
+  // Duplicate Check: ทะเบียนรถที่เคยมีในระบบแล้วจะไม่สามารถลงทะเบียนซ้ำได้
+  isPlateDuplicate(plateNumber, excludeId = null) {
+    if (!plateNumber) return false;
+    const cleanPlate = plateNumber.trim().toUpperCase().replace(/\s+/g, '');
+    const all = this.getAll();
+    return all.some(item => {
+      if (excludeId && item.id === excludeId) return false;
+      const existingClean = item.plateNumber.trim().toUpperCase().replace(/\s+/g, '');
+      return existingClean === cleanPlate;
+    });
+  }
+
+  addForklift(newItem) {
+    if (this.isPlateDuplicate(newItem.plateNumber)) {
+      throw new Error(`เลขทะเบียน "${newItem.plateNumber}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`);
+    }
+    const all = this.getAll();
+    const id = 'FL-' + Date.now().toString().slice(-4);
+    const completeItem = {
+      id,
+      ...newItem,
+      createdAt: new Date().toISOString()
+    };
+    all.unshift(completeItem);
+    this.saveAll(all);
+    return completeItem;
+  }
+
+  // Condition requirement: แก้ไขข้อมูลผู้ขับ ได้จากหน้า Dash Board
+  updateDriver(id, driverData) {
+    const all = this.getAll();
+    const index = all.findIndex(item => item.id === id);
+    if (index === -1) throw new Error('ไม่พบข้อมูลรถโฟล์คลิฟท์ที่ต้องการแก้ไข');
+
+    all[index].driver = {
+      ...all[index].driver,
+      ...driverData
+    };
+    all[index].updatedAt = new Date().toISOString();
+    this.saveAll(all);
+    return all[index];
+  }
+
+  // Condition requirement: แก้ไขสถานะ และ บันทึกการตรวจเช็คล่าสุด ได้จากหน้า Dash Board
+  updateStatusAndInspection(id, { status, inspectionDate, notes, checklist }) {
+    const all = this.getAll();
+    const index = all.findIndex(item => item.id === id);
+    if (index === -1) throw new Error('ไม่พบข้อมูลรถโฟล์คลิฟท์ที่ต้องการแก้ไข');
+
+    if (status) all[index].status = status;
+    if (inspectionDate) all[index].lastInspectionDate = inspectionDate;
+    if (notes !== undefined) all[index].notes = notes;
+    if (checklist) all[index].checklist = { ...all[index].checklist, ...checklist };
+    
+    all[index].updatedAt = new Date().toISOString();
+    this.saveAll(all);
+    return all[index];
+  }
+
+  deleteForklift(id) {
+    const all = this.getAll().filter(item => item.id !== id);
+    this.saveAll(all);
+    return true;
+  }
+
+  resetToDefault() {
+    this.saveAll(INITIAL_FORKLIFTS);
+    return INITIAL_FORKLIFTS;
+  }
+
+  /**
+   * LPG 1-Year Inspection Check:
+   * "รถประเภทพลังงาน LPG ใกล้ครบกำหนดตรวจเช็คในรอบ 1 ปีที่ผ่านมา 
+   * โดยมีการแจ้งเตือนล่วงหน้า 1 เดือนและจะคงอยู่จนกว่าจะมีการกรอกข้อมูลตรวจเช็คล่าสุด 
+   * ถึงแม้ว่าจะผ่านกำหนดเวลามาแล้วก็ตาม"
+   */
+  getLpgStatus(forklift, referenceDate = new Date()) {
+    if (!forklift || forklift.energyType !== 'LPG') {
+      return { isLpg: false, alertLevel: 'none', daysRemaining: null, text: 'ไม่ใช่ระบบ LPG' };
+    }
+
+    const checkDateStr = forklift.lastInspectionDate || forklift.registrationDate;
+    if (!checkDateStr) {
+      return {
+        isLpg: true,
+        alertLevel: 'overdue',
+        daysRemaining: -999,
+        text: 'ยังไม่เคยบันทึกวันตรวจเช็ค (ต้องตรวจทันที)'
+      };
+    }
+
+    const lastDate = new Date(checkDateStr);
+    // Due date is exactly 1 year (365 days) from last inspection
+    const dueDate = new Date(lastDate);
+    dueDate.setFullYear(dueDate.getFullYear() + 1);
+
+    const ref = new Date(referenceDate);
+    const diffTime = dueDate.getTime() - ref.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Overdue condition: Over 1 year passed, alert stays until latest inspection is submitted
+    if (diffDays < 0) {
+      return {
+        isLpg: true,
+        alertLevel: 'overdue',
+        daysRemaining: diffDays,
+        overdueDays: Math.abs(diffDays),
+        dueDateStr: dueDate.toISOString().split('T')[0],
+        text: `เลยกำหนดตรวจรอบ 1 ปี มาแล้ว ${Math.abs(diffDays)} วัน! (รอการตรวจเช็คล่าสุด)`
+      };
+    }
+
+    // Advance 1 month warning (<= 30 days remaining)
+    if (diffDays <= 30) {
+      return {
+        isLpg: true,
+        alertLevel: 'warning',
+        daysRemaining: diffDays,
+        dueDateStr: dueDate.toISOString().split('T')[0],
+        text: `ใกล้ครบกำหนดในอีก ${diffDays} วัน (แจ้งเตือนล่วงหน้า 1 เดือน)`
+      };
+    }
+
+    // Normal / Safe
+    return {
+      isLpg: true,
+      alertLevel: 'ok',
+      daysRemaining: diffDays,
+      dueDateStr: dueDate.toISOString().split('T')[0],
+      text: `ตรวจเช็คปกติ (ครบกำหนดถัดไปในอีก ${diffDays} วัน)`
+    };
+  }
+
+  /**
+   * Incomplete Data Check:
+   * "แจ้งเตือนในกรณีที่กรอกข้อมูลยังไม่ครบ"
+   * e.g. missing 3 photos, missing driver name, missing capacity, or cert pending
+   */
+  getIncompleteIssues(forklift) {
+    const issues = [];
+    if (!forklift.plateNumber) issues.push('ยังไม่ระบุเลขทะเบียนรถ');
+    if (!forklift.vehicleType) issues.push('ยังไม่ระบุประเภทรถ');
+    if (!forklift.energyType) issues.push('ยังไม่ระบุประเภทพลังงาน');
+    if (!forklift.liftingCapacity) issues.push('ยังไม่ระบุความสามารถยกน้ำหนัก');
+    if (!forklift.ownerCompany) issues.push('ยังไม่ระบุเจ้าของรถ');
+
+    // Photo checks: 3 photos required
+    const p = forklift.photos || {};
+    if (!p.front) issues.push('ขาดภาพถ่ายด้านหน้ารถ');
+    if (!p.side) issues.push('ขาดภาพถ่ายด้านข้างรถ');
+    if (!p.fullFront) issues.push('ขาดภาพถ่ายด้านหน้าที่เห็นทั้งคัน');
+
+    // Driver checks
+    const d = forklift.driver || {};
+    if (!d.name) issues.push('ยังไม่ได้ระบุชื่อผู้ขับขี่');
+    if (!d.empId) issues.push('ยังไม่ได้ระบุรหัสพนักงาน');
+    if (!d.certImage || d.certStatus === 'รอดำเนินการ') {
+      issues.push('ใบรับรองการอบรมรถยก: รอดำเนินการ (ยังไม่แนบภาพ)');
+    }
+
+    return issues;
+  }
+}
+
+// Global instance
+window.forkliftStore = new ForkliftDataStore();
+window.SVG_ASSETS = SVG_ASSETS;
