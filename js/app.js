@@ -48,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // KPI Count Elements
   const kpiTotal = document.getElementById('kpi-total');
+  const kpiCompany = document.getElementById('kpi-company');
+  const kpiRental = document.getElementById('kpi-rental');
   const kpiReady = document.getElementById('kpi-ready');
   const kpiRepair = document.getElementById('kpi-repair');
   const kpiLpgAlert = document.getElementById('kpi-lpg-alert');
@@ -121,11 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // Shortcut link in banner or duplicate alert
+  // Shortcut link in banner or duplicate alert or quick filter trigger
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-switch-tab]')) {
       const targetTab = e.target.closest('[data-switch-tab]').dataset.switchTab;
       switchTab(targetTab);
+    }
+    const filterTrigger = e.target.closest('[data-filter-trigger]');
+    if (filterTrigger) {
+      const filterValue = filterTrigger.dataset.filterTrigger;
+      const targetPill = Array.from(filterPills).find(pill => pill.dataset.filter === filterValue);
+      if (targetPill) {
+        targetPill.click();
+      }
     }
   });
 
@@ -141,9 +151,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let lpgAlertCount = 0;
     let incompleteCount = 0;
     let pendingCertCount = 0;
+    let companyCount = 0;
+    let rentalCount = 0;
     const lpgAlertItems = [];
 
     forklifts.forEach(item => {
+      if (item.isSubcontractor) {
+        rentalCount++;
+      } else {
+        companyCount++;
+      }
+
       if (item.status === 'พร้อมใช้งาน') readyCount++;
       if (item.status === 'ส่งซ่อม') repairCount++;
 
@@ -163,6 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update KPI UI
     kpiTotal.textContent = forklifts.length;
+    if (kpiCompany) kpiCompany.textContent = companyCount;
+    if (kpiRental) kpiRental.textContent = rentalCount;
     kpiReady.textContent = readyCount;
     kpiRepair.textContent = repairCount;
     kpiLpgAlert.textContent = lpgAlertCount;

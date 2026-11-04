@@ -418,6 +418,8 @@ body {
   position: relative;
   overflow: hidden;
   transition: var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-card:hover {
@@ -478,8 +480,69 @@ body {
   font-family: var(--font-main);
 }
 
+/* Sub-information for Breakdown (e.g. รถบริษัท / รถเช่า) */
+.stat-sub-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.stat-sub-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+}
+
+.stat-sub-item.sub-company {
+  background: rgba(0, 194, 255, 0.08);
+  color: var(--haier-cyan);
+  border: 1px solid rgba(0, 194, 255, 0.25);
+}
+
+.stat-sub-item.sub-company:hover {
+  background: rgba(0, 194, 255, 0.2);
+  border-color: var(--haier-cyan);
+  transform: translateY(-1px);
+}
+
+.stat-sub-item.sub-rental {
+  background: rgba(168, 85, 247, 0.08);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.stat-sub-item.sub-rental:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: #c084fc;
+  transform: translateY(-1px);
+}
+
+.stat-sub-item .sub-icon {
+  font-size: 0.72rem;
+}
+
+.stat-sub-item .sub-label {
+  color: var(--text-secondary);
+}
+
+.stat-sub-item .sub-value {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
 .stat-footer {
-  margin-top: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--text-muted);
   display: flex;
