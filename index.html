@@ -84,9 +84,14 @@
               ตรวจสอบสถานะความพร้อม บันทึกการตรวจสภาพ และค้นหาข้อมูลรถโฟล์คลิฟท์ในสายการผลิต
             </p>
           </div>
-          <button class="btn btn-primary" data-switch-tab="register-tab">
-            <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
-          </button>
+          <div style="display:flex; gap:0.6rem; align-items:center;">
+            <button id="btn-clear-all-data" class="btn btn-secondary btn-sm" title="ล้างข้อมูลรถทั้งหมดในระบบ">
+              <i class="fa-solid fa-trash-can"></i> ล้างข้อมูลทั้งหมด
+            </button>
+            <button class="btn btn-primary" data-switch-tab="register-tab">
+              <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
+            </button>
+          </div>
         </div>
 
         <!-- LPG Notification Banner (Shown when alerts active) -->
@@ -235,7 +240,7 @@
                 <th>เจ้าของรถ (บริษัท/ซัพ)</th>
                 <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
                 <th style="width: 130px;">สถานะ</th>
-                <th style="width: 250px; text-align: center;">จัดการข้อมูล</th>
+                <th style="width: 290px; text-align: center;">จัดการข้อมูล</th>
               </tr>
             </thead>
             <tbody id="fleet-table-body">
@@ -887,7 +892,10 @@
       <div class="modal-body" id="view-modal-body">
         <!-- Content injected dynamically -->
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn-danger btn-sm" id="btn-view-modal-delete">
+          <i class="fa-solid fa-trash-can"></i> ลบข้อมูลรถคันนี้
+        </button>
         <button type="button" class="btn btn-secondary btn-modal-close">ปิดหน้าต่าง</button>
       </div>
     </div>

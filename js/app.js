@@ -368,6 +368,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')" title="แก้ไขสถานะรถและบันทึกการตรวจเช็ค">
               <i class="fa-solid fa-screwdriver-wrench"></i> สถานะ/ตรวจเช็ค
             </button>
+            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${item.id}', '${item.plateNumber}')" title="ลบข้อมูลรถคันนี้">
+              <i class="fa-solid fa-trash-can"></i> ลบ
+            </button>
           </div>
         </td>
       `;
@@ -1019,6 +1022,13 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
 
+    const deleteBtn = document.getElementById('btn-view-modal-delete');
+    if (deleteBtn) {
+      deleteBtn.onclick = function() {
+        window.deleteForkliftItem(item.id, item.plateNumber, true);
+      };
+    }
+
     openModal(modalView);
   };
 
@@ -1183,7 +1193,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Reset / Clear data button handler (if present)
+  // --------------------------------------------------------------------------
+  // Delete Forklift Operations
+  // --------------------------------------------------------------------------
+  window.deleteForkliftItem = function(id, plateNumber, closeViewModal = false) {
+    const item = window.forkliftStore.getById(id);
+    const displayName = (item && item.plateNumber) ? item.plateNumber : (plateNumber || id);
+
+    const msg = `คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลรถโฟล์คลิฟท์ทะเบียน "${displayName}" ออกจากระบบ?\n\n* ข้อมูลรถ, ภาพถ่าย 3 มุมมอง และประวัติการตรวจสภาพจะถูกลบอย่างถาวร`;
+    if (confirm(msg)) {
+      window.forkliftStore.deleteForklift(id);
+      showToast(`ลบข้อมูลรถทะเบียน "${displayName}" เรียบร้อยแล้ว`, 'success');
+
+      if (closeViewModal) {
+        document.querySelectorAll('.modal-backdrop').forEach(closeModal);
+      }
+
+      renderDashboard();
+      if (state.currentTab === 'alerts-tab') {
+        renderAlertsCenter();
+      }
+    }
+  };
+
+  // Clear all fleet data button handler
+  const btnClearAll = document.getElementById('btn-clear-all-data');
+  if (btnClearAll) {
+    btnClearAll.addEventListener('click', () => {
+      const all = window.forkliftStore.getAll();
+      if (all.length === 0) {
+        showToast('ขณะนี้ไม่มีข้อมูลรถโฟล์คลิฟท์ในระบบ', 'info');
+        return;
+      }
+      if (confirm(`คุณต้องการล้างข้อมูลรถโฟล์คลิฟท์ทั้งหมด (${all.length} คัน) ออกจากระบบหรือไม่?\n\n* ข้อมูลรถและประวัติทั้งหมดจะถูกลบถาวร ไม่สามารถย้อนกลับได้`)) {
+        window.forkliftStore.clearAll();
+        showToast('ล้างข้อมูลรถทั้งหมดในระบบเรียบร้อยแล้ว', 'success');
+        renderDashboard();
+        if (state.currentTab === 'alerts-tab') {
+          renderAlertsCenter();
+        }
+      }
+    });
+  }
+
+  // Reset / Clear data button handler (backward compatibility)
   const btnResetData = document.getElementById('btn-reset-data');
   if (btnResetData) {
     btnResetData.addEventListener('click', () => {
