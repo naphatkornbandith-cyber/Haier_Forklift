@@ -226,14 +226,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Render Table Rows
     fleetTableBody.innerHTML = '';
     if (filtered.length === 0) {
-      fleetTableBody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align:center; padding: 3rem 1rem; color: var(--text-muted);">
-            <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; margin-bottom: 0.75rem; color: var(--surface-border);"></i>
-            <p>ไม่พบข้อมูลรถโฟล์คลิฟท์ที่ตรงตามเงื่อนไขการค้นหา</p>
-          </td>
-        </tr>
-      `;
+      if (forklifts.length === 0) {
+        fleetTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 3.5rem 1rem; color: var(--text-muted);">
+              <i class="fa-solid fa-truck-ramp-box" style="font-size: 2.8rem; margin-bottom: 0.85rem; color: var(--haier-cyan); opacity: 0.7;"></i>
+              <p style="font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 0.35rem;">ยังไม่มีข้อมูลรถโฟล์คลิฟท์ในระบบ</p>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">เริ่มต้นบันทึกข้อมูลโดยการขึ้นทะเบียนรถคันแรกเข้าสู่ระบบสำรวจ</p>
+              <button type="button" class="btn btn-primary btn-sm" data-switch-tab="register-tab">
+                <i class="fa-solid fa-square-plus"></i> ลงทะเบียนรถโฟล์คลิฟท์ใหม่
+              </button>
+            </td>
+          </tr>
+        `;
+      } else {
+        fleetTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 3rem 1rem; color: var(--text-muted);">
+              <i class="fa-solid fa-magnifying-glass" style="font-size: 2.5rem; margin-bottom: 0.75rem; color: var(--surface-border);"></i>
+              <p>ไม่พบข้อมูลรถโฟล์คลิฟท์ที่ตรงตามเงื่อนไขการค้นหา</p>
+            </td>
+          </tr>
+        `;
+      }
       return;
     }
 
@@ -447,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lpgAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
-          <p>ไม่มีรถพลังงาน LPG ที่ครบหรือใกล้ครบกำหนดตรวจเช็ค 1 ปีในขณะนี้</p>
+          <p>${forklifts.length === 0 ? 'ยังไม่มีข้อมูลรถในระบบ' : 'ไม่มีรถพลังงาน LPG ที่ครบหรือใกล้ครบกำหนดตรวจเช็ค 1 ปีในขณะนี้'}</p>
         </div>
       `;
     }
@@ -456,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
       incompleteAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
-          <p>รถทุกคันในระบบมีข้อมูลการสำรวจและเอกสารครบถ้วนสมบูรณ์ 100%</p>
+          <p>${forklifts.length === 0 ? 'ยังไม่มีข้อมูลรถในระบบ' : 'รถทุกคันในระบบมีข้อมูลการสำรวจและเอกสารครบถ้วนสมบูรณ์ 100%'}</p>
         </div>
       `;
     }
@@ -1040,15 +1055,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Reset to default sample data button
-  document.getElementById('btn-reset-data').addEventListener('click', () => {
-    if (confirm('คุณต้องการรีเซ็ตข้อมูลตัวอย่างกลับเป็นค่าเริ่มต้นหรือไม่?')) {
-      window.forkliftStore.resetToDefault();
-      showToast('รีเซ็ตข้อมูลระบบกลับสู่ค่าเริ่มต้นแล้ว', 'success');
-      renderDashboard();
-      if (state.currentTab === 'alerts-tab') renderAlertsCenter();
-    }
-  });
+  // Reset / Clear data button handler (if present)
+  const btnResetData = document.getElementById('btn-reset-data');
+  if (btnResetData) {
+    btnResetData.addEventListener('click', () => {
+      if (confirm('คุณต้องการล้างข้อมูลรถทั้งหมดในระบบหรือไม่?')) {
+        window.forkliftStore.clearAll();
+        showToast('ล้างข้อมูลระบบเรียบร้อยแล้ว', 'success');
+        renderDashboard();
+        if (state.currentTab === 'alerts-tab') renderAlertsCenter();
+      }
+    });
+  }
 
   // Toast Notification helper
   function showToast(message, type = 'info') {

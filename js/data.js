@@ -18,195 +18,8 @@ const SVG_ASSETS = {
   invalidCert: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="350" viewBox="0 0 500 350"><rect width="100%" height="100%" fill="%23e2e8f0"/><text x="250" y="160" fill="%2364748b" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">ภาพถ่ายทั่วไป / ใบเสร็จรับเงิน</text><text x="250" y="190" fill="%2394a3b8" font-family="sans-serif" font-size="13" text-anchor="middle">(ไม่พบข้อมูลหรือตราสัญลักษณ์การอบรมรถยก)</text></svg>`
 };
 
-// Initial Seed Data with varied real-world scenarios
-const INITIAL_FORKLIFTS = [
-  {
-    id: 'FL-001',
-    plateNumber: 'FL-H01',
-    vehicleType: 'รถโฟล์คลิฟท์ไฟฟ้า (Electric Counterbalance)',
-    energyType: 'ไฟฟ้า',
-    liftingCapacity: '2.5 ตัน',
-    ownerCompany: 'Haier Electric Appliances (Thailand) Co., Ltd.',
-    subcontractor: 'บจก. ไฮเออร์ แอพพลายแอนซ์ (รถบริษัท)',
-    isSubcontractor: false,
-    registrationDate: '2025-06-15',
-    lastInspectionDate: '2026-05-10',
-    status: 'พร้อมใช้งาน',
-    photos: {
-      front: SVG_ASSETS.forkliftFront,
-      side: SVG_ASSETS.forkliftSide,
-      fullFront: SVG_ASSETS.forkliftFull
-    },
-    checklist: {
-      forks: true,
-      brakes: true,
-      hydraulics: true,
-      tires: true,
-      lightsHorn: true,
-      seatbeltGuard: true,
-      energySystem: true
-    },
-    driver: {
-      name: 'สมชาย มั่นคง',
-      empId: 'HR-8821',
-      company: 'Haier Thailand',
-      department: 'คลังสินค้าสำเร็จรูป (Finished Goods WH-1)',
-      hasTrained: true,
-      certImage: SVG_ASSETS.validCert,
-      certStatus: 'ผ่านการรับรอง' // 'ผ่านการรับรอง', 'รอดำเนินการ', 'ไม่ถูกต้อง'
-    },
-    notes: 'สภาพใหม่ ใช้งานเบิกจ่ายสินค้าโซน A'
-  },
-  {
-    id: 'FL-002',
-    plateNumber: 'FL-LPG-02',
-    vehicleType: 'รถโฟล์คลิฟท์เครื่องยนต์ (Engine Counterbalance)',
-    energyType: 'LPG',
-    liftingCapacity: '3.0 ตัน',
-    ownerCompany: 'Haier Electric Appliances (Thailand) Co., Ltd.',
-    subcontractor: 'บจก. สยาม แมททีเรียล แฮนด์ลิ่ง (ซัพพลายเออร์เช่า)',
-    isSubcontractor: true,
-    registrationDate: '2025-11-20',
-    lastInspectionDate: '2025-11-20', // Approaching 1 year! (Current local time: ~Nov 2026 -> ~11.5 - 12 months)
-    status: 'พร้อมใช้งาน',
-    photos: {
-      front: SVG_ASSETS.forkliftFront,
-      side: SVG_ASSETS.forkliftSide,
-      fullFront: SVG_ASSETS.forkliftFull
-    },
-    checklist: {
-      forks: true,
-      brakes: true,
-      hydraulics: true,
-      tires: true,
-      lightsHorn: true,
-      seatbeltGuard: true,
-      energySystem: true
-    },
-    driver: {
-      name: 'ประเสริฐ ชำนาญขับ',
-      empId: 'SUB-4019',
-      company: 'Siam Material Handling',
-      department: 'แผนกขนถ่ายสินค้าภายนอก (Outdoor Yard)',
-      hasTrained: true,
-      certImage: SVG_ASSETS.validCert,
-      certStatus: 'ผ่านการรับรอง'
-    },
-    notes: 'ใช้สำหรับขนตู้คอนเทนเนอร์ลานภายนอก ติดตั้งถังแก๊สคู่'
-  },
-  {
-    id: 'FL-003',
-    plateNumber: 'FL-LPG-03',
-    vehicleType: 'รถโฟล์คลิฟท์เครื่องยนต์ (Engine Counterbalance)',
-    energyType: 'LPG',
-    liftingCapacity: '3.5 ตัน',
-    ownerCompany: 'Thai Forklift Logistics & Services Co., Ltd.',
-    subcontractor: 'บจก. ไทย โฟล์คลิฟท์ โลจิสติกส์',
-    isSubcontractor: true,
-    registrationDate: '2025-08-10',
-    lastInspectionDate: '2025-08-10', // OVERDUE for 1-year inspection! (> 365 days ago)
-    status: 'พร้อมใช้งาน',
-    photos: {
-      front: SVG_ASSETS.forkliftFront,
-      side: SVG_ASSETS.forkliftSide,
-      fullFront: SVG_ASSETS.forkliftFull
-    },
-    checklist: {
-      forks: true,
-      brakes: true,
-      hydraulics: true,
-      tires: true,
-      lightsHorn: true,
-      seatbeltGuard: true,
-      energySystem: true
-    },
-    driver: {
-      name: 'กิตติศักดิ์ บุญชู',
-      empId: 'SUB-2033',
-      company: 'Thai Forklift Logistics',
-      department: 'แผนกบรรจุหีบห่อ (Packing Plant)',
-      hasTrained: true,
-      certImage: SVG_ASSETS.validCert,
-      certStatus: 'ผ่านการรับรอง'
-    },
-    notes: 'เกินกำหนดตรวจแก๊ส LPG 1 ปีแล้ว! ต้องตรวจเช็คด่วน'
-  },
-  {
-    id: 'FL-004',
-    plateNumber: 'FL-E-04',
-    vehicleType: 'รถโฟล์คลิฟท์ไฟฟ้าแบบยืนขับ (Reach Truck)',
-    energyType: 'ไฟฟ้า',
-    liftingCapacity: '1.5 ตัน',
-    ownerCompany: 'Haier Electric Appliances (Thailand) Co., Ltd.',
-    subcontractor: 'บจก. ไฮเออร์ แอพพลายแอนซ์',
-    isSubcontractor: false,
-    registrationDate: '2026-02-14',
-    lastInspectionDate: '2026-02-14',
-    status: 'ส่งซ่อม',
-    photos: {
-      front: SVG_ASSETS.forkliftFront,
-      side: SVG_ASSETS.forkliftSide,
-      fullFront: SVG_ASSETS.forkliftFull
-    },
-    checklist: {
-      forks: false, // Hydraulic leak
-      brakes: true,
-      hydraulics: false,
-      tires: true,
-      lightsHorn: true,
-      seatbeltGuard: true,
-      energySystem: true
-    },
-    driver: {
-      name: 'วีระชัย สิทธิโชค',
-      empId: 'HR-9104',
-      company: 'Haier Thailand',
-      department: 'คลังสินค้าชิ้นส่วนแอร์ (AC Parts Warehouse)',
-      hasTrained: true,
-      certImage: SVG_ASSETS.validCert,
-      certStatus: 'ผ่านการรับรอง'
-    },
-    notes: 'กระบอกไฮดรอลิกเสากระโดงมีน้ำมันซึม กำลังรออะไหล่จากศูนย์ซ่อม'
-  },
-  {
-    id: 'FL-005',
-    plateNumber: 'FL-D-05',
-    vehicleType: 'รถโฟล์คลิฟท์ดีเซล (Diesel Forklift)',
-    energyType: 'ดีเซล',
-    liftingCapacity: '5.0 ตัน',
-    ownerCompany: 'Chonburi Heavy Equipment Rent Co., Ltd.',
-    subcontractor: 'บจก. ชลบุรี เฮฟวี่ อิควิปเมนท์',
-    isSubcontractor: true,
-    registrationDate: '2026-04-01',
-    lastInspectionDate: '2026-04-01',
-    status: 'พร้อมใช้งาน',
-    // Incomplete data: missing side photo, driver cert is pending
-    photos: {
-      front: SVG_ASSETS.forkliftFront,
-      side: '', // MISSING
-      fullFront: SVG_ASSETS.forkliftFull
-    },
-    checklist: {
-      forks: true,
-      brakes: true,
-      hydraulics: true,
-      tires: true,
-      lightsHorn: true,
-      seatbeltGuard: true,
-      energySystem: true
-    },
-    driver: {
-      name: 'อนุชา ศรีสวัสดิ์',
-      empId: 'SUB-5512',
-      company: 'Chonburi Heavy',
-      department: 'แผนกหล่อโครงเหล็ก (Press & Stamping)',
-      hasTrained: false,
-      certImage: '', // NO IMAGE -> Status: รอดำเนินการ
-      certStatus: 'รอดำเนินการ'
-    },
-    notes: 'ข้อมูลยังไม่สมบูรณ์: ขาดภาพถ่ายด้านข้าง และพนักงานขับรถอยู่ระหว่างส่งเอกสารอบรม'
-  }
-];
+// Initial Seed Data (Empty by default)
+const INITIAL_FORKLIFTS = [];
 
 class ForkliftDataStore {
   constructor() {
@@ -216,6 +29,19 @@ class ForkliftDataStore {
   init() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
+      this.saveAll(INITIAL_FORKLIFTS);
+      return;
+    }
+
+    try {
+      const items = JSON.parse(raw);
+      // Remove mock sample data items (FL-001 through FL-005) if they exist in localStorage
+      const sampleIds = ['FL-001', 'FL-002', 'FL-003', 'FL-004', 'FL-005'];
+      const filtered = items.filter(item => !sampleIds.includes(item.id));
+      if (filtered.length !== items.length) {
+        this.saveAll(filtered);
+      }
+    } catch (e) {
       this.saveAll(INITIAL_FORKLIFTS);
     }
   }
@@ -236,6 +62,11 @@ class ForkliftDataStore {
     } catch (e) {
       console.error('Failed to save fleet data:', e);
     }
+  }
+
+  clearAll() {
+    this.saveAll([]);
+    return [];
   }
 
   getById(id) {
