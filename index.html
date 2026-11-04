@@ -526,19 +526,9 @@
                   </div>
                 </div>
 
-                <!-- 7. Energy / Tank -->
-                <div class="check-item-row" data-check-key="energySystem">
-                  <div class="check-item-info">
-                    <span class="check-item-num">7</span>
-                    <div>
-                      <div class="check-item-name">ถังก๊าซ LPG/สายรัด หรือ สภาพแบตเตอรี่ (Energy Storage)</div>
-                      <div class="check-item-desc">สายรัดถังแน่นหนา สายแก๊สไม่ปริแตก หรือขั้วแบตเตอรี่สะอาดไม่มีคราบขี้เกลือ</div>
-                    </div>
-                  </div>
-                  <div class="check-item-options">
-                    <button type="button" class="status-toggle-btn btn-pass active">ปกติ</button>
-                    <button type="button" class="status-toggle-btn btn-fail">ชำรุด</button>
-                  </div>
+                <!-- 7. Energy-specific (Dynamic — rendered by JS based on reg-energy selection) -->
+                <div id="energy-specific-check-row">
+                  <!-- Populated dynamically by updateChecklistForEnergy() in app.js -->
                 </div>
               </div>
 

@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tires: true,
       lightsHorn: true,
       seatbeltGuard: true,
-      energySystem: true
+      batterySystem: true  // Default: ไฟฟ้า (will be updated by updateChecklistForEnergy)
     },
     regCert: {
       image: '',
@@ -526,13 +526,96 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Energy source change: Display LPG inspection guidance
+  // Energy source change: Display LPG inspection guidance + update dynamic checklist
+  // =====================================================================
+  // Energy-type checklist definitions
+  // =====================================================================
+  const ENERGY_CHECKLIST_KEYS = ['batterySystem', 'lpgSystem', 'engineSystem', 'gasolineSystem'];
+
+  const ENERGY_CHECKLIST_DEFINITIONS = {
+    'ไฟฟ้า': {
+      key: 'batterySystem',
+      name: 'แบตเตอรี่และชุดชาร์จ (Battery Pack & Charger)',
+      desc: 'ระดับแบตเตอรี่เพียงพอ ขั้วต่อสะอาดไม่มีคราบขี้เกลือ สายไฟไม่ชำรุด ตู้ชาร์จและสายชาร์จสมบูรณ์'
+    },
+    'LPG': {
+      key: 'lpgSystem',
+      name: 'ถังแก๊ส LPG สายแก๊ส และวาล์วควบคุม (LPG Tank, Hose & Regulator)',
+      desc: 'สายรัดถังแน่นหนา สายแก๊สไม่ปริแตกหรือหักงอ วาล์วปิดสนิท ไม่พบกลิ่นแก๊สรั่ว'
+    },
+    'ดีเซล': {
+      key: 'engineSystem',
+      name: 'น้ำมันเครื่อง น้ำหล่อเย็น และกรองอากาศ (Engine Oil, Coolant & Air Filter)',
+      desc: 'ระดับน้ำมันเครื่องและน้ำหล่อเย็นอยู่ในเกณฑ์ ไม่พบรอยรั่ว กรองอากาศสะอาด ควันไอเสียปกติ'
+    },
+    'เบนซิน': {
+      key: 'gasolineSystem',
+      name: 'หัวเทียน คาร์บูเรเตอร์ และถังน้ำมันเบนซิน (Spark Plugs, Carburettor & Fuel Tank)',
+      desc: 'หัวเทียนสะอาดไม่สึกกร่อน คาร์บูเรเตอร์ไม่อุดตัน ถังน้ำมันไม่รั่วซึม ระดับน้ำมันเพียงพอ'
+    }
+  };
+
+  /**
+   * Render the energy-specific checklist row (item 7) and update state.regChecklist
+   * to remove old energy key and add the new one (defaulting to true / ปกติ).
+   * Re-attaches toggle event listeners for the newly rendered row.
+   * @param {string} energyType - One of 'ไฟฟ้า', 'LPG', 'ดีเซล', 'เบนซิน'
+   */
+  function updateChecklistForEnergy(energyType) {
+    const container = document.getElementById('energy-specific-check-row');
+    if (!container) return;
+
+    const def = ENERGY_CHECKLIST_DEFINITIONS[energyType];
+    if (!def) return;
+
+    // Remove all old energy-specific keys from state
+    ENERGY_CHECKLIST_KEYS.forEach(k => { delete state.regChecklist[k]; });
+    // Add new key (preserve existing value if already set, else default true)
+    if (!(def.key in state.regChecklist)) {
+      state.regChecklist[def.key] = true;
+    }
+
+    const isPass = state.regChecklist[def.key] !== false;
+
+    container.innerHTML = `
+      <div class="check-item-row" data-check-key="${def.key}">
+        <div class="check-item-info">
+          <span class="check-item-num">7</span>
+          <div>
+            <div class="check-item-name">${def.name}</div>
+            <div class="check-item-desc">${def.desc}</div>
+          </div>
+        </div>
+        <div class="check-item-options">
+          <button type="button" class="status-toggle-btn btn-pass${isPass ? ' active' : ''}">ปกติ</button>
+          <button type="button" class="status-toggle-btn btn-fail${!isPass ? ' active' : ''}">ชำรุด</button>
+        </div>
+      </div>`;
+
+    // Re-attach toggle listeners for the new row
+    container.querySelectorAll('.status-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('.check-item-row');
+        const key = row.dataset.checkKey;
+        const isPassClick = btn.classList.contains('btn-pass');
+        row.querySelector('.btn-pass').classList.toggle('active', isPassClick);
+        row.querySelector('.btn-fail').classList.toggle('active', !isPassClick);
+        state.regChecklist[key] = isPassClick;
+        const hasFail = Object.values(state.regChecklist).some(val => val === false);
+        if (hasFail) {
+          document.getElementById('status-repair').checked = true;
+        }
+      });
+    });
+  }
+
   regEnergySelect.addEventListener('change', () => {
     if (regEnergySelect.value === 'LPG') {
       regLpgNote.style.display = 'block';
     } else {
       regLpgNote.style.display = 'none';
     }
+    updateChecklistForEnergy(regEnergySelect.value);
   });
 
   // Checklist: Pass All shortcut
@@ -914,6 +997,25 @@ document.addEventListener('DOMContentLoaded', () => {
         box.classList.remove('has-image');
       });
       state.regPhotos = { front: '', side: '', fullFront: '' };
+
+      // Reset checklist state to defaults, then re-init energy-specific row
+      state.regChecklist = {
+        forks: true,
+        brakes: true,
+        hydraulics: true,
+        tires: true,
+        lightsHorn: true,
+        seatbeltGuard: true
+      };
+      // Re-render item 7 and restore common rows to ปกติ visually
+      updateChecklistForEnergy(regEnergySelect.value);
+      document.querySelectorAll('.check-item-row').forEach(row => {
+        const passBtn = row.querySelector('.btn-pass');
+        const failBtn = row.querySelector('.btn-fail');
+        if (passBtn) passBtn.classList.add('active');
+        if (failBtn) failBtn.classList.remove('active');
+      });
+
       regCertPreview.src = '';
       regCertPreview.style.display = 'none';
       document.getElementById('cert-upload-placeholder').style.display = 'flex';
@@ -1272,4 +1374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial render
   renderDashboard();
+
+  // Initialize energy-specific checklist row based on default dropdown value
+  updateChecklistForEnergy(regEnergySelect.value);
 });
