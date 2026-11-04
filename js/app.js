@@ -633,7 +633,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   // AI Verification Section Logic
   // --------------------------------------------------------------------------
-  async function runAiVerification(imageSrc) {
+  async function runAiVerification(imageSrc, customOptions = {}) {
+    const driverInput = document.getElementById('reg-driver-name');
+    const currentDriverName = (customOptions.driverName !== undefined)
+      ? customOptions.driverName
+      : (driverInput ? driverInput.value.trim() : '');
+
+    const options = {
+      driverName: currentDriverName,
+      ...customOptions
+    };
+
     regCertLaser.classList.add('scanning');
     regAiStatus.className = 'ai-status-output status-pending';
     regAiStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังวิเคราะห์ภาพถ่ายด้วย AI...`;
@@ -641,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     regAiConfidenceText.textContent = 'วิเคราะห์ความสมบูรณ์...';
     regAiTags.innerHTML = '';
 
-    const result = await window.aiVerifier.verify(imageSrc, (progress) => {
+    const result = await window.aiVerifier.verify(imageSrc, options, (progress) => {
       regAiConfidenceFill.style.width = `${progress.percent}%`;
       regAiConfidenceText.textContent = progress.message;
     });
@@ -652,7 +662,8 @@ document.addEventListener('DOMContentLoaded', () => {
       image: imageSrc,
       status: result.status,
       confidence: result.confidence,
-      isCertified: result.isCertified
+      isCertified: result.isCertified,
+      options: options
     };
 
     if (result.status === 'ผ่านการรับรอง') {
@@ -660,7 +671,8 @@ document.addEventListener('DOMContentLoaded', () => {
       regAiStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> ผ่านการตรวจสอบ: ใบรับรองถูกต้อง (${result.confidence}%)`;
     } else if (result.status === 'ไม่ถูกต้อง') {
       regAiStatus.className = 'ai-status-output status-rejected';
-      regAiStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> แจ้งเตือน: ไม่ใช่ใบรับรองรถยกที่ถูกต้อง`;
+      const isNameFail = result.nameMatch && !result.nameMatch.pass;
+      regAiStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ไม่ผ่าน: ${isNameFail ? 'ชื่อผู้ขับขี่ไม่ตรงกับใบรับรอง' : 'ไม่ใช่ใบรับรองรถยกที่ถูกต้อง'}`;
     } else {
       regAiStatus.className = 'ai-status-output status-pending';
       regAiStatus.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ (ยังไม่แนบภาพใบรับรอง)`;
@@ -668,11 +680,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     regAiDetails.textContent = result.details;
 
+    // Update 4-Point AI Verification Audit Checklist
+    updateAuditChecklistRow('crit-institute', 'crit-detail-institute', result.institute, 'fa-building');
+    updateAuditChecklistRow('crit-course', 'crit-detail-course', result.course, 'fa-truck-ramp-box');
+    updateAuditChecklistRow('crit-name', 'crit-detail-name', result.nameMatch, 'fa-id-badge');
+    updateAuditChecklistRow('crit-layout', 'crit-detail-layout', result.layout, 'fa-file-contract');
+
     if (result.detectedKeywords && result.detectedKeywords.length > 0) {
       regAiTags.innerHTML = result.detectedKeywords
         .map(tag => `<span class="ai-tag"><i class="fa-solid fa-check"></i> ${tag}</span>`)
         .join('');
     }
+  }
+
+  function updateAuditChecklistRow(rowId, detailId, data, defaultIcon) {
+    const row = document.getElementById(rowId);
+    const detail = document.getElementById(detailId);
+    if (!row || !detail) return;
+
+    const iconEl = row.querySelector('.criterion-icon');
+
+    if (!data || data.detail === 'ยังไม่ได้แนบภาพ' || data.detail === 'รอการอัปโหลดภาพใบรับรอง' || data.detail === 'ยังไม่มีภาพเอกสารเพื่อเทียบชื่อ' || data.detail === 'ยังไม่มีเอกสาร') {
+      row.className = 'ai-criterion-row crit-pending';
+      if (iconEl) iconEl.className = `fa-solid ${defaultIcon} criterion-icon`;
+      detail.textContent = data?.detail || 'รอการอัปโหลดภาพใบรับรอง';
+      return;
+    }
+
+    if (data.pass) {
+      row.className = 'ai-criterion-row crit-pass';
+      if (iconEl) iconEl.className = 'fa-solid fa-circle-check criterion-icon';
+      detail.textContent = data.detail;
+    } else if (data.warn) {
+      row.className = 'ai-criterion-row crit-warn';
+      if (iconEl) iconEl.className = 'fa-solid fa-triangle-exclamation criterion-icon';
+      detail.textContent = data.detail;
+    } else {
+      row.className = 'ai-criterion-row crit-fail';
+      if (iconEl) iconEl.className = 'fa-solid fa-circle-xmark criterion-icon';
+      detail.textContent = data.detail;
+    }
+  }
+
+  // Auto re-verify name matching when driver's name is typed
+  const regDriverNameInput = document.getElementById('reg-driver-name');
+  if (regDriverNameInput) {
+    regDriverNameInput.addEventListener('input', () => {
+      if (state.regCert.image) {
+        runAiVerification(state.regCert.image, { driverName: regDriverNameInput.value.trim() });
+      }
+    });
   }
 
   // Upload cert input
@@ -694,27 +751,76 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Sample cert buttons for quick evaluation
-  document.getElementById('btn-sample-valid-cert').addEventListener('click', () => {
-    regCertPreview.src = window.SVG_ASSETS.validCert;
-    regCertPreview.style.display = 'block';
-    document.getElementById('cert-upload-placeholder').style.display = 'none';
-    runAiVerification(window.SVG_ASSETS.validCert);
-  });
+  const btnSampleNichiyu = document.getElementById('btn-sample-nichiyu');
+  if (btnSampleNichiyu) {
+    btnSampleNichiyu.addEventListener('click', () => {
+      const driverInput = document.getElementById('reg-driver-name');
+      if (!driverInput.value || driverInput.value.trim() === '') {
+        driverInput.value = 'นายธวัชชัย บุญส่ง';
+      }
+      regCertPreview.src = 'assets/sample-cert-nichiyu.jpg';
+      regCertPreview.style.display = 'block';
+      document.getElementById('cert-upload-placeholder').style.display = 'none';
+      runAiVerification('assets/sample-cert-nichiyu.jpg', {
+        driverName: driverInput.value.trim(),
+        certTraineeName: driverInput.value.trim()
+      });
+    });
+  }
 
-  document.getElementById('btn-sample-invalid-cert').addEventListener('click', () => {
-    regCertPreview.src = window.SVG_ASSETS.invalidCert;
-    regCertPreview.style.display = 'block';
-    document.getElementById('cert-upload-placeholder').style.display = 'none';
-    runAiVerification(window.SVG_ASSETS.invalidCert);
-  });
+  const btnSampleOperator = document.getElementById('btn-sample-operator');
+  if (btnSampleOperator) {
+    btnSampleOperator.addEventListener('click', () => {
+      const driverInput = document.getElementById('reg-driver-name');
+      if (!driverInput.value || driverInput.value.trim() === '') {
+        driverInput.value = 'Name Surname';
+      }
+      regCertPreview.src = 'assets/sample-cert-operator.jpg';
+      regCertPreview.style.display = 'block';
+      document.getElementById('cert-upload-placeholder').style.display = 'none';
+      runAiVerification('assets/sample-cert-operator.jpg', {
+        driverName: driverInput.value.trim(),
+        certTraineeName: driverInput.value.trim()
+      });
+    });
+  }
 
-  document.getElementById('btn-sample-no-cert').addEventListener('click', () => {
-    regCertPreview.src = '';
-    regCertPreview.style.display = 'none';
-    regCertUpload.value = '';
-    document.getElementById('cert-upload-placeholder').style.display = 'flex';
-    runAiVerification('');
-  });
+  const btnSampleMismatch = document.getElementById('btn-sample-mismatch');
+  if (btnSampleMismatch) {
+    btnSampleMismatch.addEventListener('click', () => {
+      const driverInput = document.getElementById('reg-driver-name');
+      driverInput.value = 'นายสมหมาย ใจดี'; // Different driver name
+      regCertPreview.src = 'assets/sample-cert-nichiyu.jpg';
+      regCertPreview.style.display = 'block';
+      document.getElementById('cert-upload-placeholder').style.display = 'none';
+      runAiVerification('assets/sample-cert-nichiyu.jpg', {
+        driverName: 'นายสมหมาย ใจดี',
+        certTraineeName: 'นาย สิทธิชัย วงศ์ษา',
+        isMismatchTest: true
+      });
+    });
+  }
+
+  const btnSampleInvalid = document.getElementById('btn-sample-invalid-cert');
+  if (btnSampleInvalid) {
+    btnSampleInvalid.addEventListener('click', () => {
+      regCertPreview.src = window.SVG_ASSETS.invalidCert;
+      regCertPreview.style.display = 'block';
+      document.getElementById('cert-upload-placeholder').style.display = 'none';
+      runAiVerification(window.SVG_ASSETS.invalidCert);
+    });
+  }
+
+  const btnSampleNoCert = document.getElementById('btn-sample-no-cert');
+  if (btnSampleNoCert) {
+    btnSampleNoCert.addEventListener('click', () => {
+      regCertPreview.src = '';
+      regCertPreview.style.display = 'none';
+      regCertUpload.value = '';
+      document.getElementById('cert-upload-placeholder').style.display = 'flex';
+      runAiVerification('');
+    });
+  }
 
   // --------------------------------------------------------------------------
   // Submit Registration Form
@@ -956,17 +1062,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const file = e.target.files[0];
     const preview = document.getElementById('edit-cert-preview');
     const statusText = document.getElementById('edit-cert-status-text');
+    const driverName = document.getElementById('edit-driver-name').value.trim();
 
     if (file) {
-      statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> AI กำลังตรวจสอบภาพ...`;
+      statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> AI กำลังตรวจสอบภาพและชื่อผู้ขับขี่...`;
       const reader = new FileReader();
       reader.onload = async (ev) => {
         preview.src = ev.target.result;
         preview.style.display = 'block';
-        const result = await window.aiVerifier.verify(ev.target.result);
+        const result = await window.aiVerifier.verify(ev.target.result, { driverName });
         state.editDriverCert.image = ev.target.result;
         state.editDriverCert.status = result.status;
-        statusText.innerHTML = `ผลตรวจ AI: <strong>${result.status}</strong> (${result.confidence}%)`;
+        const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
+        statusText.innerHTML = `ผลตรวจ AI: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
       };
       reader.readAsDataURL(file);
     } else {
