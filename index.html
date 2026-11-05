@@ -651,48 +651,72 @@
                   <span class="section-num-badge">3</span>
                   <div>
                     <h3>ส่วนที่ 3: ข้อมูลผู้ขับรถที่ขึ้นทะเบียน</h3>
-                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน, สังกัด และแผนกที่ปฏิบัติงาน</p>
+                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน, สังกัด, แผนกที่ปฏิบัติงาน และแนบภาพถ่ายผู้ขับขี่</p>
                   </div>
                 </div>
               </div>
 
-              <div class="form-grid" style="margin-bottom:1.5rem;">
+              <div class="driver-form-layout">
+                <!-- จุดแนบรูปผู้ขับขี่ -->
                 <div class="form-group">
-                  <label class="form-label" for="reg-driver-name">
-                    ชื่อ-นามสกุล ผู้ขับขี่ <span class="required">*</span>
+                  <label class="form-label">
+                    <i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> ภาพถ่ายผู้ขับขี่ (Driver Photo)
                   </label>
-                  <input type="text" id="reg-driver-name" class="form-control" 
-                         placeholder="เช่น นายธวัชชัย บุญส่ง" required>
+                  <div class="photo-box driver-photo-box" id="box-photo-driver" title="คลิกเพื่อแนบรูปผู้ขับขี่">
+                    <input type="file" id="input-photo-driver" accept="image/*" style="display:none;">
+                    <img class="photo-box-preview" id="preview-photo-driver" style="display:none;" alt="ภาพถ่ายผู้ขับขี่">
+                    <div class="photo-box-content">
+                      <i class="fa-solid fa-user-tie photo-box-icon"></i>
+                      <div class="photo-box-title">แนบรูปถ่ายผู้ขับขี่</div>
+                      <div class="photo-box-sub">คลิกเพื่ออัปโหลดภาพ (JPG, PNG)</div>
+                    </div>
+                    <div class="photo-overlay-actions">
+                      <button type="button" class="btn btn-danger btn-sm btn-remove-photo" id="btn-remove-photo-driver">
+                        <i class="fa-solid fa-trash"></i> ลบรูป
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label" for="reg-driver-empid">
-                    รหัสพนักงาน (Employee ID) <span class="required">*</span>
-                  </label>
-                  <input type="text" id="reg-driver-empid" class="form-control" 
-                         placeholder="เช่น HR-9204 หรือ SUB-1088" required>
-                </div>
+                <!-- ข้อมูลรายละเอียดผู้ขับขี่ -->
+                <div class="form-grid" style="margin-bottom:0;">
+                  <div class="form-group">
+                    <label class="form-label" for="reg-driver-name">
+                      ชื่อ-นามสกุล ผู้ขับขี่ <span class="required">*</span>
+                    </label>
+                    <input type="text" id="reg-driver-name" class="form-control" 
+                           placeholder="เช่น นายธวัชชัย บุญส่ง" required>
+                  </div>
 
-                <div class="form-group">
-                  <label class="form-label" for="reg-driver-company">
-                    สังกัด (ชื่อบริษัท และซัพพลายเออร์) <span class="required">*</span>
-                  </label>
-                  <input type="text" id="reg-driver-company" class="form-control" 
-                         value="Haier Electric Appliances (Thailand)" required>
-                </div>
+                  <div class="form-group">
+                    <label class="form-label" for="reg-driver-empid">
+                      รหัสพนักงาน (Employee ID) <span class="required">*</span>
+                    </label>
+                    <input type="text" id="reg-driver-empid" class="form-control" 
+                           placeholder="เช่น HR-9204 หรือ SUB-1088" required>
+                  </div>
 
-                <div class="form-group">
-                  <label class="form-label" for="reg-driver-dept">
-                    แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
-                  </label>
-                  <input type="text" id="reg-driver-dept" class="form-control" 
-                         placeholder="เช่น คลังสินค้าสำเร็จรูป WH-A, แผนกประกอบ Assembly Line" required>
-                </div>
+                  <div class="form-group">
+                    <label class="form-label" for="reg-driver-company">
+                      สังกัด (ชื่อบริษัท และซัพพลายเออร์) <span class="required">*</span>
+                    </label>
+                    <input type="text" id="reg-driver-company" class="form-control" 
+                           value="Haier Electric Appliances (Thailand)" required>
+                  </div>
 
-                <div class="form-group form-group-full">
-                  <label class="form-label" for="reg-notes">หมายเหตุเพิ่มเติม</label>
-                  <input type="text" id="reg-notes" class="form-control" 
-                         placeholder="รายละเอียดหรือข้อสังเกตเพิ่มเติมเกี่ยวกับการตรวจสภาพ...">
+                  <div class="form-group">
+                    <label class="form-label" for="reg-driver-dept">
+                      แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
+                    </label>
+                    <input type="text" id="reg-driver-dept" class="form-control" 
+                           placeholder="เช่น คลังสินค้าสำเร็จรูป WH-A, แผนกประกอบ Assembly Line" required>
+                  </div>
+
+                  <div class="form-group form-group-full">
+                    <label class="form-label" for="reg-notes">หมายเหตุเพิ่มเติม</label>
+                    <input type="text" id="reg-notes" class="form-control" 
+                           placeholder="รายละเอียดหรือข้อสังเกตเพิ่มเติมเกี่ยวกับการตรวจสภาพ...">
+                  </div>
                 </div>
               </div>
 
@@ -846,6 +870,22 @@
           <div class="form-group" style="margin-bottom:1.25rem;">
             <label class="form-label" for="edit-driver-dept">แผนก <span class="required">*</span></label>
             <input type="text" id="edit-driver-dept" class="form-control" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1.25rem;">
+            <label class="form-label"><i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> ภาพถ่ายผู้ขับขี่ (Driver Photo)</label>
+            <div style="display:flex; align-items:center; gap:1rem;">
+              <div id="edit-driver-photo-wrap" style="position:relative; width:56px; height:56px; border-radius:50%; overflow:hidden; border:2px solid var(--haier-cyan); background:rgba(0,160,233,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <img id="edit-driver-photo-preview" style="width:100%; height:100%; object-fit:cover; display:none;" alt="Driver Photo">
+                <i id="edit-driver-photo-placeholder" class="fa-solid fa-user" style="color:var(--haier-cyan); font-size:1.4rem;"></i>
+              </div>
+              <div style="flex:1;">
+                <input type="file" id="edit-driver-photo-upload" accept="image/*" class="form-control" style="padding:0.4rem; font-size:0.8rem;">
+                <button type="button" id="btn-remove-edit-driver-photo" class="btn btn-secondary btn-sm" style="margin-top:0.35rem; font-size:0.75rem; padding:0.2rem 0.5rem; display:none;">
+                  <i class="fa-solid fa-trash"></i> ลบรูปผู้ขับ
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="form-group">

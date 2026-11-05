@@ -442,6 +442,27 @@
   display: flex;
 }
 
+/* Driver Photo Box Layout in Registration Form */
+.driver-form-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  align-items: stretch;
+}
+
+.driver-photo-box {
+  min-height: 220px;
+  height: 100%;
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .driver-form-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* --------------------------------------------------------------------------
    AI Certificate Verification Engine UI
    -------------------------------------------------------------------------- */

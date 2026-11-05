@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
       side: '',
       fullFront: ''
     },
+    regDriverPhoto: '',
     regChecklist: {
       forks: true,
       brakes: true,
@@ -105,7 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
     editDriverCert: {
       image: '',
       status: 'รอดำเนินการ'
-    }
+    },
+    editDriverPhoto: ''
   };
 
   // DOM Elements
@@ -443,13 +445,16 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </td>
         <td>
-          <div class="driver-info-cell">
-            <div class="driver-name">
-              <i class="fa-solid fa-id-card-clip" style="color:var(--haier-cyan); font-size:0.85rem;"></i>
-              ${driver.name || 'ยังไม่ระบุ'}
+          <div class="driver-info-cell" style="display:flex; align-items:center; gap:0.65rem;">
+            ${driver.photo
+              ? `<img src="${driver.photo}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); flex-shrink:0;">`
+              : `<div style="width:38px; height:38px; border-radius:50%; background:rgba(0,160,233,0.15); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1rem; flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`
+            }
+            <div>
+              <div class="driver-name">${driver.name || 'ยังไม่ระบุ'}</div>
+              <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
+              <div style="margin-top:0.2rem;">${certBadge}</div>
             </div>
-            <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
-            <div style="margin-top:0.2rem;">${certBadge}</div>
           </div>
         </td>
         <td>
@@ -814,6 +819,51 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('โหลดภาพถ่ายตัวอย่างครบทั้ง 3 มุมแล้ว', 'success');
   });
 
+  // Driver Photo Upload Handler (ส่วนที่ 3 ข้อมูลผู้ขับขี่)
+  const driverPhotoBox = document.getElementById('box-photo-driver');
+  const driverPhotoInput = document.getElementById('input-photo-driver');
+  const driverPhotoPreview = document.getElementById('preview-photo-driver');
+  const driverPhotoContent = driverPhotoBox ? driverPhotoBox.querySelector('.photo-box-content') : null;
+  const btnRemoveDriverPhoto = document.getElementById('btn-remove-photo-driver');
+
+  if (driverPhotoBox && driverPhotoInput) {
+    driverPhotoBox.addEventListener('click', (e) => {
+      if (e.target.closest('.photo-overlay-actions')) return;
+      driverPhotoInput.click();
+    });
+
+    driverPhotoInput.addEventListener('change', () => {
+      const file = driverPhotoInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          state.regDriverPhoto = e.target.result;
+          if (driverPhotoPreview) {
+            driverPhotoPreview.src = e.target.result;
+            driverPhotoPreview.style.display = 'block';
+          }
+          if (driverPhotoContent) driverPhotoContent.style.display = 'none';
+          driverPhotoBox.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    if (btnRemoveDriverPhoto) {
+      btnRemoveDriverPhoto.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.regDriverPhoto = '';
+        driverPhotoInput.value = '';
+        if (driverPhotoPreview) {
+          driverPhotoPreview.src = '';
+          driverPhotoPreview.style.display = 'none';
+        }
+        if (driverPhotoContent) driverPhotoContent.style.display = 'flex';
+        driverPhotoBox.classList.remove('has-image');
+      });
+    }
+  }
+
   // --------------------------------------------------------------------------
   // Submit Registration Form
   // --------------------------------------------------------------------------
@@ -901,6 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
         empId: driverEmpId || '-',
         company: driverCompany || ownerCompany,
         department: driverDept || '-',
+        photo: state.regDriverPhoto || '',
         hasTrained: false,
         certImage: '',
         certStatus: 'รอดำเนินการ'
@@ -930,6 +981,16 @@ document.addEventListener('DOMContentLoaded', () => {
         box.classList.remove('has-image');
       });
       state.regPhotos = { front: '', side: '', fullFront: '' };
+
+      // Reset driver photo upload
+      state.regDriverPhoto = '';
+      if (driverPhotoInput) driverPhotoInput.value = '';
+      if (driverPhotoPreview) {
+        driverPhotoPreview.src = '';
+        driverPhotoPreview.style.display = 'none';
+      }
+      if (driverPhotoContent) driverPhotoContent.style.display = 'flex';
+      if (driverPhotoBox) driverPhotoBox.classList.remove('has-image');
 
       // Reset checklist state to defaults, then re-init energy-specific row
       state.regChecklist = {
@@ -1028,8 +1089,16 @@ document.addEventListener('DOMContentLoaded', () => {
       <h4 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--haier-cyan);"><i class="fa-solid fa-user-shield"></i> ข้อมูลผู้ขับขี่และใบรับรองความปลอดภัย</h4>
       <div style="background:var(--haier-navy-darker); border:1px solid var(--surface-border); border-radius:8px; padding:1.25rem; display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
         <div>
-          <div style="font-size:1.05rem; font-weight:700; color:#fff;"><i class="fa-solid fa-id-card"></i> ${driver.name || 'ยังไม่ระบุ'}</div>
-          <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.25rem;">รหัสพนักงาน: <strong>${driver.empId || '-'}</strong></div>
+          <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.6rem;">
+            ${driver.photo
+              ? `<img src="${driver.photo}" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); flex-shrink:0;">`
+              : `<div style="width:50px; height:50px; border-radius:50%; background:rgba(0,160,233,0.15); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.4rem; flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`
+            }
+            <div>
+              <div style="font-size:1.05rem; font-weight:700; color:#fff;"><i class="fa-solid fa-id-card"></i> ${driver.name || 'ยังไม่ระบุ'}</div>
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.15rem;">รหัสพนักงาน: <strong>${driver.empId || '-'}</strong></div>
+            </div>
+          </div>
           <div style="font-size:0.85rem; color:var(--text-secondary);">สังกัด: <strong>${driver.company || '-'}</strong></div>
           <div style="font-size:0.85rem; color:var(--text-secondary);">แผนก: <strong>${driver.department || '-'}</strong></div>
           
@@ -1083,6 +1152,29 @@ document.addEventListener('DOMContentLoaded', () => {
       status: driver.certStatus || 'รอดำเนินการ'
     };
 
+    state.editDriverPhoto = driver.photo || '';
+    const driverPhotoPrev = document.getElementById('edit-driver-photo-preview');
+    const driverPhotoPh = document.getElementById('edit-driver-photo-placeholder');
+    const btnRemoveEditPhoto = document.getElementById('btn-remove-edit-driver-photo');
+    const inputEditPhoto = document.getElementById('edit-driver-photo-upload');
+    if (inputEditPhoto) inputEditPhoto.value = '';
+
+    if (driver.photo) {
+      if (driverPhotoPrev) {
+        driverPhotoPrev.src = driver.photo;
+        driverPhotoPrev.style.display = 'block';
+      }
+      if (driverPhotoPh) driverPhotoPh.style.display = 'none';
+      if (btnRemoveEditPhoto) btnRemoveEditPhoto.style.display = 'inline-block';
+    } else {
+      if (driverPhotoPrev) {
+        driverPhotoPrev.src = '';
+        driverPhotoPrev.style.display = 'none';
+      }
+      if (driverPhotoPh) driverPhotoPh.style.display = 'block';
+      if (btnRemoveEditPhoto) btnRemoveEditPhoto.style.display = 'none';
+    }
+
     const preview = document.getElementById('edit-cert-preview');
     const statusText = document.getElementById('edit-cert-status-text');
 
@@ -1097,6 +1189,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openModal(modalEditDriver);
   };
+
+  // Edit Driver: Handle driver photo upload & removal
+  const editDriverPhotoUpload = document.getElementById('edit-driver-photo-upload');
+  if (editDriverPhotoUpload) {
+    editDriverPhotoUpload.addEventListener('change', () => {
+      const file = editDriverPhotoUpload.files[0];
+      const preview = document.getElementById('edit-driver-photo-preview');
+      const placeholder = document.getElementById('edit-driver-photo-placeholder');
+      const btnRemove = document.getElementById('btn-remove-edit-driver-photo');
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          state.editDriverPhoto = e.target.result;
+          if (preview) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          }
+          if (placeholder) placeholder.style.display = 'none';
+          if (btnRemove) btnRemove.style.display = 'inline-block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  const btnRemoveEditPhoto = document.getElementById('btn-remove-edit-driver-photo');
+  if (btnRemoveEditPhoto) {
+    btnRemoveEditPhoto.addEventListener('click', () => {
+      state.editDriverPhoto = '';
+      const input = document.getElementById('edit-driver-photo-upload');
+      if (input) input.value = '';
+      const preview = document.getElementById('edit-driver-photo-preview');
+      if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+      }
+      const placeholder = document.getElementById('edit-driver-photo-placeholder');
+      if (placeholder) placeholder.style.display = 'block';
+      btnRemoveEditPhoto.style.display = 'none';
+    });
+  }
 
   // Edit Driver: Handle new certificate upload & AI verification
   document.getElementById('edit-cert-upload').addEventListener('change', async (e) => {
@@ -1147,6 +1280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         empId,
         company,
         department,
+        photo: state.editDriverPhoto,
         certImage: state.editDriverCert.image,
         certStatus: state.editDriverCert.status,
         hasTrained: state.editDriverCert.status === 'ผ่านการรับรอง'
