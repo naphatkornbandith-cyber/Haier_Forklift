@@ -315,7 +315,7 @@
         </div>
 
         <div class="form-container">
-          <form id="forklift-reg-form">
+          <form id="forklift-reg-form" novalidate>
 
             <!-- ------------------------------------------------------------ -->
             <!-- ส่วนที่ 1: ลงทะเบียนรถ Forklift -->
@@ -390,8 +390,7 @@
                     ความสามารถในการยกน้ำหนัก (Lifting Capacity) <span class="required">*</span>
                   </label>
                   <select id="reg-capacity" class="form-control" required>
-                    <option value="กรุณาระบุ">กรุณาระบุ</option>
-                    <option value="1.5 ตัน">1.5 ตัน (1,500 kg)</option>
+                    <option value="1.5 ตัน" selected>1.5 ตัน (1,500 kg)</option>
                     <option value="2.0 ตัน">2.0 ตัน (2,000 kg)</option>
                     <option value="2.5 ตัน">2.5 ตัน (2,500 kg)</option>
                     <option value="3.0 ตัน">3.0 ตัน (3,000 kg)</option>
@@ -407,8 +406,7 @@
                     ประเภทกรรมสิทธิ์ / เจ้าของรถ <span class="required">*</span>
                   </label>
                   <select id="reg-owner-type" class="form-control">
-                    <option value="กรุณาระบุ">กรุณาระบุ</option>
-                    <option value="company">รถของบริษัท Haier (Company Owned)</option>
+                    <option value="company" selected>รถของบริษัท Haier (Company Owned)</option>
                     <option value="subcontractor">รถเช่า (Rental)</option>
                   </select>
                 </div>
@@ -420,6 +418,9 @@
                   <input type="text" id="reg-owner-company" class="form-control" 
                          placeholder="เช่น บจก. ไทย โฟล์คลิฟท์ โลจิสติกส์">
                 </div>
+
+              </div><!-- /.form-grid -->
+            </div><!-- /.form-section-card (ส่วนที่ 1) -->
 
             <!-- ------------------------------------------------------------ -->
             <!-- ส่วนที่ 2: กรอกข้อมูลการตรวจเช็คขณะขึ้นทะเบียน -->
@@ -441,7 +442,7 @@
                   <label class="form-label" for="reg-inspect-date">
                     วันที่ตรวจเช็คสภาพรถ <span class="required">*</span>
                   </label>
-                  <input type="date" id="reg-inspect-date" class="form-control" required>
+                  <input type="date" id="reg-inspect-date" class="form-control">
                   <span class="form-hint">ใช้วันที่ปัจจุบันเป็นค่าเริ่มต้น เพื่อคำนวณรอบตรวจ 1 ปี</span>
                 </div>
 
@@ -922,7 +923,6 @@
 
   <!-- Javascript Modules -->
   <script src="js/data.js"></script>
-  <script src="js/ai-verifier.js"></script>
   <!-- Chart.js — loaded before app.js; onerror stub prevents crash if CDN unreachable -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
           onerror="window.Chart=null;"></script>

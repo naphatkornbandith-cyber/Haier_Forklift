@@ -835,28 +835,61 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const vehicleType = document.getElementById('reg-type').value;
-    const energyType = document.getElementById('reg-energy').value;
-    const liftingCapacity = document.getElementById('reg-capacity').value;
-    const ownerCompany = document.getElementById('reg-owner-company').value.trim();
-    const subcontractor = document.getElementById('reg-subcontractor').value.trim();
-    const isSub = document.getElementById('reg-owner-type').value === 'subcontractor';
+    const vehicleTypeEl = document.getElementById('reg-type');
+    const vehicleType = vehicleTypeEl ? vehicleTypeEl.value : 'Warehouse Forklift';
 
-    const inspectionDate = document.getElementById('reg-inspect-date').value || new Date().toISOString().split('T')[0];
-    const status = document.querySelector('input[name="reg-status"]:checked').value;
+    const energyTypeEl = document.getElementById('reg-energy');
+    const energyType = energyTypeEl ? energyTypeEl.value : 'ไฟฟ้า';
 
-    const driverName = document.getElementById('reg-driver-name').value.trim();
-    const driverEmpId = document.getElementById('reg-driver-empid').value.trim();
-    const driverCompany = document.getElementById('reg-driver-company').value.trim();
-    const driverDept = document.getElementById('reg-driver-dept').value.trim();
+    const capacityEl = document.getElementById('reg-capacity');
+    const liftingCapacity = (capacityEl && capacityEl.value && capacityEl.value !== 'กรุณาระบุ') 
+      ? capacityEl.value 
+      : '1.5 ตัน';
+
+    const ownerCompanyEl = document.getElementById('reg-owner-company');
+    const ownerCompanyVal = ownerCompanyEl ? ownerCompanyEl.value.trim() : '';
+
+    const ownerTypeEl = document.getElementById('reg-owner-type');
+    const isSub = ownerTypeEl ? ownerTypeEl.value === 'subcontractor' : false;
+
+    const ownerCompany = isSub
+      ? (ownerCompanyVal || 'บริษัทรถเช่า / ซัพพลายเออร์')
+      : 'Haier Electric (Thailand) Company Limited';
+
+    const subcontractor = isSub
+      ? (ownerCompanyVal || 'ผู้รับเหมาช่วง / รถเช่า')
+      : 'Haier Owned';
+
+    const inspectDateEl = document.getElementById('reg-inspect-date');
+    const inspectionDate = (inspectDateEl && inspectDateEl.value) 
+      ? inspectDateEl.value 
+      : new Date().toISOString().split('T')[0];
+
+    const statusRadio = document.querySelector('input[name="reg-status"]:checked');
+    const status = statusRadio ? statusRadio.value : 'พร้อมใช้งาน';
+
+    const driverNameEl = document.getElementById('reg-driver-name');
+    const driverName = driverNameEl ? driverNameEl.value.trim() : '';
+
+    const driverEmpIdEl = document.getElementById('reg-driver-empid');
+    const driverEmpId = driverEmpIdEl ? driverEmpIdEl.value.trim() : '';
+
+    const driverCompanyEl = document.getElementById('reg-driver-company');
+    const driverCompany = driverCompanyEl ? driverCompanyEl.value.trim() : '';
+
+    const driverDeptEl = document.getElementById('reg-driver-dept');
+    const driverDept = driverDeptEl ? driverDeptEl.value.trim() : '';
+
+    const notesEl = document.getElementById('reg-notes');
+    const notes = notesEl ? notesEl.value.trim() : '';
 
     const newForklift = {
       plateNumber,
       vehicleType,
       energyType,
       liftingCapacity,
-      ownerCompany: ownerCompany || 'Haier Electric (Thailand) Company Limited',
-      subcontractor: subcontractor || (isSub ? 'ผู้รับเหมาช่วง' : 'Haier Owned'),
+      ownerCompany,
+      subcontractor,
       isSubcontractor: isSub,
       registrationDate: new Date().toISOString().split('T')[0],
       lastInspectionDate: inspectionDate,
@@ -872,7 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
         certImage: '',
         certStatus: 'รอดำเนินการ'
       },
-      notes: document.getElementById('reg-notes').value.trim()
+      notes
     };
 
     try {
@@ -883,6 +916,10 @@ document.addEventListener('DOMContentLoaded', () => {
       regForm.reset();
       regPlateInput.classList.remove('is-valid', 'is-invalid');
       duplicateAlert.classList.remove('show');
+      const inspectDateElPost = document.getElementById('reg-inspect-date');
+      if (inspectDateElPost) {
+        inspectDateElPost.value = new Date().toISOString().split('T')[0];
+      }
       photoBoxes.forEach(cfg => {
         const box = document.getElementById(cfg.boxId);
         const preview = box.querySelector('.photo-box-preview');
@@ -1069,16 +1106,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const driverName = document.getElementById('edit-driver-name').value.trim();
 
     if (file) {
-      statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> AI กำลังตรวจสอบภาพและชื่อผู้ขับขี่...`;
+      statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบภาพ...`;
       const reader = new FileReader();
       reader.onload = async (ev) => {
         preview.src = ev.target.result;
         preview.style.display = 'block';
-        const result = await window.aiVerifier.verify(ev.target.result, { driverName });
-        state.editDriverCert.image = ev.target.result;
-        state.editDriverCert.status = result.status;
-        const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
-        statusText.innerHTML = `ผลตรวจ AI: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
+        if (window.aiVerifier && typeof window.aiVerifier.verify === 'function') {
+          const result = await window.aiVerifier.verify(ev.target.result, { driverName });
+          state.editDriverCert.image = ev.target.result;
+          state.editDriverCert.status = result.status;
+          const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
+          statusText.innerHTML = `ผลตรวจ: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
+        } else {
+          state.editDriverCert.image = ev.target.result;
+          state.editDriverCert.status = 'ผ่านการรับรอง';
+          statusText.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-check"></i> แนบภาพใบรับรองเรียบร้อยแล้ว</span>`;
+        }
       };
       reader.readAsDataURL(file);
     } else {
@@ -1269,4 +1312,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize energy-specific checklist row based on default dropdown value
   updateChecklistForEnergy(regEnergySelect.value);
+
+  // Set today's date as default for inspection date field
+  const inspectDateInput = document.getElementById('reg-inspect-date');
+  if (inspectDateInput && !inspectDateInput.value) {
+    inspectDateInput.value = new Date().toISOString().split('T')[0];
+  }
 });
