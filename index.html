@@ -306,7 +306,7 @@
               <i class="fa-solid fa-file-circle-plus"></i> แบบฟอร์มขึ้นทะเบียนและสำรวจรถ Forklift
             </h2>
             <p class="section-subtitle">
-              กรอกข้อมูลขึ้นทะเบียน ตรวจสอบสภาพรถ 3 มุมมอง และประเมินใบรับรองผู้ขับขี่ด้วยระบบ AI
+              กรอกข้อมูลขึ้นทะเบียน ตรวจสอบสภาพรถ ภาพถ่ายรถ 3 มุมมอง และใบรับรองการอบรมผู้ขับขี่รถยก
             </p>
           </div>
           <button class="btn btn-secondary" data-switch-tab="dashboard-tab">
@@ -338,7 +338,7 @@
                     เลขทะเบียนรถ <span class="required">*</span>
                   </label>
                   <input type="text" id="reg-plate" class="form-control" 
-                         placeholder="เช่น FL-H08, 1กข-9923, FL-LPG-09" required>
+                         placeholder="เช่น FL-H08, FL-LPG-09" required>
                   <span class="form-hint">ระบบจะตรวจสอบความซ้ำซ้อนของเลขทะเบียนแบบ Real-time ทันที</span>
                   
                   <!-- Duplicate Plate Callout -->
@@ -804,11 +804,10 @@
     <footer class="app-footer">
       <div class="footer-inner">
         <div>
-          <strong>Haier Forklift Management System</strong> &copy; 2026 Haier Group (Thailand) Co., Ltd. All Rights Reserved.
+          <strong>Haier Forklift Management System</strong> &copy; 2026 Haier Electric (Thailand) Company Limited. All Rights Reserved.
         </div>
         <div style="display:flex; gap:1rem;">
           <span><i class="fa-solid fa-shield-halved"></i> มาตรฐานความปลอดภัย จป. วิชาชีพ</span>
-          <span><i class="fa-solid fa-robot"></i> AI Powered OCR Verifier</span>
         </div>
       </div>
     </footer>
@@ -889,7 +888,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">ภาพใบรับรองการฝึกอบรม (AI Re-Verification)</label>
+            <label class="form-label">ภาพใบรับรองการฝึกอบรม</label>
             <input type="file" id="edit-cert-upload" accept="image/*" class="form-control" style="padding:0.4rem;">
             <div id="edit-cert-status-text" style="font-size:0.8rem; color:#c4b5fd; margin-top:0.4rem;">
               สถานะ: รอดำเนินการ

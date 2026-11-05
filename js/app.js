@@ -1103,9 +1103,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size:0.85rem; color:var(--text-secondary);">แผนก: <strong>${driver.department || '-'}</strong></div>
           
           <div style="margin-top:0.85rem;">
-            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.25rem;">สถานะใบรับรองการอบรม (AI Checked):</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.25rem;">สถานะใบรับรองการอบรม:</div>
             ${driver.certStatus === 'ผ่านการรับรอง'
-              ? '<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง (AI Verified)</span>'
+              ? '<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการอบรม</span>'
               : (driver.certStatus === 'ไม่ถูกต้อง'
                   ? '<span class="status-badge badge-repair"><i class="fa-solid fa-xmark"></i> ไม่ถูกต้อง</span>'
                   : '<span class="status-badge badge-cert-pending"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ (ไม่มีภาพแนบ)</span>')
