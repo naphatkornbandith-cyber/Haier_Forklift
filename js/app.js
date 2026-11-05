@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function drawDonut(canvasId, labels, data, colors, existing) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return existing;
+    if (!canvas || typeof Chart === 'undefined' || !Chart) return existing;
     if (existing) { existing.destroy(); }
 
     const total = data.reduce((s, v) => s + v, 0);
