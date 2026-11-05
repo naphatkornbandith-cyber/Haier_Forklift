@@ -1364,6 +1364,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Close modals on Escape key
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop').forEach(closeModal);
+    }
+  });
+
   // --------------------------------------------------------------------------
   // Delete Forklift Operations
   // --------------------------------------------------------------------------
