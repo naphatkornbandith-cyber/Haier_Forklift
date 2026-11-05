@@ -14,6 +14,9 @@
   <!-- Font Awesome 6 Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+  <!-- Chart.js for Pie/Donut Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
   <!-- Custom Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
@@ -182,6 +185,50 @@
             <div class="stat-footer" style="color:#c4b5fd;"><i class="fa-solid fa-id-card"></i> ผู้ขับยังไม่แนบภาพใบเซอร์</div>
           </div>
         </div>
+
+        <!-- ═══ Pie Chart Section ════════════════════════════════════════ -->
+        <div class="charts-row">
+
+          <!-- Chart 1: สัดส่วนรถบริษัท vs รถเช่า -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title">
+                <i class="fa-solid fa-chart-pie" style="color:var(--haier-cyan);"></i>
+                สัดส่วนรถ Forklift ทั้งหมด
+              </span>
+              <span class="chart-card-sub">รถบริษัท vs รถเช่า / ซัพพลายเออร์</span>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-ownership" width="220" height="220"></canvas>
+              <div class="chart-center-label" id="chart-ownership-center">
+                <span class="center-num" id="chart-ownership-total">0</span>
+                <span class="center-unit">คัน</span>
+              </div>
+            </div>
+            <div class="chart-legend" id="chart-ownership-legend"></div>
+          </div>
+
+          <!-- Chart 2: สัดส่วนสถานะ พร้อมใช้งาน vs ส่งซ่อม -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title">
+                <i class="fa-solid fa-circle-half-stroke" style="color:#4ade80;"></i>
+                สัดส่วนสถานะรถ Forklift
+              </span>
+              <span class="chart-card-sub">พร้อมใช้งาน vs ส่งซ่อม / ปรับปรุง</span>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-status" width="220" height="220"></canvas>
+              <div class="chart-center-label" id="chart-status-center">
+                <span class="center-num" id="chart-status-ready">0</span>
+                <span class="center-unit">พร้อม</span>
+              </div>
+            </div>
+            <div class="chart-legend" id="chart-status-legend"></div>
+          </div>
+
+        </div>
+        <!-- ════════════════════════════════════════════════════════════════ -->
 
         <!-- Search & Filter Controls Panel -->
         <div class="filter-panel">

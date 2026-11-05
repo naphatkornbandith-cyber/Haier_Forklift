@@ -5,6 +5,81 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ─────────────────────────────────────────────────────────────
+  // Pie/Donut Chart instances (Chart.js) — kept outside state
+  // so they can be destroyed & re-created on each renderDashboard call
+  // ─────────────────────────────────────────────────────────────
+  let chartOwnership = null;
+  let chartStatus    = null;
+
+  /**
+   * Draw (or update) a doughnut chart on a given canvas.
+   * @param {string}   canvasId   - id of <canvas> element
+   * @param {string[]} labels     - legend labels
+   * @param {number[]} data       - numeric values
+   * @param {string[]} colors     - hex/rgb fill colours
+   * @param {Chart|null} existing - previous Chart instance to destroy first
+   * @returns {Chart} new Chart instance
+   */
+  function drawDonut(canvasId, labels, data, colors, existing) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return existing;
+    if (existing) { existing.destroy(); }
+
+    const total = data.reduce((s, v) => s + v, 0);
+    const isEmpty = total === 0;
+
+    return new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: isEmpty ? [1] : data,
+          backgroundColor: isEmpty ? ['#2a3042'] : colors,
+          borderColor:     isEmpty ? ['#3a4155'] : colors.map(() => 'transparent'),
+          borderWidth: isEmpty ? 1 : 0,
+          hoverOffset: isEmpty ? 0 : 8
+        }]
+      },
+      options: {
+        cutout: '68%',
+        animation: { duration: 500 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: !isEmpty,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.parsed} คัน (${total > 0 ? Math.round(ctx.parsed / total * 100) : 0}%)`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render the HTML legend items below a chart.
+   * @param {string}   legendId - id of legend container
+   * @param {Array<{label, value, color}>} items
+   */
+  function renderLegend(legendId, items) {
+    const el = document.getElementById(legendId);
+    if (!el) return;
+    const total = items.reduce((s, i) => s + i.value, 0);
+    if (total === 0) {
+      el.innerHTML = `<span class="chart-empty-msg">ยังไม่มีข้อมูลรถในระบบ</span>`;
+      return;
+    }
+    el.innerHTML = items.map(it => {
+      const pct = total > 0 ? Math.round(it.value / total * 100) : 0;
+      return `
+        <div class="chart-legend-item">
+          <span class="legend-dot" style="background:${it.color};"></span>
+          <span class="legend-label">${it.label}</span>
+          <span class="legend-value">${it.value} <small style="font-weight:400;color:var(--text-muted);">(${pct}%)</small></span>
+        </div>`;
+    }).join('');
+  }
   // Application State
   const state = {
     currentTab: 'dashboard-tab',
@@ -173,6 +248,44 @@ document.addEventListener('DOMContentLoaded', () => {
     kpiLpgAlert.textContent = lpgAlertCount;
     kpiIncomplete.textContent = incompleteCount;
     kpiPendingCert.textContent = pendingCertCount;
+
+    // ── Pie/Donut Charts ──────────────────────────────────────────────
+    // Chart 1: Ownership (รถบริษัท vs รถเช่า)
+    const ownershipColors  = ['#06b6d4', '#a78bfa'];   // cyan, purple
+    chartOwnership = drawDonut(
+      'chart-ownership',
+      ['รถบริษัท Haier', 'รถเช่า / ซัพพลายเออร์'],
+      [companyCount, rentalCount],
+      ownershipColors,
+      chartOwnership
+    );
+    // Update center label
+    const ownerTotal = document.getElementById('chart-ownership-total');
+    if (ownerTotal) ownerTotal.textContent = forklifts.length;
+    // Legend
+    renderLegend('chart-ownership-legend', [
+      { label: 'รถบริษัท',  value: companyCount, color: ownershipColors[0] },
+      { label: 'รถเช่า',    value: rentalCount,  color: ownershipColors[1] }
+    ]);
+
+    // Chart 2: Status (พร้อมใช้งาน vs ส่งซ่อม)
+    const statusColors = ['#4ade80', '#f87171'];   // green, red
+    chartStatus = drawDonut(
+      'chart-status',
+      ['พร้อมใช้งาน', 'ส่งซ่อม / ปรับปรุง'],
+      [readyCount, repairCount],
+      statusColors,
+      chartStatus
+    );
+    // Update center label (show ready count)
+    const statusReady = document.getElementById('chart-status-ready');
+    if (statusReady) statusReady.textContent = readyCount;
+    // Legend
+    renderLegend('chart-status-legend', [
+      { label: 'พร้อมใช้งาน',      value: readyCount,  color: statusColors[0] },
+      { label: 'ส่งซ่อม / ปรับปรุง', value: repairCount, color: statusColors[1] }
+    ]);
+    // ────────────────────────────────────────────────────────────────
 
     // Total Alerts on tab badge
     const totalAlerts = lpgAlertCount + incompleteCount;

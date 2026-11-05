@@ -944,3 +944,132 @@
   .alerts-tab-grid { grid-template-columns: 1fr; }
   .form-wizard-nav::before { display: none; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Pie / Donut Chart Section
+══════════════════════════════════════════════════════════════ */
+.charts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.chart-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.chart-card-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chart-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.chart-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Canvas wrapper — relative so the center label can overlay */
+.chart-canvas-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-canvas-wrap canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Center label inside the donut hole */
+.chart-center-label {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  line-height: 1.1;
+}
+
+.center-num {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.center-unit {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+/* Legend row below chart */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  width: 100%;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  color: var(--text-secondary);
+}
+
+.legend-value {
+  font-weight: 700;
+  color: #fff;
+  margin-left: 0.1rem;
+}
+
+/* Empty state inside chart (no data) */
+.chart-empty-msg {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+@media (max-width: 600px) {
+  .charts-row { grid-template-columns: 1fr; }
+  .chart-canvas-wrap { width: 180px; height: 180px; }
+  .chart-canvas-wrap canvas { width: 180px !important; height: 180px !important; }
+}
