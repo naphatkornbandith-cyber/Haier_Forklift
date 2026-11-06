@@ -53,6 +53,11 @@
           <span>แดชบอร์ดภาพรวม</span>
         </button>
 
+        <button class="tab-btn" data-tab="admin-tab" id="nav-btn-admin">
+          <i class="fa-solid fa-user-shield"></i>
+          <span>จัดการข้อมูล (Admin)</span>
+        </button>
+
         <button class="tab-btn" data-tab="register-tab" id="nav-btn-register">
           <i class="fa-solid fa-square-plus"></i>
           <span>ลงทะเบียนรถ Forklift</span>
@@ -85,11 +90,11 @@
             </p>
           </div>
           <div style="display:flex; gap:0.6rem; align-items:center;">
-            <button id="btn-clear-all-data" class="btn btn-secondary btn-sm" title="ล้างข้อมูลรถทั้งหมดในระบบ">
-              <i class="fa-solid fa-trash-can"></i> ล้างข้อมูลทั้งหมด
-            </button>
-            <button class="btn btn-primary" data-switch-tab="register-tab">
-              <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
+            <div class="view-only-badge">
+              <i class="fa-solid fa-eye"></i> มุมมองทั่วไป (ดูและค้นหาข้อมูล)
+            </div>
+            <button class="btn btn-secondary btn-sm" data-switch-tab="admin-tab" title="เข้าสู่ส่วนจัดการข้อมูลสำหรับผู้ดูแลระบบ">
+              <i class="fa-solid fa-user-shield"></i> จัดการข้อมูล (Admin)
             </button>
           </div>
         </div>
@@ -284,13 +289,143 @@
                 <th>เจ้าของรถ (บริษัท/ซัพ)</th>
                 <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
                 <th style="width: 130px;">สถานะ</th>
-                <th style="width: 290px; text-align: center;">จัดการข้อมูล</th>
+                <th style="width: 130px; text-align: center;">รายละเอียด</th>
               </tr>
             </thead>
             <tbody id="fleet-table-body">
               <!-- Dynamically populated rows -->
             </tbody>
           </table>
+        </div>
+
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TAB: ADMIN MANAGEMENT (หน้า จัดการข้อมูล Admin) -->
+      <!-- ================================================================== -->
+      <section id="admin-tab" class="tab-content">
+
+        <!-- 1. Admin Login View (แสดงเมื่อยังไม่เข้าสู่ระบบ Admin) -->
+        <div id="admin-login-view" class="admin-login-container">
+          <div class="admin-login-card">
+            <div class="admin-login-icon">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h3 class="admin-login-title">เข้าสู่ระบบผู้ดูแลระบบ (Admin Login)</h3>
+            <p class="admin-login-subtitle">
+              กรุณากรอกรหัสผ่านผู้ดูแลระบบ เพื่อเข้าสู่ส่วนแก้ไขข้อมูลรถ, ข้อมูลผู้ขับขี่ และจัดการสถานะการตรวจสภาพ
+            </p>
+
+            <form id="form-admin-login" class="admin-login-form">
+              <div class="form-group">
+                <label class="form-label" for="admin-password">รหัสผ่านผู้ดูแลระบบ (Admin Password)</label>
+                <div style="position:relative;">
+                  <input type="password" id="admin-password" class="form-control" placeholder="กรอกรหัสผ่าน (ค่าเริ่มต้น: admin1234)" required autocomplete="current-password" style="padding-right: 2.75rem;">
+                  <button type="button" id="btn-toggle-admin-pw" class="btn-toggle-pw" title="แสดง/ซ่อนรหัสผ่าน">
+                    <i class="fa-solid fa-eye" id="icon-toggle-pw"></i>
+                  </button>
+                </div>
+                <div id="admin-login-error" class="admin-login-error" style="display:none;">
+                  <i class="fa-solid fa-circle-exclamation"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                </div>
+              </div>
+
+              <div class="admin-login-actions">
+                <span style="font-size:0.78rem; color:var(--text-muted);">
+                  <i class="fa-solid fa-key"></i> รหัสผ่านเริ่มต้น: <code style="color:var(--haier-cyan); background:rgba(0,160,233,0.1); padding:0.15rem 0.4rem; border-radius:4px;">admin1234</code>
+                </span>
+                <button type="submit" class="btn btn-primary" style="padding:0.65rem 1.75rem;">
+                  <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. Admin Management Panel (แสดงเมื่อยืนยันตัวตน Admin แล้ว) -->
+        <div id="admin-panel-view" style="display:none;">
+          <!-- Section Header -->
+          <div class="section-header-row">
+            <div>
+              <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem;">
+                <span class="admin-active-badge">
+                  <i class="fa-solid fa-shield-halved"></i> โหมดผู้ดูแลระบบ (Admin Mode Active)
+                </span>
+              </div>
+              <h2 class="section-title">
+                <i class="fa-solid fa-sliders"></i> จัดการและแก้ไขข้อมูลรถ Forklift
+              </h2>
+              <p class="section-subtitle">
+                แก้ไขข้อมูลผู้ขับขี่, อัปเดตสถานะความพร้อม, บันทึกการตรวจสภาพ และจัดการลบข้อมูลในระบบ
+              </p>
+            </div>
+            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+              <button id="btn-admin-clear-data" class="btn btn-secondary btn-sm" title="ล้างข้อมูลรถทั้งหมดในระบบ">
+                <i class="fa-solid fa-trash-can"></i> ล้างข้อมูลทั้งหมด
+              </button>
+              <button class="btn btn-primary btn-sm" data-switch-tab="register-tab">
+                <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
+              </button>
+              <button id="btn-admin-logout" class="btn btn-danger btn-sm" title="ออกจากระบบ Admin">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ Admin
+              </button>
+            </div>
+          </div>
+
+          <!-- Admin Search & Filter Controls Panel -->
+          <div class="filter-panel">
+            <div class="search-input-wrap">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="admin-search-input" class="search-input" 
+                     placeholder="ค้นหาข้อมูลรถเพื่อจัดการ: เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, หรือผู้ขับขี่...">
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-categories" id="admin-filter-categories">
+                <button class="filter-pill active" data-admin-filter="all">
+                  <i class="fa-solid fa-border-all"></i> ทั้งหมด
+                </button>
+                <button class="filter-pill" data-admin-filter="electric">
+                  <i class="fa-solid fa-bolt"></i> ไฟฟ้า (Electric)
+                </button>
+                <button class="filter-pill" data-admin-filter="lpg">
+                  <i class="fa-solid fa-fire-flame-simple"></i> ก๊าซ LPG
+                </button>
+                <button class="filter-pill" data-admin-filter="diesel">
+                  <i class="fa-solid fa-gas-pump"></i> ดีเซล (Diesel)
+                </button>
+                <button class="filter-pill" data-admin-filter="ready">
+                  <i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน
+                </button>
+                <button class="filter-pill" data-admin-filter="repair">
+                  <i class="fa-solid fa-wrench"></i> ส่งซ่อม
+                </button>
+                <button class="filter-pill" data-admin-filter="incomplete">
+                  <i class="fa-solid fa-clipboard-question" style="color:#f87171;"></i> ข้อมูลไม่ครบ
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fleet Management Table -->
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">เลขทะเบียนรถ</th>
+                  <th>ประเภทรถ / พิกัดยก</th>
+                  <th style="width: 160px;">ประเภทพลังงาน</th>
+                  <th>เจ้าของรถ (บริษัท/ซัพ)</th>
+                  <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
+                  <th style="width: 130px;">สถานะ</th>
+                  <th style="width: 290px; text-align: center;">จัดการข้อมูล (Admin Actions)</th>
+                </tr>
+              </thead>
+              <tbody id="admin-table-body">
+                <!-- Dynamically populated with full action buttons -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </section>
@@ -968,3 +1103,4 @@
   <script src="js/app.js"></script>
 </body>
 </html>
+ 

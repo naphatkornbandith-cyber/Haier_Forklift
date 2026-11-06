@@ -86,6 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
     activeFilter: 'all',
     searchQuery: '',
     selectedForklift: null,
+    // Admin Authentication & Filter State
+    isAdmin: sessionStorage.getItem('haier_forklift_admin') === 'true',
+    adminFilter: 'all',
+    adminSearchQuery: '',
     // Registration Form Temp State
     regPhotos: {
       front: '',
@@ -177,6 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderDashboard();
     } else if (tabId === 'alerts-tab') {
       renderAlertsCenter();
+    } else if (tabId === 'admin-tab') {
+      renderAdminPanel();
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -460,21 +466,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           ${statusBadge}
         </td>
-        <td>
-          <div class="action-btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
-              <i class="fa-regular fa-eye"></i> ดู
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverModal('${item.id}')" title="แก้ไขข้อมูลผู้ขับขี่">
-              <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')" title="แก้ไขสถานะรถและบันทึกการตรวจเช็ค">
-              <i class="fa-solid fa-screwdriver-wrench"></i> สถานะ/ตรวจเช็ค
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${item.id}', '${item.plateNumber}')" title="ลบข้อมูลรถคันนี้">
-              <i class="fa-solid fa-trash-can"></i> ลบ
-            </button>
-          </div>
+        <td style="text-align: center;">
+          <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
+            <i class="fa-regular fa-eye"></i> ดูข้อมูล
+          </button>
         </td>
       `;
 
@@ -1124,6 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const deleteBtn = document.getElementById('btn-view-modal-delete');
     if (deleteBtn) {
+      deleteBtn.style.display = state.isAdmin ? 'inline-flex' : 'none';
       deleteBtn.onclick = function() {
         window.deleteForkliftItem(item.id, item.plateNumber, true);
       };
@@ -1289,6 +1285,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('อัปเดตข้อมูลผู้ขับขี่สำเร็จแล้ว', 'success');
       closeModal(modalEditDriver);
       renderDashboard();
+      if (state.currentTab === 'admin-tab') renderAdminPanel();
       if (state.currentTab === 'alerts-tab') renderAlertsCenter();
     } catch (err) {
       showToast(err.message, 'error');
@@ -1337,6 +1334,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(`บันทึกการตรวจเช็คและอัปเดตสถานะรถเรียบร้อยแล้ว`, 'success');
       closeModal(modalUpdateStatus);
       renderDashboard();
+      if (state.currentTab === 'admin-tab') renderAdminPanel();
       if (state.currentTab === 'alerts-tab') renderAlertsCenter();
     } catch (err) {
       showToast(err.message, 'error');
@@ -1388,6 +1386,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       renderDashboard();
+      if (state.currentTab === 'admin-tab') {
+        renderAdminPanel();
+      }
       if (state.currentTab === 'alerts-tab') {
         renderAlertsCenter();
       }
@@ -1407,6 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.forkliftStore.clearAll();
         showToast('ล้างข้อมูลรถทั้งหมดในระบบเรียบร้อยแล้ว', 'success');
         renderDashboard();
+        renderAdminPanel();
         if (state.currentTab === 'alerts-tab') {
           renderAlertsCenter();
         }
@@ -1422,10 +1424,292 @@ document.addEventListener('DOMContentLoaded', () => {
         window.forkliftStore.clearAll();
         showToast('ล้างข้อมูลระบบเรียบร้อยแล้ว', 'success');
         renderDashboard();
+        renderAdminPanel();
         if (state.currentTab === 'alerts-tab') renderAlertsCenter();
       }
     });
   }
+
+  // --------------------------------------------------------------------------
+  // Admin Management Panel Controller
+  // --------------------------------------------------------------------------
+  function renderAdminPanel() {
+    const loginView = document.getElementById('admin-login-view');
+    const panelView = document.getElementById('admin-panel-view');
+    if (!loginView || !panelView) return;
+
+    if (state.isAdmin) {
+      loginView.style.display = 'none';
+      panelView.style.display = 'block';
+      renderAdminTable();
+    } else {
+      loginView.style.display = 'flex';
+      panelView.style.display = 'none';
+      const pwInput = document.getElementById('admin-password');
+      if (pwInput) pwInput.value = '';
+      const errEl = document.getElementById('admin-login-error');
+      if (errEl) errEl.style.display = 'none';
+    }
+  }
+
+  function renderAdminTable() {
+    const adminTableBody = document.getElementById('admin-table-body');
+    if (!adminTableBody) return;
+
+    const forklifts = window.forkliftStore.getAll();
+
+    let filtered = forklifts.filter(item => {
+      // Search matching across: plate, vehicleType, energyType, ownerCompany, subcontractor, driver
+      if (state.adminSearchQuery) {
+        const q = state.adminSearchQuery.toLowerCase();
+        const matchPlate = (item.plateNumber || '').toLowerCase().includes(q);
+        const matchType = (item.vehicleType || '').toLowerCase().includes(q);
+        const matchEnergy = (item.energyType || '').toLowerCase().includes(q);
+        const matchOwner = (item.ownerCompany || '').toLowerCase().includes(q) || (item.subcontractor || '').toLowerCase().includes(q);
+        const matchDriver = (item.driver?.name || '').toLowerCase().includes(q);
+        if (!matchPlate && !matchType && !matchEnergy && !matchOwner && !matchDriver) return false;
+      }
+
+      // Filter pills
+      if (state.adminFilter === 'all') return true;
+      if (state.adminFilter === 'ready') return item.status === 'พร้อมใช้งาน';
+      if (state.adminFilter === 'repair') return item.status === 'ส่งซ่อม';
+      if (state.adminFilter === 'electric') return item.energyType === 'ไฟฟ้า';
+      if (state.adminFilter === 'lpg') return item.energyType === 'LPG';
+      if (state.adminFilter === 'diesel') return item.energyType === 'ดีเซล';
+      if (state.adminFilter === 'haier') return !item.isSubcontractor;
+      if (state.adminFilter === 'subcontractor') return item.isSubcontractor;
+      if (state.adminFilter === 'incomplete') {
+        return window.forkliftStore.getIncompleteIssues(item).length > 0;
+      }
+      return true;
+    });
+
+    adminTableBody.innerHTML = '';
+    if (filtered.length === 0) {
+      if (forklifts.length === 0) {
+        adminTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 3.5rem 1rem; color: var(--text-muted);">
+              <i class="fa-solid fa-truck-ramp-box" style="font-size: 2.8rem; margin-bottom: 0.85rem; color: var(--haier-cyan); opacity: 0.7;"></i>
+              <p style="font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 0.35rem;">ยังไม่มีข้อมูลรถโฟล์คลิฟท์ในระบบ</p>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">เริ่มต้นบันทึกข้อมูลโดยการขึ้นทะเบียนรถคันแรกเข้าสู่ระบบสำรวจ</p>
+              <button type="button" class="btn btn-primary btn-sm" data-switch-tab="register-tab">
+                <i class="fa-solid fa-square-plus"></i> ลงทะเบียนรถโฟล์คลิฟท์ใหม่
+              </button>
+            </td>
+          </tr>
+        `;
+      } else {
+        adminTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 3rem 1rem; color: var(--text-muted);">
+              <i class="fa-solid fa-magnifying-glass" style="font-size: 2.5rem; margin-bottom: 0.75rem; color: var(--surface-border);"></i>
+              <p>ไม่พบข้อมูลรถโฟล์คลิฟท์ที่ตรงตามเงื่อนไขการค้นหาของ Admin</p>
+            </td>
+          </tr>
+        `;
+      }
+      return;
+    }
+
+    filtered.forEach(item => {
+      const tr = document.createElement('tr');
+
+      const statusBadge = item.status === 'พร้อมใช้งาน'
+        ? `<span class="status-badge badge-ready"><i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน</span>`
+        : `<span class="status-badge badge-repair"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>`;
+
+      let energyClass = 'energy-electric';
+      let energyIcon = 'fa-bolt';
+      if (item.energyType === 'LPG') {
+        energyClass = 'energy-lpg';
+        energyIcon = 'fa-fire-flame-simple';
+      } else if (item.energyType === 'ดีเซล') {
+        energyClass = 'energy-diesel';
+        energyIcon = 'fa-gas-pump';
+      }
+      const energyBadge = `<span class="badge-energy ${energyClass}"><i class="fa-solid ${energyIcon}"></i> ${item.energyType}</span>`;
+
+      const lpgStatus = window.forkliftStore.getLpgStatus(item);
+      let lpgTag = '';
+      if (lpgStatus.isLpg) {
+        if (lpgStatus.alertLevel === 'overdue') {
+          lpgTag = `<div style="margin-top:0.35rem;"><span class="status-badge badge-lpg-overdue"><i class="fa-solid fa-circle-exclamation"></i> เกินกำหนดตรวจ 1 ปี (${lpgStatus.overdueDays} วัน)</span></div>`;
+        } else if (lpgStatus.alertLevel === 'warning') {
+          lpgTag = `<div style="margin-top:0.35rem;"><span class="status-badge badge-lpg-warn"><i class="fa-solid fa-clock"></i> ครบกำหนดตรวจใน ${lpgStatus.daysRemaining} วัน</span></div>`;
+        } else {
+          lpgTag = `<div style="margin-top:0.25rem; font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-calendar-check"></i> ตรวจล่าสุด: ${item.lastInspectionDate || '-'}</div>`;
+        }
+      }
+
+      const driver = item.driver || { name: 'ยังไม่ระบุ', empId: '-', certStatus: 'รอดำเนินการ' };
+      let certBadge = '';
+      if (driver.certStatus === 'ผ่านการรับรอง') {
+        certBadge = `<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง (AI Verified)</span>`;
+      } else if (driver.certStatus === 'ไม่ถูกต้อง') {
+        certBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-circle-xmark"></i> ใบเซอร์ไม่ถูกต้อง</span>`;
+      } else {
+        certBadge = `<span class="status-badge badge-cert-pending"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ</span>`;
+      }
+
+      const issues = window.forkliftStore.getIncompleteIssues(item);
+      const incompleteBadge = issues.length > 0
+        ? `<div style="margin-top:0.25rem;"><span class="status-badge badge-repair" style="font-size:0.7rem;"><i class="fa-solid fa-circle-dot"></i> ข้อมูลไม่ครบ (${issues.length})</span></div>`
+        : '';
+
+      tr.innerHTML = `
+        <td>
+          <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+          ${incompleteBadge}
+        </td>
+        <td>
+          <div style="font-weight:600; color:var(--text-primary);">${item.vehicleType}</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+            ${item.liftingCapacity ? `พิกัดยก: ${item.liftingCapacity}` : 'ไม่ระบุน้ำหนัก'}
+          </div>
+        </td>
+        <td>
+          ${energyBadge}
+          ${lpgTag}
+        </td>
+        <td>
+          <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${item.ownerCompany}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+            <i class="fa-solid fa-building"></i> ${item.subcontractor || 'Haier Owned'}
+          </div>
+        </td>
+        <td>
+          <div class="driver-info-cell" style="display:flex; align-items:center; gap:0.65rem;">
+            ${driver.photo
+              ? `<img src="${driver.photo}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); flex-shrink:0;">`
+              : `<div style="width:38px; height:38px; border-radius:50%; background:rgba(0,160,233,0.15); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1rem; flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`
+            }
+            <div>
+              <div class="driver-name">${driver.name || 'ยังไม่ระบุ'}</div>
+              <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
+              <div style="margin-top:0.2rem;">${certBadge}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          ${statusBadge}
+        </td>
+        <td>
+          <div class="action-btn-group">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
+              <i class="fa-regular fa-eye"></i> ดู
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverModal('${item.id}')" title="แก้ไขข้อมูลผู้ขับขี่">
+              <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')" title="แก้ไขสถานะรถและบันทึกการตรวจเช็ค">
+              <i class="fa-solid fa-screwdriver-wrench"></i> สถานะ/ตรวจเช็ค
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${item.id}', '${item.plateNumber}')" title="ลบข้อมูลรถคันนี้">
+              <i class="fa-solid fa-trash-can"></i> ลบ
+            </button>
+          </div>
+        </td>
+      `;
+
+      adminTableBody.appendChild(tr);
+    });
+  }
+
+  // Admin Login Event Handler
+  const formAdminLogin = document.getElementById('form-admin-login');
+  const adminPasswordInput = document.getElementById('admin-password');
+  const btnToggleAdminPw = document.getElementById('btn-toggle-admin-pw');
+  const iconTogglePw = document.getElementById('icon-toggle-pw');
+  const adminLoginError = document.getElementById('admin-login-error');
+  const btnAdminLogout = document.getElementById('btn-admin-logout');
+
+  if (formAdminLogin) {
+    formAdminLogin.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const enteredPw = adminPasswordInput ? adminPasswordInput.value.trim() : '';
+      if (enteredPw === 'admin1234' || enteredPw === 'haier1234' || enteredPw === 'admin') {
+        state.isAdmin = true;
+        sessionStorage.setItem('haier_forklift_admin', 'true');
+        if (adminLoginError) adminLoginError.style.display = 'none';
+        if (adminPasswordInput) adminPasswordInput.value = '';
+        showToast('เข้าสู่ระบบ Admin สำเร็จ ยินดีต้อนรับสู่โหมดจัดการข้อมูล', 'success');
+        renderAdminPanel();
+      } else {
+        if (adminLoginError) {
+          adminLoginError.style.display = 'block';
+          adminLoginError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง (รหัสผ่านเริ่มต้น: admin1234)';
+        }
+        if (adminPasswordInput) {
+          adminPasswordInput.select();
+        }
+      }
+    });
+  }
+
+  // Password Visibility Toggle
+  if (btnToggleAdminPw && adminPasswordInput && iconTogglePw) {
+    btnToggleAdminPw.addEventListener('click', () => {
+      const isPw = adminPasswordInput.type === 'password';
+      adminPasswordInput.type = isPw ? 'text' : 'password';
+      iconTogglePw.classList.toggle('fa-eye', !isPw);
+      iconTogglePw.classList.toggle('fa-eye-slash', isPw);
+    });
+  }
+
+  // Admin Logout Event Handler
+  if (btnAdminLogout) {
+    btnAdminLogout.addEventListener('click', () => {
+      if (confirm('คุณต้องการออกจากระบบโหมดผู้ดูแลระบบ (Admin) หรือไม่?')) {
+        state.isAdmin = false;
+        sessionStorage.removeItem('haier_forklift_admin');
+        showToast('ออกจากระบบ Admin เรียบร้อยแล้ว', 'info');
+        renderAdminPanel();
+      }
+    });
+  }
+
+  // Admin Clear All Data Handler
+  const btnAdminClearData = document.getElementById('btn-admin-clear-data');
+  if (btnAdminClearData) {
+    btnAdminClearData.addEventListener('click', () => {
+      const all = window.forkliftStore.getAll();
+      if (all.length === 0) {
+        showToast('ขณะนี้ไม่มีข้อมูลรถโฟล์คลิฟท์ในระบบ', 'info');
+        return;
+      }
+      if (confirm(`คุณต้องการล้างข้อมูลรถโฟล์คลิฟท์ทั้งหมด (${all.length} คัน) ออกจากระบบหรือไม่?\n\n* ข้อมูลรถและประวัติทั้งหมดจะถูกลบถาวร ไม่สามารถย้อนกลับได้`)) {
+        window.forkliftStore.clearAll();
+        showToast('ล้างข้อมูลรถทั้งหมดในระบบเรียบร้อยแล้ว', 'success');
+        renderDashboard();
+        renderAdminPanel();
+        if (state.currentTab === 'alerts-tab') {
+          renderAlertsCenter();
+        }
+      }
+    });
+  }
+
+  // Admin Search Input Event
+  const adminSearchInput = document.getElementById('admin-search-input');
+  if (adminSearchInput) {
+    adminSearchInput.addEventListener('input', (e) => {
+      state.adminSearchQuery = e.target.value.trim();
+      renderAdminTable();
+    });
+  }
+
+  // Admin Filter Pills Event
+  const adminFilterPills = document.querySelectorAll('[data-admin-filter]');
+  adminFilterPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      adminFilterPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.adminFilter = pill.dataset.adminFilter;
+      renderAdminTable();
+    });
+  });
 
   // Toast Notification helper
   function showToast(message, type = 'info') {
