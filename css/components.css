@@ -1158,6 +1158,25 @@
   font-weight: 600;
 }
 
+/* Database Connection Badges */
+.badge-status-local {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.badge-status-cloud {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(62, 207, 142, 0.15);
+  border: 1px solid rgba(62, 207, 142, 0.4);
+  color: #3ecf8e;
+}
+
 .admin-login-container {
   display: flex;
   justify-content: center;

@@ -23,7 +23,12 @@ const INITIAL_FORKLIFTS = [];
 
 class ForkliftDataStore {
   constructor() {
+    this.isSyncing = false;
     this.init();
+    // Auto-sync from remote if Supabase is available
+    setTimeout(() => {
+      this.syncFromRemote();
+    }, 150);
   }
 
   init() {
@@ -46,6 +51,33 @@ class ForkliftDataStore {
     }
   }
 
+  /**
+   * Sync data from Supabase Cloud to local cache
+   */
+  async syncFromRemote() {
+    if (!window.supabaseService || !window.supabaseService.isConfigured()) {
+      return false;
+    }
+
+    try {
+      this.isSyncing = true;
+      const remoteData = await window.supabaseService.fetchAll();
+      if (Array.isArray(remoteData)) {
+        this.saveAll(remoteData);
+        window.dispatchEvent(new CustomEvent('forklift-data-synced', {
+          detail: { source: 'supabase', count: remoteData.length }
+        }));
+        console.log(`☁️ Supabase Cloud Synced: ${remoteData.length} forklifts loaded.`);
+        return true;
+      }
+    } catch (err) {
+      console.warn('⚠️ Supabase syncFromRemote warning:', err);
+    } finally {
+      this.isSyncing = false;
+    }
+    return false;
+  }
+
   getAll() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -66,6 +98,11 @@ class ForkliftDataStore {
 
   clearAll() {
     this.saveAll([]);
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.clearAll().catch(e => {
+        console.warn('Supabase clearAll warning:', e);
+      });
+    }
     return [];
   }
 
@@ -99,6 +136,14 @@ class ForkliftDataStore {
     };
     all.unshift(completeItem);
     this.saveAll(all);
+
+    // Asynchronously push to Supabase
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.insert(completeItem).catch(e => {
+        console.warn('Supabase insert warning:', e);
+      });
+    }
+
     return completeItem;
   }
 
@@ -114,6 +159,14 @@ class ForkliftDataStore {
     };
     all[index].updatedAt = new Date().toISOString();
     this.saveAll(all);
+
+    // Asynchronously update to Supabase
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.update(id, all[index]).catch(e => {
+        console.warn('Supabase update warning:', e);
+      });
+    }
+
     return all[index];
   }
 
@@ -130,12 +183,28 @@ class ForkliftDataStore {
     
     all[index].updatedAt = new Date().toISOString();
     this.saveAll(all);
+
+    // Asynchronously update to Supabase
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.update(id, all[index]).catch(e => {
+        console.warn('Supabase update warning:', e);
+      });
+    }
+
     return all[index];
   }
 
   deleteForklift(id) {
     const all = this.getAll().filter(item => item.id !== id);
     this.saveAll(all);
+
+    // Asynchronously delete from Supabase
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.delete(id).catch(e => {
+        console.warn('Supabase delete warning:', e);
+      });
+    }
+
     return true;
   }
 
