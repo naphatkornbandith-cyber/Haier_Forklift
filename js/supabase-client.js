@@ -31,8 +31,8 @@
       const storedKey = localStorage.getItem(SB_STORAGE_KEY_KEY);
 
       return {
-        url: (storedUrl || DEFAULT_SUPABASE_URL || '').trim(),
-        anonKey: (storedKey || DEFAULT_SUPABASE_ANON_KEY || '').trim()
+        url: (DEFAULT_SUPABASE_URL || storedUrl || '').trim(),
+        anonKey: (DEFAULT_SUPABASE_ANON_KEY || storedKey || '').trim()
       };
     }
 

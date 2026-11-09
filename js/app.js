@@ -1745,8 +1745,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3800);
   }
 
-  // Initial render
+  // Initial render from local cache
   renderDashboard();
+
+  // Immediately sync latest data from Supabase Cloud on load
+  if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
+    window.forkliftStore.syncFromRemote().then((synced) => {
+      if (synced) {
+        renderDashboard();
+        if (state.currentTab === 'admin-tab') renderAdminPanel();
+      }
+    });
+  }
 
   // Initialize energy-specific checklist row based on default dropdown value
   updateChecklistForEnergy(regEnergySelect.value);

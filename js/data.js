@@ -77,6 +77,22 @@ class ForkliftDataStore {
       this.isSyncing = true;
       const remoteData = await window.supabaseService.fetchAll();
       if (Array.isArray(remoteData)) {
+        const localItems = this.getAll();
+
+        // กรณีที่ Supabase ยังว่างเปล่า แต่เครื่องปัจจุบันมีข้อมูลอยู่แล้ว:
+        // ระบบจะนำข้อมูลในเครื่องนี้ส่งขึ้น Supabase Cloud ให้อัตโนมัติ เพื่อให้อุปกรณ์เครื่องอื่นมองเห็น
+        if (remoteData.length === 0 && localItems.length > 0) {
+          console.log(`📤 ตรวจพบข้อมูลในเครื่อง ${localItems.length} รายการ กำลังนำขึ้น Supabase...`);
+          try {
+            await window.supabaseService.uploadLocalData(localItems);
+            console.log('✅ อัปโหลดข้อมูลขึ้น Supabase Cloud สำเร็จเรียบร้อย');
+          } catch (upErr) {
+            console.warn('⚠️ ไม่สามารถอัปโหลดข้อมูลในเครื่องขึ้น Supabase ได้:', upErr);
+          }
+          return true;
+        }
+
+        // กรณีที่ Supabase มีข้อมูล ให้อัปเดตข้อมูลล่าสุดลงเครื่อง
         this.saveAll(remoteData);
         window.dispatchEvent(new CustomEvent('forklift-data-synced', {
           detail: { source: 'supabase', count: remoteData.length }
