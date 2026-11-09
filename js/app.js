@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ─────────────────────────────────────────────────────────────
   let chartOwnership = null;
   let chartStatus    = null;
+  let chartRentalContract = null;
 
   /**
    * Draw (or update) a doughnut chart on a given canvas.
@@ -261,6 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let companyCount = 0;
     let rentalCount = 0;
     let rentalAlertCount = 0;
+    let activeRentalValidCount = 0;
+    let warningRentalCount = 0;
+    let expiredRentalCount = 0;
     const lpgAlertItems = [];
 
     forklifts.forEach(item => {
@@ -281,16 +285,26 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (item.status === 'ส่งซ่อม') repairCount++;
       }
 
+      // Check Rental Contract Expiry Status for Chart 3 & Alerts
+      if (item.isSubcontractor) {
+        const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
+        if (item.status === 'หมดสัญญาเช่า' || rentalStatus.alertLevel === 'expired') {
+          expiredRentalCount++;
+        } else if (rentalStatus.alertLevel === 'warning') {
+          warningRentalCount++;
+        } else {
+          activeRentalValidCount++;
+        }
+
+        if (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired') {
+          rentalAlertCount++;
+        }
+      }
+
       const lpgStatus = window.forkliftStore.getLpgStatus(item);
       if (lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) {
         lpgAlertCount++;
         lpgAlertItems.push({ item, lpgStatus });
-      }
-
-      // Check Rental Contract Expiry Status
-      const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
-      if (rentalStatus.isRental && (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired')) {
-        rentalAlertCount++;
       }
 
       const issues = window.forkliftStore.getIncompleteIssues(item);
@@ -344,26 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
       { label: 'รถเช่า',    value: rentalCount,  color: ownershipColors[1] }
     ]);
 
-    // Chart 2: Status (พร้อมใช้งาน vs ส่งซ่อม vs หมดสัญญาเช่า)
-    const statusLabels = ['พร้อมใช้งาน', 'ส่งซ่อม / ปรับปรุง'];
-    const statusData = [readyCount, repairCount];
+    // Chart 2: Status (พร้อมใช้งาน vs ส่งซ่อม)
     const statusColors = ['#4ade80', '#f87171'];   // green, red
-    const statusLegends = [
-      { label: 'พร้อมใช้งาน',      value: readyCount,  color: statusColors[0] },
-      { label: 'ส่งซ่อม / ปรับปรุง', value: repairCount, color: statusColors[1] }
-    ];
-
-    if (expiredStatusCount > 0) {
-      statusLabels.push('หมดสัญญา / ส่งคืนแล้ว');
-      statusData.push(expiredStatusCount);
-      statusColors.push('#94a3b8'); // slate gray
-      statusLegends.push({ label: 'หมดสัญญา/ส่งคืน', value: expiredStatusCount, color: '#94a3b8' });
-    }
-
     chartStatus = drawDonut(
       'chart-status',
-      statusLabels,
-      statusData,
+      ['พร้อมใช้งาน', 'ส่งซ่อม / ปรับปรุง'],
+      [readyCount, repairCount],
       statusColors,
       chartStatus
     );
@@ -371,7 +371,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusReady = document.getElementById('chart-status-ready');
     if (statusReady) statusReady.textContent = readyCount;
     // Legend
-    renderLegend('chart-status-legend', statusLegends);
+    renderLegend('chart-status-legend', [
+      { label: 'พร้อมใช้งาน',      value: readyCount,  color: statusColors[0] },
+      { label: 'ส่งซ่อม / ปรับปรุง', value: repairCount, color: statusColors[1] }
+    ]);
+
+    // Chart 3: สัดส่วนสัญญาเช่ารถ Forklift (ข้อมูลรถเช่าที่หมดสัญญา)
+    const rentalContractColors = ['#06b6d4', '#fbbf24', '#f87171']; // cyan, yellow, red
+    chartRentalContract = drawDonut(
+      'chart-rental-contract',
+      ['มีสัญญาใช้งานปกติ', 'ใกล้ครบกำหนด (เตือน 1 ด.)', 'หมดสัญญาเช่าแล้ว'],
+      [activeRentalValidCount, warningRentalCount, expiredRentalCount],
+      rentalContractColors,
+      chartRentalContract
+    );
+    // Update center label
+    const rentalExpiredNum = document.getElementById('chart-rental-expired-num');
+    if (rentalExpiredNum) rentalExpiredNum.textContent = expiredRentalCount;
+    const rentalCenterUnit = document.getElementById('chart-rental-center-unit');
+    if (rentalCenterUnit) {
+      rentalCenterUnit.textContent = (activeRentalValidCount + warningRentalCount + expiredRentalCount === 0) ? 'ไม่มีรถเช่า' : 'หมดสัญญา';
+    }
+    // Legend
+    renderLegend('chart-rental-contract-legend', [
+      { label: 'มีสัญญาปกติ',   value: activeRentalValidCount, color: rentalContractColors[0] },
+      { label: 'ใกล้หมดสัญญา',  value: warningRentalCount,     color: rentalContractColors[1] },
+      { label: 'หมดสัญญาแล้ว',  value: expiredRentalCount,     color: rentalContractColors[2] }
+    ]);
     // ────────────────────────────────────────────────────────────────
 
     // Total Alerts on tab badge
