@@ -10,7 +10,18 @@
   const SB_STORAGE_URL_KEY = 'HAIER_SUPABASE_URL';
   const SB_STORAGE_KEY_KEY = 'HAIER_SUPABASE_ANON_KEY';
 
-  // Default / Hardcoded config fallback (can be edited here directly or via Admin UI)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // การตั้งค่า Supabase (Backend Configuration — ไม่แสดงใน UI หน้า Admin)
+  //
+  // วิธีตั้งค่า: กรอก Supabase Project URL และ Anon Key ในไฟล์นี้โดยตรง
+  // ค่าที่กรอกในนี้จะถูกใช้เป็นค่า default หากยังไม่มีการบันทึกค่าใน LocalStorage
+  //
+  // ตัวอย่าง:
+  //   const DEFAULT_SUPABASE_URL = 'https://xxxxxxxxxxxxxxxx.supabase.co';
+  //   const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+  //
+  // หมายเหตุ: หากต้องการใช้ LocalStorage (ในเครื่อง) ให้ปล่อยค่าว่างไว้
+  // ─────────────────────────────────────────────────────────────────────────────
   const DEFAULT_SUPABASE_URL = '';
   const DEFAULT_SUPABASE_ANON_KEY = '';
 
