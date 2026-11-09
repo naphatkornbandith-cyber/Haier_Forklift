@@ -6,24 +6,15 @@
 (function (window) {
   'use strict';
 
-  // ใส่ Project URL และ Anon Key จาก Supabase Dashboard (Project Settings -> API)
-  const DEFAULT_SUPABASE_URL = 'https://hibrisgxtxwlirutlkuw.supabase.co';
-  const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpYnJpc2d4dHh3bGlydXRsa3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5NDEwNzYsImV4cCI6MjEwOTUxNzA3Nn0.2qm-WxP-SPSuNxH-y7PIvMy-STfay44WuKx8cjhBa_U';
+  // LocalStorage keys for Supabase config
+  const SB_STORAGE_URL_KEY = 'HAIER_SUPABASE_URL';
+  const SB_STORAGE_KEY_KEY = 'HAIER_SUPABASE_ANON_KEY';
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // การตั้งค่า Supabase (Backend Configuration — ไม่แสดงใน UI หน้า Admin)
-  //
-  // วิธีตั้งค่า: กรอก Supabase Project URL และ Anon Key ในไฟล์นี้โดยตรง
-  // ค่าที่กรอกในนี้จะถูกใช้เป็นค่า default หากยังไม่มีการบันทึกค่าใน LocalStorage
-  //
-  // ตัวอย่าง:
-  //   const DEFAULT_SUPABASE_URL = 'https://xxxxxxxxxxxxxxxx.supabase.co';
-  //   const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
-  //
-  // หมายเหตุ: หากต้องการใช้ LocalStorage (ในเครื่อง) ให้ปล่อยค่าว่างไว้
+  // การตั้งค่า Supabase (Backend Configuration — จัดการระบบหลังบ้าน)
   // ─────────────────────────────────────────────────────────────────────────────
-  const DEFAULT_SUPABASE_URL = '';
-  const DEFAULT_SUPABASE_ANON_KEY = '';
+  const DEFAULT_SUPABASE_URL = 'https://hibrisgxtxwlirutlkuw.supabase.co';
+  const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpYnJpc2d4dHh3bGlydXRsa3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5NDEwNzYsImV4cCI6MjEwOTUxNzA3Nn0.2qm-WxP-SPSuNxH-y7PIvMy-STfay44WuKx8cjhBa_U';
 
   class SupabaseService {
     constructor() {
