@@ -79,7 +79,38 @@ VALUES
   ('haier_admin', 'haier1234', 'ผู้ดูแลระบบ Haier Logistics', 'admin')
 ON CONFLICT (username) DO NOTHING;
 
--- 7. Optional: Storage Bucket for Forklift Photos & Certificates
+-- 7. Create drivers table (ตารางทะเบียนผู้ขับขี่รถ Forklift)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS drivers (
+  id TEXT PRIMARY KEY,
+  emp_id TEXT NOT NULL UNIQUE,             -- รหัสพนักงาน
+  name TEXT NOT NULL,                      -- ชื่อ-นามสกุล ผู้ขับขี่
+  company TEXT,                            -- สังกัด (บริษัท/ซัพพลายเออร์)
+  department TEXT,                         -- แผนกที่ปฏิบัติงาน
+  photo TEXT,                              -- ภาพถ่ายผู้ขับขี่
+  cert_image TEXT,                         -- ภาพใบรับรองการอบรม
+  cert_status TEXT DEFAULT 'รอดำเนินการ', -- ผ่านการรับรอง / ไม่ถูกต้อง / รอดำเนินการ
+  has_trained BOOLEAN DEFAULT false,
+  assigned_plate TEXT,                     -- เลขทะเบียนรถ Forklift ที่ขับประจำ
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_drivers_emp_id ON drivers(emp_id);
+CREATE INDEX IF NOT EXISTS idx_drivers_cert_status ON drivers(cert_status);
+
+ALTER TABLE drivers ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read and write drivers" ON drivers;
+CREATE POLICY "Allow public read and write drivers" ON drivers
+FOR ALL
+USING (true)
+WITH CHECK (true);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE drivers;
+
+-- 8. Optional: Storage Bucket for Forklift Photos & Certificates
 -- You can create a public bucket named 'forklift-media' in the Supabase Storage dashboard
 -- Insert into storage.buckets (id, name, public) VALUES ('forklift-media', 'forklift-media', true) ON CONFLICT DO NOTHING;
 

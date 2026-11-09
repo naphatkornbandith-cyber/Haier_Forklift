@@ -4,6 +4,7 @@
  */
 
 const STORAGE_KEY = 'HAIER_FORKLIFT_FLEET_DATA_V1';
+const DRIVERS_STORAGE_KEY = 'HAIER_FORKLIFT_DRIVERS_DATA_V1';
 
 // Default SVG Mock Images for clean display
 const SVG_ASSETS = {
@@ -46,6 +47,11 @@ class ForkliftDataStore {
   }
 
   init() {
+    this.initForklifts();
+    this.initDrivers();
+  }
+
+  initForklifts() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
       this.saveAll(INITIAL_FORKLIFTS);
@@ -65,8 +71,38 @@ class ForkliftDataStore {
     }
   }
 
+  initDrivers() {
+    const raw = localStorage.getItem(DRIVERS_STORAGE_KEY);
+    if (!raw) {
+      // Auto-extract drivers from existing forklifts if any
+      const forklifts = this.getAll();
+      const extracted = [];
+      forklifts.forEach(fl => {
+        if (fl.driver && fl.driver.name && fl.driver.name !== 'ยังไม่ระบุ') {
+          if (!extracted.some(d => d.empId === fl.driver.empId && d.empId !== '-')) {
+            extracted.push({
+              id: 'DRV-' + Date.now().toString().slice(-4) + Math.floor(Math.random() * 100),
+              empId: fl.driver.empId || ('EMP-' + Math.floor(Math.random() * 1000)),
+              name: fl.driver.name,
+              company: fl.driver.company || fl.ownerCompany,
+              department: fl.driver.department || '-',
+              photo: fl.driver.photo || '',
+              certImage: fl.driver.certImage || '',
+              certStatus: fl.driver.certStatus || 'รอดำเนินการ',
+              hasTrained: Boolean(fl.driver.hasTrained),
+              assignedPlate: fl.plateNumber || '',
+              notes: '',
+              createdAt: new Date().toISOString()
+            });
+          }
+        }
+      });
+      this.saveAllDrivers(extracted);
+    }
+  }
+
   /**
-   * Sync data from Supabase Cloud to local cache
+   * Sync data from Supabase Cloud to local cache (forklifts & drivers)
    */
   async syncFromRemote() {
     if (!window.supabaseService || !window.supabaseService.isConfigured()) {
@@ -75,37 +111,193 @@ class ForkliftDataStore {
 
     try {
       this.isSyncing = true;
+      // 1. Sync Forklifts
       const remoteData = await window.supabaseService.fetchAll();
       if (Array.isArray(remoteData)) {
         const localItems = this.getAll();
 
-        // กรณีที่ Supabase ยังว่างเปล่า แต่เครื่องปัจจุบันมีข้อมูลอยู่แล้ว:
-        // ระบบจะนำข้อมูลในเครื่องนี้ส่งขึ้น Supabase Cloud ให้อัตโนมัติ เพื่อให้อุปกรณ์เครื่องอื่นมองเห็น
         if (remoteData.length === 0 && localItems.length > 0) {
-          console.log(`📤 ตรวจพบข้อมูลในเครื่อง ${localItems.length} รายการ กำลังนำขึ้น Supabase...`);
+          console.log(`📤 ตรวจพบข้อมูลรถในเครื่อง ${localItems.length} รายการ กำลังนำขึ้น Supabase...`);
           try {
             await window.supabaseService.uploadLocalData(localItems);
-            console.log('✅ อัปโหลดข้อมูลขึ้น Supabase Cloud สำเร็จเรียบร้อย');
+            console.log('✅ อัปโหลดข้อมูลรถขึ้น Supabase Cloud สำเร็จเรียบร้อย');
           } catch (upErr) {
-            console.warn('⚠️ ไม่สามารถอัปโหลดข้อมูลในเครื่องขึ้น Supabase ได้:', upErr);
+            console.warn('⚠️ ไม่สามารถอัปโหลดข้อมูลรถขึ้น Supabase ได้:', upErr);
           }
-          return true;
+        } else {
+          this.saveAll(remoteData);
+          window.dispatchEvent(new CustomEvent('forklift-data-synced', {
+            detail: { source: 'supabase', count: remoteData.length }
+          }));
+          console.log(`☁️ Supabase Cloud Synced: ${remoteData.length} forklifts loaded.`);
         }
-
-        // กรณีที่ Supabase มีข้อมูล ให้อัปเดตข้อมูลล่าสุดลงเครื่อง
-        this.saveAll(remoteData);
-        window.dispatchEvent(new CustomEvent('forklift-data-synced', {
-          detail: { source: 'supabase', count: remoteData.length }
-        }));
-        console.log(`☁️ Supabase Cloud Synced: ${remoteData.length} forklifts loaded.`);
-        return true;
       }
+
+      // 2. Sync Drivers
+      if (typeof window.supabaseService.fetchDrivers === 'function') {
+        const remoteDrivers = await window.supabaseService.fetchDrivers();
+        if (Array.isArray(remoteDrivers)) {
+          const localDrivers = this.getAllDrivers();
+          if (remoteDrivers.length === 0 && localDrivers.length > 0) {
+            console.log(`📤 ตรวจพบข้อมูลผู้ขับในเครื่อง ${localDrivers.length} รายการ กำลังนำขึ้น Supabase...`);
+            await window.supabaseService.uploadLocalDrivers(localDrivers);
+          } else {
+            this.saveAllDrivers(remoteDrivers);
+            window.dispatchEvent(new CustomEvent('driver-data-synced', {
+              detail: { source: 'supabase', count: remoteDrivers.length }
+            }));
+            console.log(`☁️ Supabase Cloud Synced: ${remoteDrivers.length} drivers loaded.`);
+          }
+        }
+      }
+      return true;
     } catch (err) {
       console.warn('⚠️ Supabase syncFromRemote warning:', err);
     } finally {
       this.isSyncing = false;
     }
     return false;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Driver Registry Methods
+  // ──────────────────────────────────────────────────────────────────────────
+
+  getAllDrivers() {
+    try {
+      const raw = localStorage.getItem(DRIVERS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  saveAllDrivers(drivers) {
+    try {
+      localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(drivers));
+    } catch (e) {
+      console.error('Failed to save drivers data:', e);
+    }
+  }
+
+  getDriverById(id) {
+    return this.getAllDrivers().find(d => d.id === id || d.empId === id);
+  }
+
+  isDriverEmpIdDuplicate(empId, excludeId = null) {
+    if (!empId || empId === '-') return false;
+    const clean = empId.trim().toUpperCase();
+    return this.getAllDrivers().some(d => {
+      if (excludeId && d.id === excludeId) return false;
+      return (d.empId || '').trim().toUpperCase() === clean;
+    });
+  }
+
+  addDriver(newDriver) {
+    if (this.isDriverEmpIdDuplicate(newDriver.empId)) {
+      throw new Error(`รหัสพนักงาน "${newDriver.empId}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`);
+    }
+    const drivers = this.getAllDrivers();
+    const id = 'DRV-' + Date.now().toString().slice(-4);
+    const completeDriver = {
+      id,
+      ...newDriver,
+      createdAt: new Date().toISOString()
+    };
+    drivers.unshift(completeDriver);
+    this.saveAllDrivers(drivers);
+
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.insertDriver(completeDriver).catch(e => {
+        console.warn('Supabase insertDriver warning:', e);
+      });
+    }
+
+    // If assigned to a forklift, update forklift's driver as well
+    if (completeDriver.assignedPlate) {
+      const forklifts = this.getAll();
+      const flIdx = forklifts.findIndex(f => f.plateNumber === completeDriver.assignedPlate);
+      if (flIdx !== -1) {
+        forklifts[flIdx].driver = {
+          name: completeDriver.name,
+          empId: completeDriver.empId,
+          company: completeDriver.company,
+          department: completeDriver.department,
+          photo: completeDriver.photo,
+          certImage: completeDriver.certImage,
+          certStatus: completeDriver.certStatus,
+          hasTrained: completeDriver.hasTrained
+        };
+        this.saveAll(forklifts);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('driver-data-synced', {
+      detail: { count: drivers.length }
+    }));
+
+    return completeDriver;
+  }
+
+  updateDriverData(id, driverData) {
+    const drivers = this.getAllDrivers();
+    const idx = drivers.findIndex(d => d.id === id);
+    if (idx === -1) throw new Error('ไม่พบข้อมูลผู้ขับขี่ที่ต้องการแก้ไข');
+
+    drivers[idx] = {
+      ...drivers[idx],
+      ...driverData,
+      updatedAt: new Date().toISOString()
+    };
+    this.saveAllDrivers(drivers);
+
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.updateDriverRow(id, drivers[idx]).catch(e => {
+        console.warn('Supabase updateDriverRow warning:', e);
+      });
+    }
+
+    // Also update driver in assigned forklift if applicable
+    if (drivers[idx].assignedPlate) {
+      const forklifts = this.getAll();
+      const flIdx = forklifts.findIndex(f => f.plateNumber === drivers[idx].assignedPlate);
+      if (flIdx !== -1) {
+        forklifts[flIdx].driver = {
+          name: drivers[idx].name,
+          empId: drivers[idx].empId,
+          company: drivers[idx].company,
+          department: drivers[idx].department,
+          photo: drivers[idx].photo,
+          certImage: drivers[idx].certImage,
+          certStatus: drivers[idx].certStatus,
+          hasTrained: drivers[idx].hasTrained
+        };
+        this.saveAll(forklifts);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('driver-data-synced', {
+      detail: { count: drivers.length }
+    }));
+
+    return drivers[idx];
+  }
+
+  deleteDriver(id) {
+    const drivers = this.getAllDrivers().filter(d => d.id !== id);
+    this.saveAllDrivers(drivers);
+
+    if (window.supabaseService && window.supabaseService.isConfigured()) {
+      window.supabaseService.deleteDriverRow(id).catch(e => {
+        console.warn('Supabase deleteDriverRow warning:', e);
+      });
+    }
+
+    window.dispatchEvent(new CustomEvent('driver-data-synced', {
+      detail: { count: drivers.length }
+    }));
+
+    return true;
   }
 
   getAll() {

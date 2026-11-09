@@ -63,6 +63,11 @@
           <span>ลงทะเบียนรถ Forklift</span>
         </button>
 
+        <button class="tab-btn" data-tab="driver-reg-tab" id="nav-btn-driver-reg">
+          <i class="fa-solid fa-user-plus"></i>
+          <span>ลงทะเบียนผู้ขับ</span>
+        </button>
+
         <button class="tab-btn" data-tab="alerts-tab" id="nav-btn-alerts">
           <i class="fa-solid fa-bell"></i>
           <span>ศูนย์แจ้งเตือน</span>
@@ -232,70 +237,150 @@
         </div>
         <!-- ════════════════════════════════════════════════════════════════ -->
 
-        <!-- Search & Filter Controls Panel -->
-        <div class="filter-panel">
-          <!-- Search Bar: (เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, เจ้าของรถ) -->
-          <div class="search-input-wrap">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="search-input" class="search-input" 
-                   placeholder="ค้นหาข้อมูลรถ: เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, หรือเจ้าของรถ/ซัพพลายเออร์...">
+        <!-- Dashboard View Switcher: ข้อมูลรถ Forklift vs ทะเบียนผู้ขับขี่ -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+          <div style="display:flex; gap:0.6rem; align-items:center;">
+            <button type="button" class="btn btn-primary btn-sm dash-view-btn active" id="btn-view-fleet" data-dash-view="fleet">
+              <i class="fa-solid fa-truck-ramp-box"></i> ข้อมูลรถ Forklift (<span id="dash-fleet-count">0</span>)
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm dash-view-btn" id="btn-view-drivers" data-dash-view="drivers">
+              <i class="fa-solid fa-id-card"></i> ทะเบียนผู้ขับขี่ (<span id="dash-drivers-count">0</span>)
+            </button>
           </div>
-
-          <!-- Filter Pills / Categories Tabs -->
-          <div class="filter-row">
-            <div class="filter-categories">
-              <button class="filter-pill active" data-filter="all">
-                <i class="fa-solid fa-border-all"></i> ทั้งหมด
-              </button>
-              <button class="filter-pill" data-filter="electric">
-                <i class="fa-solid fa-bolt"></i> ไฟฟ้า (Electric)
-              </button>
-              <button class="filter-pill" data-filter="lpg">
-                <i class="fa-solid fa-fire-flame-simple"></i> ก๊าซ LPG
-              </button>
-              <button class="filter-pill" data-filter="diesel">
-                <i class="fa-solid fa-gas-pump"></i> ดีเซล (Diesel)
-              </button>
-              <button class="filter-pill" data-filter="haier">
-                <i class="fa-solid fa-building"></i> รถบริษัท Haier
-              </button>
-              <button class="filter-pill" data-filter="subcontractor">
-                <i class="fa-solid fa-handshake"></i> ซัพพลายเออร์ (Sub)
-              </button>
-              <button class="filter-pill" data-filter="ready">
-                <i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน
-              </button>
-              <button class="filter-pill" data-filter="repair">
-                <i class="fa-solid fa-wrench"></i> ส่งซ่อม
-              </button>
-              <button class="filter-pill" data-filter="lpg-alert">
-                <i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> แจ้งเตือน LPG 1 ปี
-              </button>
-              <button class="filter-pill" data-filter="incomplete">
-                <i class="fa-solid fa-clipboard-question" style="color:#f87171;"></i> ข้อมูลไม่ครบ
-              </button>
-            </div>
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" data-switch-tab="register-tab">
+              <i class="fa-solid fa-plus"></i> ขึ้นทะเบียนรถใหม่
+            </button>
+            <button class="btn btn-primary btn-sm" data-switch-tab="driver-reg-tab">
+              <i class="fa-solid fa-user-plus"></i> ลงทะเบียนผู้ขับขี่ใหม่
+            </button>
           </div>
         </div>
 
-        <!-- Fleet Table -->
-        <div class="table-container">
-          <table class="custom-table">
-            <thead>
-              <tr>
-                <th style="width: 140px;">เลขทะเบียนรถ</th>
-                <th>ประเภทรถ / พิกัดยก</th>
-                <th style="width: 170px;">ประเภทพลังงาน</th>
-                <th>เจ้าของรถ (บริษัท/ซัพ)</th>
-                <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
-                <th style="width: 130px;">สถานะ</th>
-                <th style="width: 130px; text-align: center;">รายละเอียด</th>
-              </tr>
-            </thead>
-            <tbody id="fleet-table-body">
-              <!-- Dynamically populated rows -->
-            </tbody>
-          </table>
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- VIEW 1: FLEET TABLE (ตารางรถ Forklift)                      -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <div id="dash-fleet-view-container">
+          <!-- Search & Filter Controls Panel -->
+          <div class="filter-panel">
+            <!-- Search Bar: (เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, เจ้าของรถ) -->
+            <div class="search-input-wrap">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="search-input" class="search-input" 
+                     placeholder="ค้นหาข้อมูลรถ: เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, หรือเจ้าของรถ/ซัพพลายเออร์...">
+            </div>
+
+            <!-- Filter Pills / Categories Tabs -->
+            <div class="filter-row">
+              <div class="filter-categories">
+                <button class="filter-pill active" data-filter="all">
+                  <i class="fa-solid fa-border-all"></i> ทั้งหมด
+                </button>
+                <button class="filter-pill" data-filter="electric">
+                  <i class="fa-solid fa-bolt"></i> ไฟฟ้า (Electric)
+                </button>
+                <button class="filter-pill" data-filter="lpg">
+                  <i class="fa-solid fa-fire-flame-simple"></i> ก๊าซ LPG
+                </button>
+                <button class="filter-pill" data-filter="diesel">
+                  <i class="fa-solid fa-gas-pump"></i> ดีเซล (Diesel)
+                </button>
+                <button class="filter-pill" data-filter="haier">
+                  <i class="fa-solid fa-building"></i> รถบริษัท Haier
+                </button>
+                <button class="filter-pill" data-filter="subcontractor">
+                  <i class="fa-solid fa-handshake"></i> ซัพพลายเออร์ (Sub)
+                </button>
+                <button class="filter-pill" data-filter="ready">
+                  <i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน
+                </button>
+                <button class="filter-pill" data-filter="repair">
+                  <i class="fa-solid fa-wrench"></i> ส่งซ่อม
+                </button>
+                <button class="filter-pill" data-filter="lpg-alert">
+                  <i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> แจ้งเตือน LPG 1 ปี
+                </button>
+                <button class="filter-pill" data-filter="incomplete">
+                  <i class="fa-solid fa-clipboard-question" style="color:#f87171;"></i> ข้อมูลไม่ครบ
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fleet Table -->
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">เลขทะเบียนรถ</th>
+                  <th>ประเภทรถ / พิกัดยก</th>
+                  <th style="width: 170px;">ประเภทพลังงาน</th>
+                  <th>เจ้าของรถ (บริษัท/ซัพ)</th>
+                  <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
+                  <th style="width: 130px;">สถานะ</th>
+                  <th style="width: 130px; text-align: center;">รายละเอียด</th>
+                </tr>
+              </thead>
+              <tbody id="fleet-table-body">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- VIEW 2: DRIVER REGISTRY (ตารางทะเบียนผู้ขับขี่)            -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <div id="dash-driver-view-container" style="display:none;">
+          <!-- Driver Search & Filter Panel -->
+          <div class="filter-panel">
+            <div class="search-input-wrap">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="driver-search-input" class="search-input" 
+                     placeholder="ค้นหาข้อมูลผู้ขับขี่: ชื่อ-นามสกุล, รหัสพนักงาน, สังกัด/บริษัท, แผนก หรือทะเบียนรถ...">
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-categories" id="driver-filter-categories">
+                <button class="filter-pill active" data-driver-filter="all">
+                  <i class="fa-solid fa-users"></i> ทั้งหมด
+                </button>
+                <button class="filter-pill" data-driver-filter="certified">
+                  <i class="fa-solid fa-award" style="color:#34d399;"></i> ผ่านการรับรอง
+                </button>
+                <button class="filter-pill" data-driver-filter="pending">
+                  <i class="fa-solid fa-hourglass-half" style="color:#fbbf24;"></i> รอดำเนินการ (รอใบเซอร์)
+                </button>
+                <button class="filter-pill" data-driver-filter="assigned">
+                  <i class="fa-solid fa-truck-ramp-box"></i> มีรถประจำ
+                </button>
+                <button class="filter-pill" data-driver-filter="unassigned">
+                  <i class="fa-solid fa-user-clock"></i> ยังไม่มีรถประจำ
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Driver Table -->
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">รูปถ่าย</th>
+                  <th style="width: 140px;">รหัสพนักงาน</th>
+                  <th>ชื่อ-นามสกุล ผู้ขับขี่</th>
+                  <th>สังกัด (บริษัท/ซัพ)</th>
+                  <th>แผนกที่ปฏิบัติงาน</th>
+                  <th style="width: 150px;">รถ Forklift ที่ขับ</th>
+                  <th style="width: 170px;">ใบรับรองการอบรม</th>
+                  <th style="width: 140px; text-align: center;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="driver-table-body">
+                <!-- Dynamically populated driver rows -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </section>
@@ -784,80 +869,51 @@
             </div>
 
             <!-- ------------------------------------------------------------ -->
-            <!-- ส่วนที่ 3: ข้อมูลผู้ขับรถที่ขึ้นทะเบียน -->
+            <!-- ส่วนที่ 3: กำหนดผู้ขับขี่ประจำรถ (Driver Assignment) -->
             <!-- ------------------------------------------------------------ -->
             <div class="form-section-card">
               <div class="form-section-header">
                 <div class="section-badge-title">
                   <span class="section-num-badge">3</span>
                   <div>
-                    <h3>ส่วนที่ 3: ข้อมูลผู้ขับรถที่ขึ้นทะเบียน</h3>
-                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน, สังกัด, แผนกที่ปฏิบัติงาน และแนบภาพถ่ายผู้ขับขี่</p>
+                    <h3>ส่วนที่ 3: กำหนดผู้ขับขี่ประจำรถ (Driver Assignment)</h3>
+                    <p class="form-hint">เลือกผู้ขับขี่จาก "ทะเบียนผู้ขับขี่" ที่ขึ้นทะเบียนไว้ หรือเลือกยังไม่ระบุ</p>
                   </div>
                 </div>
               </div>
 
-              <div class="driver-form-layout">
-                <!-- จุดแนบรูปผู้ขับขี่ -->
-                <div class="form-group">
-                  <label class="form-label">
-                    <i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> ภาพถ่ายผู้ขับขี่ (Driver Photo)
-                  </label>
-                  <div class="photo-box driver-photo-box" id="box-photo-driver" title="คลิกเพื่อแนบรูปผู้ขับขี่">
-                    <input type="file" id="input-photo-driver" accept="image/*" style="display:none;">
-                    <img class="photo-box-preview" id="preview-photo-driver" style="display:none;" alt="ภาพถ่ายผู้ขับขี่">
-                    <div class="photo-box-content">
-                      <i class="fa-solid fa-user-tie photo-box-icon"></i>
-                      <div class="photo-box-title">แนบรูปถ่ายผู้ขับขี่</div>
-                      <div class="photo-box-sub">คลิกเพื่ออัปโหลดภาพ (JPG, PNG)</div>
+              <div class="form-grid">
+                <div class="form-group form-group-full">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.5rem;">
+                    <label class="form-label" for="reg-select-driver" style="margin-bottom:0;">
+                      <i class="fa-solid fa-id-card" style="color:var(--haier-cyan);"></i> เลือกผู้ขับขี่ประจำรถ
+                    </label>
+                    <button type="button" class="btn btn-secondary btn-sm" data-switch-tab="driver-reg-tab">
+                      <i class="fa-solid fa-user-plus"></i> ลงทะเบียนผู้ขับขี่คนใหม่
+                    </button>
+                  </div>
+                  <select id="reg-select-driver" class="form-control">
+                    <option value="">-- ยังไม่กำหนดผู้ขับขี่ (Unassigned) --</option>
+                  </select>
+                  <span class="form-hint">หากยังไม่มีข้อมูลผู้ขับ สามารถบันทึกรถไว้ก่อน แล้วมากำหนดคนขับภายหลังได้</span>
+                </div>
+
+                <!-- Preview Selected Driver Card -->
+                <div id="reg-driver-preview-card" class="stat-card" style="display:none; grid-column: 1 / -1; margin-top:0.25rem; background:var(--haier-navy-darker); border:1px solid rgba(0,160,233,0.3);">
+                  <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <img id="reg-driver-preview-img" src="" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan);" alt="รูปผู้ขับ">
+                    <div style="flex:1;">
+                      <div id="reg-driver-preview-name" style="font-weight:700; color:#fff; font-size:1rem;">-</div>
+                      <div id="reg-driver-preview-sub" style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">-</div>
                     </div>
-                    <div class="photo-overlay-actions">
-                      <button type="button" class="btn btn-danger btn-sm btn-remove-photo" id="btn-remove-photo-driver">
-                        <i class="fa-solid fa-trash"></i> ลบรูป
-                      </button>
-                    </div>
+                    <div id="reg-driver-preview-badge"></div>
                   </div>
                 </div>
 
-                <!-- ข้อมูลรายละเอียดผู้ขับขี่ -->
-                <div class="form-grid" style="margin-bottom:0;">
-                  <div class="form-group">
-                    <label class="form-label" for="reg-driver-name">
-                      ชื่อ-นามสกุล ผู้ขับขี่ <span class="required">*</span>
-                    </label>
-                    <input type="text" id="reg-driver-name" class="form-control" 
-                           placeholder="เช่น นายธวัชชัย บุญส่ง" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label" for="reg-driver-empid">
-                      รหัสพนักงาน (Employee ID) <span class="required">*</span>
-                    </label>
-                    <input type="text" id="reg-driver-empid" class="form-control" 
-                           placeholder="เช่น HR-9204 หรือ SUB-1088" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label" for="reg-driver-company">
-                      สังกัด (ชื่อบริษัท และซัพพลายเออร์) <span class="required">*</span>
-                    </label>
-                    <input type="text" id="reg-driver-company" class="form-control" 
-                           value="Haier Electric Appliances (Thailand)" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label" for="reg-driver-dept">
-                      แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
-                    </label>
-                    <input type="text" id="reg-driver-dept" class="form-control" 
-                           placeholder="เช่น คลังสินค้าสำเร็จรูป WH-A, แผนกประกอบ Assembly Line" required>
-                  </div>
-
-                  <div class="form-group form-group-full">
-                    <label class="form-label" for="reg-notes">หมายเหตุเพิ่มเติม</label>
-                    <input type="text" id="reg-notes" class="form-control" 
-                           placeholder="รายละเอียดหรือข้อสังเกตเพิ่มเติมเกี่ยวกับการตรวจสภาพ...">
-                  </div>
+                <div class="form-group form-group-full">
+                  <label class="form-label" for="reg-notes">หมายเหตุเพิ่มเติม</label>
+                  <input type="text" id="reg-notes" class="form-control" 
+                         placeholder="รายละเอียดหรือข้อสังเกตเพิ่มเติมเกี่ยวกับการตรวจสภาพ...">
                 </div>
               </div>
 
@@ -876,6 +932,165 @@
           </form>
         </div>
 
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TAB: REGISTER DRIVER (ลงทะเบียนผู้ขับขี่รถ Forklift)               -->
+      <!-- ================================================================== -->
+      <section id="driver-reg-tab" class="tab-content">
+        
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">
+              <i class="fa-solid fa-id-card"></i> แบบฟอร์มขึ้นทะเบียนผู้ขับขี่รถ Forklift
+            </h2>
+            <p class="section-subtitle">
+              บันทึกข้อมูลผู้ขับขี่, รหัสพนักงาน, สังกัด, แผนก, ภาพถ่ายผู้ขับขี่ และแนบใบรับรองการฝึกอบรม (Safety Certificate)
+            </p>
+          </div>
+          <button class="btn btn-secondary" data-switch-tab="dashboard-tab">
+            <i class="fa-solid fa-arrow-left"></i> กลับสู่หน้าแดชบอร์ด
+          </button>
+        </div>
+
+        <div class="form-container">
+          <form id="driver-reg-form" novalidate>
+
+            <!-- ส่วนที่ 1: ข้อมูลและภาพถ่ายผู้ขับขี่ -->
+            <div class="form-section-card">
+              <div class="form-section-header">
+                <div class="section-badge-title">
+                  <span class="section-num-badge">1</span>
+                  <div>
+                    <h3>ส่วนที่ 1: ข้อมูลและภาพถ่ายผู้ขับขี่ (Driver Profile)</h3>
+                    <p class="form-hint">ระบุชื่อ-นามสกุล, รหัสพนักงาน (ห้ามซ้ำ), สังกัดบริษัท, แผนกที่ปฏิบัติงาน และแนบภาพถ่ายหน้าตรง</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="driver-form-layout">
+                <!-- จุดแนบรูปผู้ขับขี่ -->
+                <div class="form-group">
+                  <label class="form-label">
+                    <i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> ภาพถ่ายผู้ขับขี่ (Driver Photo)
+                  </label>
+                  <div class="photo-box driver-photo-box" id="box-new-driver-photo" title="คลิกเพื่อแนบรูปผู้ขับขี่">
+                    <input type="file" id="input-new-driver-photo" accept="image/*" style="display:none;">
+                    <img class="photo-box-preview" id="preview-new-driver-photo" style="display:none;" alt="ภาพถ่ายผู้ขับขี่">
+                    <div class="photo-box-content">
+                      <i class="fa-solid fa-user-tie photo-box-icon"></i>
+                      <div class="photo-box-title">แนบรูปถ่ายผู้ขับขี่</div>
+                      <div class="photo-box-sub">คลิกเพื่ออัปโหลดภาพ (JPG, PNG)</div>
+                    </div>
+                    <div class="photo-overlay-actions">
+                      <button type="button" class="btn btn-danger btn-sm btn-remove-photo" id="btn-remove-new-driver-photo">
+                        <i class="fa-solid fa-trash"></i> ลบรูป
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ข้อมูลรายละเอียดผู้ขับขี่ -->
+                <div class="form-grid" style="margin-bottom:0;">
+                  <div class="form-group">
+                    <label class="form-label" for="new-driver-name">
+                      ชื่อ-นามสกุล ผู้ขับขี่ <span class="required">*</span>
+                    </label>
+                    <input type="text" id="new-driver-name" class="form-control" 
+                           placeholder="เช่น นายธวัชชัย บุญส่ง" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="new-driver-empid">
+                      รหัสพนักงาน (Employee ID) <span class="required">*</span>
+                    </label>
+                    <input type="text" id="new-driver-empid" class="form-control" 
+                           placeholder="เช่น HR-9204 หรือ SUB-1088" required>
+                    <div id="new-driver-empid-alert" class="admin-login-error" style="display:none; margin-top:0.35rem;">
+                      <i class="fa-solid fa-triangle-exclamation"></i> รหัสพนักงานนี้มีอยู่ในระบบแล้ว
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="new-driver-company">
+                      สังกัด (ชื่อบริษัท และซัพพลายเออร์) <span class="required">*</span>
+                    </label>
+                    <input type="text" id="new-driver-company" class="form-control" 
+                           value="Haier Electric Appliances (Thailand)" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="new-driver-dept">
+                      แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
+                    </label>
+                    <input type="text" id="new-driver-dept" class="form-control" 
+                           placeholder="เช่น คลังสินค้าสำเร็จรูป WH-A, แผนกประกอบ Assembly Line" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="new-driver-assigned-plate">
+                      มอบหมายรถ Forklift ที่ขับประจำ (Assigned Vehicle)
+                    </label>
+                    <select id="new-driver-assigned-plate" class="form-control">
+                      <option value="">-- ยังไม่มอบหมายรถประจำ (Unassigned) --</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="new-driver-notes">หมายเหตุเพิ่มเติม</label>
+                    <input type="text" id="new-driver-notes" class="form-control" 
+                           placeholder="ข้อสังเกตเพิ่มเติม...">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ส่วนที่ 2: ใบรับรองการอบรมความปลอดภัย (Safety Certificate) -->
+            <div class="form-section-card">
+              <div class="form-section-header">
+                <div class="section-badge-title">
+                  <span class="section-num-badge">2</span>
+                  <div>
+                    <h3>ส่วนที่ 2: ใบรับรองการฝึกอบรมผู้ขับขี่รถยก (Safety Certificate)</h3>
+                    <p class="form-hint">แนบเอกสารหรือบัตรรับรองผ่านการฝึกอบรมการขับขี่รถยกอย่างปลอดภัย (มีระบบ AI ตรวจสอบอัตโนมัติ)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ai-cert-panel">
+                <div class="ai-panel-header">
+                  <span class="ai-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Certificate Verification Engine</span>
+                  <span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-shield-halved"></i> ตรวจสอบเอกสารความปลอดภัยตามมาตรฐานกระทรวงแรงงาน</span>
+                </div>
+
+                <div class="ai-cert-body">
+                  <div>
+                    <label class="form-label">
+                      <i class="fa-solid fa-file-arrow-up" style="color:var(--haier-cyan);"></i> แนบภาพถ่ายใบรับรอง / บัตรเซอร์
+                    </label>
+                    <input type="file" id="input-new-driver-cert" class="form-control" accept="image/*">
+                    <div id="new-driver-cert-status" style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-muted);">
+                      สถานะ: ยังไม่ได้แนบภาพใบรับรอง (รอดำเนินการ)
+                    </div>
+                  </div>
+                  <div style="text-align:center;">
+                    <img id="preview-new-driver-cert" style="display:none; max-height:180px; width:auto; margin:0 auto; border-radius:6px; border:1px solid var(--surface-border);" alt="พรีวิวใบรับรอง">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1.5rem;">
+              <button type="button" class="btn btn-secondary" data-switch-tab="dashboard-tab">
+                ยกเลิก
+              </button>
+              <button type="submit" id="btn-submit-driver-reg" class="btn btn-primary" style="padding:0.75rem 2rem;">
+                <i class="fa-solid fa-user-plus"></i> บันทึกการขึ้นทะเบียนผู้ขับขี่
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <!-- ================================================================== -->
@@ -978,18 +1193,50 @@
     </div>
   </div>
 
+  <!-- 1.1 Modal: View Driver Details (ดูรายละเอียดผู้ขับขี่) -->
+  <div id="modal-view-driver-details" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-id-card"></i> รายละเอียดข้อมูลผู้ขับขี่</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="view-driver-modal-body">
+        <!-- Content injected dynamically -->
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn-danger btn-sm" id="btn-view-driver-delete">
+          <i class="fa-solid fa-trash-can"></i> ลบผู้ขับขี่นี้
+        </button>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-view-driver-edit">
+            <i class="fa-solid fa-user-pen"></i> แก้ไขข้อมูล
+          </button>
+          <button type="button" class="btn btn-secondary btn-modal-close">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 2. Modal: Edit Driver (แก้ไขข้อมูลผู้ขับ) -->
   <div id="modal-edit-driver" class="modal-backdrop">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3 class="modal-title"><i class="fa-solid fa-user-pen"></i> แก้ไขข้อมูลผู้ขับขี่รถ Forklift</h3>
+        <h3 class="modal-title" id="modal-edit-driver-title"><i class="fa-solid fa-user-pen"></i> แก้ไขข้อมูลผู้ขับขี่</h3>
         <button class="modal-close-btn">&times;</button>
       </div>
       <form id="form-edit-driver">
         <div class="modal-body">
           <input type="hidden" id="edit-driver-id">
-          <div style="background:rgba(0,160,233,0.1); border-left:3px solid var(--haier-cyan); padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:1.25rem;">
+          <input type="hidden" id="edit-driver-mode" value="forklift">
+          <div id="edit-driver-forklift-box" style="background:rgba(0,160,233,0.1); border-left:3px solid var(--haier-cyan); padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:1.25rem;">
             ทะเบียนรถ: <strong id="edit-driver-forklift-plate" class="plate-tag" style="margin-left:0.5rem;">-</strong>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;" id="edit-driver-assigned-group">
+            <label class="form-label" for="edit-driver-assigned-plate">รถ Forklift ที่มอบหมายให้ขับประจำ</label>
+            <select id="edit-driver-assigned-plate" class="form-control">
+              <option value="">-- ยังไม่มอบหมายรถประจำ (Unassigned) --</option>
+            </select>
           </div>
 
           <div class="form-group" style="margin-bottom:1rem;">
@@ -1104,12 +1351,12 @@
   <!-- Javascript Modules -->
   <!-- Supabase JS Client v2 (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-client.js?v=4"></script>
-  <script src="js/data.js?v=4"></script>
+  <script src="js/supabase-client.js?v=5"></script>
+  <script src="js/data.js?v=5"></script>
   <!-- Chart.js — loaded before app.js; onerror stub prevents crash if CDN unreachable -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
           onerror="window.Chart=null;"></script>
-  <script src="js/app.js?v=4"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>
  

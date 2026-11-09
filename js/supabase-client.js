@@ -300,20 +300,30 @@
     }
 
     /**
-     * Subscribe to real-time changes across all devices
+     * Subscribe to real-time changes across all devices (forklifts & drivers)
      */
     subscribeToChanges(callback) {
       if (!this.isConfigured() || !this.client) return null;
       try {
         const channel = this.client
-          .channel('public:forklifts')
+          .channel('public:fleet_and_drivers')
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'forklifts' },
             (payload) => {
-              console.log('🔄 Supabase Realtime Change received from another device:', payload);
+              console.log('🔄 Supabase Realtime forklifts change:', payload);
               if (typeof callback === 'function') {
-                callback(payload);
+                callback('forklifts', payload);
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'drivers' },
+            (payload) => {
+              console.log('🔄 Supabase Realtime drivers change:', payload);
+              if (typeof callback === 'function') {
+                callback('drivers', payload);
               }
             }
           )
@@ -322,6 +332,122 @@
       } catch (err) {
         console.warn('Realtime subscription error:', err);
         return null;
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Drivers Data Mapping & CRUD Operations
+    // ──────────────────────────────────────────────────────────────────────────
+
+    driverToDbRow(item) {
+      return {
+        id: item.id,
+        emp_id: item.empId || '',
+        name: item.name || '',
+        company: item.company || '',
+        department: item.department || '',
+        photo: item.photo || '',
+        cert_image: item.certImage || '',
+        cert_status: item.certStatus || 'รอดำเนินการ',
+        has_trained: Boolean(item.hasTrained),
+        assigned_plate: item.assignedPlate || '',
+        notes: item.notes || '',
+        created_at: item.createdAt || new Date().toISOString()
+      };
+    }
+
+    driverFromDbRow(row) {
+      return {
+        id: row.id,
+        empId: row.emp_id || '',
+        name: row.name || '',
+        company: row.company || '',
+        department: row.department || '',
+        photo: row.photo || '',
+        certImage: row.cert_image || '',
+        certStatus: row.cert_status || 'รอดำเนินการ',
+        hasTrained: Boolean(row.has_trained),
+        assignedPlate: row.assigned_plate || '',
+        notes: row.notes || '',
+        createdAt: row.created_at
+      };
+    }
+
+    async fetchDrivers() {
+      if (!this.isConfigured() || !this.client) return null;
+      try {
+        const { data, error } = await this.client
+          .from('drivers')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.warn('⚠️ Supabase fetchDrivers error:', error);
+          return null;
+        }
+        return (data || []).map(row => this.driverFromDbRow(row));
+      } catch (err) {
+        console.error('❌ Supabase fetchDrivers exception:', err);
+        return null;
+      }
+    }
+
+    async insertDriver(driver) {
+      if (!this.isConfigured() || !this.client) return null;
+      const row = this.driverToDbRow(driver);
+      const { data, error } = await this.client
+        .from('drivers')
+        .insert([row])
+        .select();
+
+      if (error) {
+        console.error('❌ Supabase insertDriver error:', error);
+        throw new Error(`บันทึกข้อมูลผู้ขับขี่ลง Supabase ล้มเหลว: ${error.message}`);
+      }
+      return data && data[0] ? this.driverFromDbRow(data[0]) : driver;
+    }
+
+    async updateDriverRow(id, updatedDriver) {
+      if (!this.isConfigured() || !this.client) return null;
+      const row = this.driverToDbRow(updatedDriver);
+      delete row.id;
+      const { data, error } = await this.client
+        .from('drivers')
+        .update(row)
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error('❌ Supabase updateDriverRow error:', error);
+        throw new Error(`อัปเดตข้อมูลผู้ขับขี่บน Supabase ล้มเหลว: ${error.message}`);
+      }
+      return data && data[0] ? this.driverFromDbRow(data[0]) : updatedDriver;
+    }
+
+    async deleteDriverRow(id) {
+      if (!this.isConfigured() || !this.client) return null;
+      const { error } = await this.client
+        .from('drivers')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Supabase deleteDriverRow error:', error);
+        throw new Error(`ลบข้อมูลผู้ขับขี่จาก Supabase ล้มเหลว: ${error.message}`);
+      }
+      return true;
+    }
+
+    async uploadLocalDrivers(localDrivers) {
+      if (!this.isConfigured() || !this.client) return;
+      if (!localDrivers || localDrivers.length === 0) return;
+      try {
+        const rows = localDrivers.map(d => this.driverToDbRow(d));
+        await this.client
+          .from('drivers')
+          .upsert(rows, { onConflict: 'id' });
+      } catch (e) {
+        console.warn('⚠️ Supabase uploadLocalDrivers error:', e);
       }
     }
 
