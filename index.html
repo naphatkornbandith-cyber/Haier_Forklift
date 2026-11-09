@@ -443,15 +443,15 @@
                 </span>
               </div>
               <h2 class="section-title">
-                <i class="fa-solid fa-sliders"></i> จัดการและแก้ไขข้อมูลรถ Forklift
+                <i class="fa-solid fa-sliders"></i> จัดการและแก้ไขข้อมูลระบบ (Admin Console)
               </h2>
               <p class="section-subtitle">
-                แก้ไขข้อมูลผู้ขับขี่, อัปเดตสถานะความพร้อม, บันทึกการตรวจสภาพ และจัดการลบข้อมูลในระบบ
+                จัดการข้อมูลรถ Forklift, จัดการและแก้ไขข้อมูลผู้ขับขี่, บันทึกการตรวจสภาพ และลบข้อมูลในระบบ
               </p>
             </div>
             <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
               <button id="btn-admin-clear-data" class="btn btn-secondary btn-sm" title="ล้างข้อมูลรถทั้งหมดในระบบ">
-                <i class="fa-solid fa-trash-can"></i> ล้างข้อมูลทั้งหมด
+                <i class="fa-solid fa-trash-can"></i> ล้างข้อมูลรถทั้งหมด
               </button>
               <button class="btn btn-primary btn-sm" data-switch-tab="register-tab">
                 <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
@@ -462,60 +462,139 @@
             </div>
           </div>
 
-
-          <!-- Admin Search & Filter Controls Panel -->
-          <div class="filter-panel">
-            <div class="search-input-wrap">
-              <i class="fa-solid fa-magnifying-glass search-icon"></i>
-              <input type="text" id="admin-search-input" class="search-input" 
-                     placeholder="ค้นหาข้อมูลรถเพื่อจัดการ: เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, หรือผู้ขับขี่...">
+          <!-- Admin Sub-View Switcher: จัดการรถ Forklift vs จัดการข้อมูลผู้ขับ -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+            <div style="display:flex; gap:0.6rem; align-items:center;">
+              <button type="button" class="btn btn-primary btn-sm admin-subview-btn active" id="btn-admin-view-fleet" data-admin-subview="fleet">
+                <i class="fa-solid fa-truck-ramp-box"></i> จัดการข้อมูลรถ Forklift (<span id="admin-fleet-count">0</span>)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm admin-subview-btn" id="btn-admin-view-drivers" data-admin-subview="drivers">
+                <i class="fa-solid fa-id-card"></i> จัดการและแก้ไขข้อมูลผู้ขับ (<span id="admin-drivers-count">0</span>)
+              </button>
             </div>
-
-            <div class="filter-row">
-              <div class="filter-categories" id="admin-filter-categories">
-                <button class="filter-pill active" data-admin-filter="all">
-                  <i class="fa-solid fa-border-all"></i> ทั้งหมด
-                </button>
-                <button class="filter-pill" data-admin-filter="electric">
-                  <i class="fa-solid fa-bolt"></i> ไฟฟ้า (Electric)
-                </button>
-                <button class="filter-pill" data-admin-filter="lpg">
-                  <i class="fa-solid fa-fire-flame-simple"></i> ก๊าซ LPG
-                </button>
-                <button class="filter-pill" data-admin-filter="diesel">
-                  <i class="fa-solid fa-gas-pump"></i> ดีเซล (Diesel)
-                </button>
-                <button class="filter-pill" data-admin-filter="ready">
-                  <i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน
-                </button>
-                <button class="filter-pill" data-admin-filter="repair">
-                  <i class="fa-solid fa-wrench"></i> ส่งซ่อม
-                </button>
-                <button class="filter-pill" data-admin-filter="incomplete">
-                  <i class="fa-solid fa-clipboard-question" style="color:#f87171;"></i> ข้อมูลไม่ครบ
-                </button>
-              </div>
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" data-switch-tab="register-tab">
+                <i class="fa-solid fa-plus"></i> ลงทะเบียนรถใหม่
+              </button>
+              <button class="btn btn-primary btn-sm" data-switch-tab="driver-reg-tab">
+                <i class="fa-solid fa-user-plus"></i> ลงทะเบียนผู้ขับใหม่
+              </button>
             </div>
           </div>
 
-          <!-- Fleet Management Table -->
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th style="width: 140px;">เลขทะเบียนรถ</th>
-                  <th>ประเภทรถ / พิกัดยก</th>
-                  <th style="width: 160px;">ประเภทพลังงาน</th>
-                  <th>เจ้าของรถ (บริษัท/ซัพ)</th>
-                  <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
-                  <th style="width: 130px;">สถานะ</th>
-                  <th style="width: 290px; text-align: center;">จัดการข้อมูล (Admin Actions)</th>
-                </tr>
-              </thead>
-              <tbody id="admin-table-body">
-                <!-- Dynamically populated with full action buttons -->
-              </tbody>
-            </table>
+          <!-- ──────────────────────────────────────────────────────────── -->
+          <!-- ADMIN VIEW 1: FLEET MANAGEMENT (จัดการรถ Forklift)          -->
+          <!-- ──────────────────────────────────────────────────────────── -->
+          <div id="admin-fleet-view-container">
+            <!-- Admin Search & Filter Controls Panel -->
+            <div class="filter-panel">
+              <div class="search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="admin-search-input" class="search-input" 
+                       placeholder="ค้นหาข้อมูลรถเพื่อจัดการ: เลขทะเบียนรถ, ประเภทรถ, ประเภทพลังงาน, หรือผู้ขับขี่...">
+              </div>
+
+              <div class="filter-row">
+                <div class="filter-categories" id="admin-filter-categories">
+                  <button class="filter-pill active" data-admin-filter="all">
+                    <i class="fa-solid fa-border-all"></i> ทั้งหมด
+                  </button>
+                  <button class="filter-pill" data-admin-filter="electric">
+                    <i class="fa-solid fa-bolt"></i> ไฟฟ้า (Electric)
+                  </button>
+                  <button class="filter-pill" data-admin-filter="lpg">
+                    <i class="fa-solid fa-fire-flame-simple"></i> ก๊าซ LPG
+                  </button>
+                  <button class="filter-pill" data-admin-filter="diesel">
+                    <i class="fa-solid fa-gas-pump"></i> ดีเซล (Diesel)
+                  </button>
+                  <button class="filter-pill" data-admin-filter="ready">
+                    <i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน
+                  </button>
+                  <button class="filter-pill" data-admin-filter="repair">
+                    <i class="fa-solid fa-wrench"></i> ส่งซ่อม
+                  </button>
+                  <button class="filter-pill" data-admin-filter="incomplete">
+                    <i class="fa-solid fa-clipboard-question" style="color:#f87171;"></i> ข้อมูลไม่ครบ
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fleet Management Table -->
+            <div class="table-container">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 140px;">เลขทะเบียนรถ</th>
+                    <th>ประเภทรถ / พิกัดยก</th>
+                    <th style="width: 160px;">ประเภทพลังงาน</th>
+                    <th>เจ้าของรถ (บริษัท/ซัพ)</th>
+                    <th>ข้อมูลผู้ขับขี่ & ใบรับรอง</th>
+                    <th style="width: 130px;">สถานะ</th>
+                    <th style="width: 290px; text-align: center;">จัดการข้อมูล (Admin Actions)</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-table-body">
+                  <!-- Dynamically populated with full action buttons -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ──────────────────────────────────────────────────────────── -->
+          <!-- ADMIN VIEW 2: DRIVER MANAGEMENT (จัดการและแก้ไขข้อมูลผู้ขับ) -->
+          <!-- ──────────────────────────────────────────────────────────── -->
+          <div id="admin-driver-view-container" style="display:none;">
+            <!-- Driver Search & Filter Panel -->
+            <div class="filter-panel">
+              <div class="search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="admin-driver-search-input" class="search-input" 
+                       placeholder="ค้นหาข้อมูลผู้ขับเพื่อจัดการ: ชื่อ-นามสกุล, รหัสพนักงาน, สังกัดบริษัท, แผนก หรือทะเบียนรถประจำ...">
+              </div>
+
+              <div class="filter-row">
+                <div class="filter-categories" id="admin-driver-filter-categories">
+                  <button class="filter-pill active" data-admin-driver-filter="all">
+                    <i class="fa-solid fa-users"></i> ทั้งหมด
+                  </button>
+                  <button class="filter-pill" data-admin-driver-filter="certified">
+                    <i class="fa-solid fa-award" style="color:#34d399;"></i> ผ่านการรับรอง
+                  </button>
+                  <button class="filter-pill" data-admin-driver-filter="pending">
+                    <i class="fa-solid fa-hourglass-half" style="color:#fbbf24;"></i> รอดำเนินการ (รอใบเซอร์)
+                  </button>
+                  <button class="filter-pill" data-admin-driver-filter="assigned">
+                    <i class="fa-solid fa-truck-ramp-box"></i> มีรถประจำ
+                  </button>
+                  <button class="filter-pill" data-admin-driver-filter="unassigned">
+                    <i class="fa-solid fa-user-clock"></i> ยังไม่มีรถประจำ
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Driver Management Table -->
+            <div class="table-container">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">รูปถ่าย</th>
+                    <th style="width: 140px;">รหัสพนักงาน</th>
+                    <th>ชื่อ-นามสกุล ผู้ขับขี่</th>
+                    <th>สังกัด (บริษัท/ซัพ)</th>
+                    <th>แผนกที่ปฏิบัติงาน</th>
+                    <th style="width: 150px;">รถ Forklift ที่ขับ</th>
+                    <th style="width: 170px;">ใบรับรองการอบรม</th>
+                    <th style="width: 200px; text-align: center;">จัดการข้อมูล (Admin Actions)</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-driver-table-body">
+                  <!-- Dynamically populated admin driver rows -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1232,6 +1311,17 @@
             ทะเบียนรถ: <strong id="edit-driver-forklift-plate" class="plate-tag" style="margin-left:0.5rem;">-</strong>
           </div>
 
+          <!-- ส่วนเลือกดึงข้อมูลผู้ขับจากทะเบียนผู้ขับ (สำหรับโหมดแก้ไขผู้ขับประจำรถ Forklift) -->
+          <div class="form-group" style="margin-bottom:1.15rem;" id="edit-forklift-driver-select-group">
+            <label class="form-label" for="edit-forklift-driver-select">
+              <i class="fa-solid fa-id-card-clip" style="color:var(--haier-cyan);"></i> เลือกผู้ขับขี่จากทะเบียนผู้ขับ (Registered Drivers) <span class="required">*</span>
+            </label>
+            <select id="edit-forklift-driver-select" class="form-control">
+              <option value="">-- ไม่ระบุผู้ขับ (ยังไม่มีคนขับประจำ) --</option>
+            </select>
+            <span class="form-hint">เลือกผู้ขับขี่ที่ลงทะเบียนไว้ในระบบ เพื่อดึงข้อมูล รูปถ่าย และใบเซอร์มาผูกกับรถคันนี้โดยอัตโนมัติ</span>
+          </div>
+
           <div class="form-group" style="margin-bottom:1rem;" id="edit-driver-assigned-group">
             <label class="form-label" for="edit-driver-assigned-plate">รถ Forklift ที่มอบหมายให้ขับประจำ</label>
             <select id="edit-driver-assigned-plate" class="form-control">
@@ -1351,12 +1441,12 @@
   <!-- Javascript Modules -->
   <!-- Supabase JS Client v2 (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-client.js?v=5"></script>
-  <script src="js/data.js?v=5"></script>
+  <script src="js/supabase-client.js?v=6"></script>
+  <script src="js/data.js?v=6"></script>
   <!-- Chart.js — loaded before app.js; onerror stub prevents crash if CDN unreachable -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
           onerror="window.Chart=null;"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>
  

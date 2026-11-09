@@ -284,8 +284,34 @@ class ForkliftDataStore {
   }
 
   deleteDriver(id) {
+    const targetDriver = this.getDriverById(id);
     const drivers = this.getAllDrivers().filter(d => d.id !== id);
     this.saveAllDrivers(drivers);
+
+    // Unassign driver from any assigned forklift
+    if (targetDriver) {
+      const forklifts = this.getAll();
+      let changed = false;
+      forklifts.forEach(fl => {
+        if (fl.driver?.driverId === id || (targetDriver.assignedPlate && fl.plateNumber === targetDriver.assignedPlate)) {
+          fl.driver = {
+            name: 'ยังไม่ระบุ',
+            empId: '-',
+            company: fl.ownerCompany,
+            department: '-',
+            photo: '',
+            hasTrained: false,
+            certImage: '',
+            certStatus: 'รอดำเนินการ'
+          };
+          changed = true;
+          if (window.supabaseService && window.supabaseService.isConfigured()) {
+            window.supabaseService.update(fl.id, fl).catch(e => console.warn(e));
+          }
+        }
+      });
+      if (changed) this.saveAll(forklifts);
+    }
 
     if (window.supabaseService && window.supabaseService.isConfigured()) {
       window.supabaseService.deleteDriverRow(id).catch(e => {

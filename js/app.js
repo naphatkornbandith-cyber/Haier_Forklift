@@ -89,8 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Admin Authentication & Filter State
     isAdmin: sessionStorage.getItem('haier_forklift_admin') === 'true',
     adminUser: JSON.parse(sessionStorage.getItem('haier_forklift_admin_user') || 'null'),
+    adminSubView: 'fleet', // 'fleet' หรือ 'drivers'
     adminFilter: 'all',
     adminSearchQuery: '',
+    adminDriverFilter: 'all',
+    adminDriverSearchQuery: '',
     // Dashboard View: 'fleet' หรือ 'drivers'
     dashView: 'fleet',
     driverFilter: 'all',
@@ -1693,9 +1696,11 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         window.forkliftStore.deleteDriver(driverId);
         showToast(`ลบข้อมูลผู้ขับขี่ "${driverName}" เรียบร้อยแล้ว`, 'success');
+        renderDashboard();
         renderDriverTable();
         populateDriverSelectOptions();
         populateForkliftSelectOptions();
+        if (state.isAdmin) renderAdminPanel();
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -1718,6 +1723,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const plateBox = document.getElementById('edit-driver-forklift-box');
     if (plateBox) plateBox.style.display = 'none';
+
+    // ซ่อนช่องเลือกดึงผู้ขับ (เพราะกำลังแก้ไขข้อมูลผู้ขับคนนี้โดยตรง)
+    const driverSelectGroup = document.getElementById('edit-forklift-driver-select-group');
+    if (driverSelectGroup) driverSelectGroup.style.display = 'none';
 
     const assignedGroup = document.getElementById('edit-driver-assigned-group');
     if (assignedGroup) assignedGroup.style.display = 'block';
@@ -1773,7 +1782,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal(modalEditDriver);
   };
 
-  // 2. Edit Driver Modal from Forklift Table
+  // 2. Edit Driver Modal from Forklift Table (เลือกดึงข้อมูลผู้ขับจากทะเบียนผู้ขับขี่)
   window.openEditDriverModal = function(id) {
     const item = window.forkliftStore.getById(id);
     if (!item) return;
@@ -1782,13 +1791,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const driver = item.driver || {};
 
     const titleEl = document.getElementById('modal-edit-driver-title');
-    if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-pen"></i> แก้ไขข้อมูลผู้ขับขี่รถ Forklift';
+    if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับขี่ประจำรถ Forklift';
 
     const modeEl = document.getElementById('edit-driver-mode');
     if (modeEl) modeEl.value = 'forklift';
 
     const plateBox = document.getElementById('edit-driver-forklift-box');
     if (plateBox) plateBox.style.display = 'block';
+
+    // แสดงช่องเลือกดึงข้อมูลผู้ขับขี่จากทะเบียน
+    const driverSelectGroup = document.getElementById('edit-forklift-driver-select-group');
+    if (driverSelectGroup) driverSelectGroup.style.display = 'block';
 
     const assignedGroup = document.getElementById('edit-driver-assigned-group');
     if (assignedGroup) assignedGroup.style.display = 'none';
@@ -1799,6 +1812,33 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-driver-empid').value = driver.empId || '';
     document.getElementById('edit-driver-company').value = driver.company || item.ownerCompany;
     document.getElementById('edit-driver-dept').value = driver.department || '';
+
+    // โหลดรายชื่อผู้ขับขี่จากทะเบียนลงใน Dropdown
+    const driverSelect = document.getElementById('edit-forklift-driver-select');
+    if (driverSelect && window.forkliftStore.getAllDrivers) {
+      driverSelect.innerHTML = '<option value="">-- ไม่ระบุผู้ขับ (ยังไม่มีคนขับประจำ) --</option>';
+      const allDrivers = window.forkliftStore.getAllDrivers();
+      allDrivers.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        const currentPlate = d.assignedPlate ? ` [รถประจำ: ${d.assignedPlate}]` : '';
+        opt.textContent = `${d.name} (${d.empId}) - ${d.company}${currentPlate}`;
+        driverSelect.appendChild(opt);
+      });
+
+      // ค้นหาว่ารถคันนี้มีผู้ขับขี่ที่ตรงกับคนใดในทะเบียนหรือไม่
+      const matched = allDrivers.find(d => 
+        (driver.driverId && d.id === driver.driverId) ||
+        (driver.empId && d.empId === driver.empId && driver.empId !== '-') ||
+        (d.assignedPlate && d.assignedPlate === item.plateNumber)
+      );
+
+      if (matched) {
+        driverSelect.value = matched.id;
+      } else {
+        driverSelect.value = '';
+      }
+    }
 
     state.editDriverCert = {
       image: driver.certImage || '',
@@ -1842,6 +1882,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openModal(modalEditDriver);
   };
+
+  // Event Listener: เมื่อเลือกผู้ขับขี่จากทะเบียน ให้ดึงข้อมูลมาแสดงและอัปเดตฟอร์มอัตโนมัติ
+  const editForkliftDriverSelect = document.getElementById('edit-forklift-driver-select');
+  if (editForkliftDriverSelect) {
+    editForkliftDriverSelect.addEventListener('change', () => {
+      const selectedDriverId = editForkliftDriverSelect.value;
+      const nameInput = document.getElementById('edit-driver-name');
+      const empidInput = document.getElementById('edit-driver-empid');
+      const compInput = document.getElementById('edit-driver-company');
+      const deptInput = document.getElementById('edit-driver-dept');
+      const driverPhotoPrev = document.getElementById('edit-driver-photo-preview');
+      const driverPhotoPh = document.getElementById('edit-driver-photo-placeholder');
+      const btnRemoveEditPhoto = document.getElementById('btn-remove-edit-driver-photo');
+      const certPrev = document.getElementById('edit-cert-preview');
+      const certStatusText = document.getElementById('edit-cert-status-text');
+
+      if (selectedDriverId) {
+        const d = window.forkliftStore.getDriverById(selectedDriverId);
+        if (d) {
+          if (nameInput) nameInput.value = d.name || '';
+          if (empidInput) empidInput.value = d.empId || '';
+          if (compInput) compInput.value = d.company || (state.selectedForklift?.ownerCompany || '');
+          if (deptInput) deptInput.value = d.department || '';
+
+          state.editDriverPhoto = d.photo || '';
+          if (d.photo) {
+            if (driverPhotoPrev) { driverPhotoPrev.src = d.photo; driverPhotoPrev.style.display = 'block'; }
+            if (driverPhotoPh) driverPhotoPh.style.display = 'none';
+            if (btnRemoveEditPhoto) btnRemoveEditPhoto.style.display = 'inline-block';
+          } else {
+            if (driverPhotoPrev) { driverPhotoPrev.src = ''; driverPhotoPrev.style.display = 'none'; }
+            if (driverPhotoPh) driverPhotoPh.style.display = 'block';
+            if (btnRemoveEditPhoto) btnRemoveEditPhoto.style.display = 'none';
+          }
+
+          state.editDriverCert = {
+            image: d.certImage || '',
+            status: d.certStatus || 'รอดำเนินการ'
+          };
+          if (d.certImage) {
+            if (certPrev) { certPrev.src = d.certImage; certPrev.style.display = 'block'; }
+          } else {
+            if (certPrev) { certPrev.src = ''; certPrev.style.display = 'none'; }
+          }
+          if (certStatusText) certStatusText.textContent = `สถานะปัจจุบัน: ${state.editDriverCert.status}`;
+        }
+      } else {
+        // Unassigned
+        if (nameInput) nameInput.value = 'ยังไม่ระบุ';
+        if (empidInput) empidInput.value = '-';
+        if (compInput) compInput.value = state.selectedForklift ? state.selectedForklift.ownerCompany : '';
+        if (deptInput) deptInput.value = '-';
+
+        state.editDriverPhoto = '';
+        if (driverPhotoPrev) { driverPhotoPrev.src = ''; driverPhotoPrev.style.display = 'none'; }
+        if (driverPhotoPh) driverPhotoPh.style.display = 'block';
+        if (btnRemoveEditPhoto) btnRemoveEditPhoto.style.display = 'none';
+
+        state.editDriverCert = { image: '', status: 'รอดำเนินการ' };
+        if (certPrev) { certPrev.src = ''; certPrev.style.display = 'none'; }
+        if (certStatusText) certStatusText.textContent = 'สถานะ: ยังไม่ได้แนบภาพใบรับรอง (รอดำเนินการ)';
+      }
+    });
+  }
 
   // Edit Driver: Handle driver photo upload & removal
   const editDriverPhotoUpload = document.getElementById('edit-driver-photo-upload');
@@ -1944,7 +2048,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         showToast('อัปเดตข้อมูลผู้ขับขี่ในทะเบียนสำเร็จแล้ว', 'success');
       } else {
-        window.forkliftStore.updateDriver(id, {
+        // Forklift driver assignment mode
+        const forkliftItem = window.forkliftStore.getById(id);
+        const plateNumber = forkliftItem ? forkliftItem.plateNumber : '';
+        const selectedDriverId = document.getElementById('edit-forklift-driver-select')?.value;
+
+        let driverData = {
+          driverId: selectedDriverId || null,
           name,
           empId,
           company,
@@ -1953,8 +2063,24 @@ document.addEventListener('DOMContentLoaded', () => {
           certImage: state.editDriverCert.image,
           certStatus: state.editDriverCert.status,
           hasTrained: state.editDriverCert.status === 'ผ่านการรับรอง'
+        };
+
+        window.forkliftStore.updateDriver(id, driverData);
+
+        // ปลดล็อครถคันนี้จากผู้ขับขี่คนเดิมในทะเบียน (ถ้ามี)
+        const allDrivers = window.forkliftStore.getAllDrivers();
+        allDrivers.forEach(d => {
+          if (d.assignedPlate === plateNumber && d.id !== selectedDriverId) {
+            window.forkliftStore.updateDriverData(d.id, { assignedPlate: '' });
+          }
         });
-        showToast('อัปเดตข้อมูลผู้ขับขี่สำเร็จแล้ว', 'success');
+
+        // หากเลือกผู้ขับจากทะเบียน ให้ผูกเลขทะเบียนรถนี้เข้ากับทะเบียนผู้ขับขี่ด้วย
+        if (selectedDriverId) {
+          window.forkliftStore.updateDriverData(selectedDriverId, { assignedPlate: plateNumber });
+        }
+
+        showToast(`อัปเดตผู้ขับขี่ประจำรถ "${plateNumber}" เรียบร้อยแล้ว`, 'success');
       }
 
       closeModal(modalEditDriver);
@@ -2123,7 +2249,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = state.adminUser;
         adminUserNameEl.textContent = u ? (u.full_name || u.username) : 'Admin';
       }
+
+      // Update Counts
+      const adminFleetCountEl = document.getElementById('admin-fleet-count');
+      if (adminFleetCountEl) adminFleetCountEl.textContent = window.forkliftStore.getAll().length;
+      const adminDriversCountEl = document.getElementById('admin-drivers-count');
+      if (adminDriversCountEl && window.forkliftStore.getAllDrivers) {
+        adminDriversCountEl.textContent = window.forkliftStore.getAllDrivers().length;
+      }
+
+      // Set current subview
+      setAdminSubView(state.adminSubView || 'fleet');
       renderAdminTable();
+      renderAdminDriverTable();
     } else {
       loginView.style.display = 'flex';
       panelView.style.display = 'none';
@@ -2134,6 +2272,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const errEl = document.getElementById('admin-login-error');
       if (errEl) errEl.style.display = 'none';
     }
+  }
+
+  // Admin Sub-view Switcher (จัดการรถ Forklift vs จัดการข้อมูลผู้ขับ)
+  const btnAdminViewFleet = document.getElementById('btn-admin-view-fleet');
+  const btnAdminViewDrivers = document.getElementById('btn-admin-view-drivers');
+  const adminFleetContainer = document.getElementById('admin-fleet-view-container');
+  const adminDriverContainer = document.getElementById('admin-driver-view-container');
+
+  function setAdminSubView(subview) {
+    state.adminSubView = subview;
+    if (subview === 'fleet') {
+      if (btnAdminViewFleet) {
+        btnAdminViewFleet.classList.add('active', 'btn-primary');
+        btnAdminViewFleet.classList.remove('btn-secondary');
+      }
+      if (btnAdminViewDrivers) {
+        btnAdminViewDrivers.classList.remove('active', 'btn-primary');
+        btnAdminViewDrivers.classList.add('btn-secondary');
+      }
+      if (adminFleetContainer) adminFleetContainer.style.display = 'block';
+      if (adminDriverContainer) adminDriverContainer.style.display = 'none';
+      renderAdminTable();
+    } else {
+      if (btnAdminViewDrivers) {
+        btnAdminViewDrivers.classList.add('active', 'btn-primary');
+        btnAdminViewDrivers.classList.remove('btn-secondary');
+      }
+      if (btnAdminViewFleet) {
+        btnAdminViewFleet.classList.remove('active', 'btn-primary');
+        btnAdminViewFleet.classList.add('btn-secondary');
+      }
+      if (adminFleetContainer) adminFleetContainer.style.display = 'none';
+      if (adminDriverContainer) adminDriverContainer.style.display = 'block';
+      renderAdminDriverTable();
+    }
+  }
+
+  if (btnAdminViewFleet) {
+    btnAdminViewFleet.addEventListener('click', () => setAdminSubView('fleet'));
+  }
+  if (btnAdminViewDrivers) {
+    btnAdminViewDrivers.addEventListener('click', () => setAdminSubView('drivers'));
   }
 
   function renderAdminTable() {
@@ -2443,6 +2623,124 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Admin Driver Search Input Event
+  const adminDriverSearchInput = document.getElementById('admin-driver-search-input');
+  if (adminDriverSearchInput) {
+    adminDriverSearchInput.addEventListener('input', (e) => {
+      state.adminDriverSearchQuery = e.target.value.trim();
+      renderAdminDriverTable();
+    });
+  }
+
+  // Admin Driver Filter Pills Event
+  const adminDriverFilterPills = document.querySelectorAll('[data-admin-driver-filter]');
+  adminDriverFilterPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      adminDriverFilterPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.adminDriverFilter = pill.dataset.adminDriverFilter;
+      renderAdminDriverTable();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Admin Driver Management Table Rendering
+  // --------------------------------------------------------------------------
+  function renderAdminDriverTable() {
+    const adminDriverTableBody = document.getElementById('admin-driver-table-body');
+    if (!adminDriverTableBody) return;
+    if (!window.forkliftStore || typeof window.forkliftStore.getAllDrivers !== 'function') return;
+
+    let drivers = window.forkliftStore.getAllDrivers();
+
+    const adminDriversCount = document.getElementById('admin-drivers-count');
+    if (adminDriversCount) adminDriversCount.textContent = drivers.length;
+
+    // Filter pills
+    if (state.adminDriverFilter === 'certified') {
+      drivers = drivers.filter(d => d.certStatus === 'ผ่านการรับรอง');
+    } else if (state.adminDriverFilter === 'pending') {
+      drivers = drivers.filter(d => d.certStatus !== 'ผ่านการรับรอง');
+    } else if (state.adminDriverFilter === 'assigned') {
+      drivers = drivers.filter(d => d.assignedPlate && d.assignedPlate.trim() !== '');
+    } else if (state.adminDriverFilter === 'unassigned') {
+      drivers = drivers.filter(d => !d.assignedPlate || d.assignedPlate.trim() === '');
+    }
+
+    // Search query
+    if (state.adminDriverSearchQuery) {
+      const q = state.adminDriverSearchQuery.toLowerCase();
+      drivers = drivers.filter(d => {
+        return (d.name && d.name.toLowerCase().includes(q)) ||
+               (d.empId && d.empId.toLowerCase().includes(q)) ||
+               (d.company && d.company.toLowerCase().includes(q)) ||
+               (d.department && d.department.toLowerCase().includes(q)) ||
+               (d.assignedPlate && d.assignedPlate.toLowerCase().includes(q));
+      });
+    }
+
+    adminDriverTableBody.innerHTML = '';
+    if (drivers.length === 0) {
+      adminDriverTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding: 3rem 1rem; color: var(--text-muted);">
+            <i class="fa-solid fa-id-card" style="font-size: 2.5rem; margin-bottom: 0.75rem; color: var(--surface-border);"></i>
+            <p style="font-size: 1rem; font-weight: 500; color: #fff;">ไม่พบข้อมูลผู้ขับขี่ตามเงื่อนไขที่เลือกในหน้า Admin</p>
+            <button type="button" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;" data-switch-tab="driver-reg-tab">
+              <i class="fa-solid fa-user-plus"></i> ลงทะเบียนผู้ขับขี่ใหม่
+            </button>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    drivers.forEach(driver => {
+      const tr = document.createElement('tr');
+
+      const photoHtml = driver.photo
+        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan);">`
+        : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem;"><i class="fa-solid fa-user-tie"></i></div>`;
+
+      const isCert = driver.certStatus === 'ผ่านการรับรอง';
+      const certBadge = isCert
+        ? `<span class="status-badge badge-ready" title="ผ่านการอบรมความปลอดภัย"><i class="fa-solid fa-certificate"></i> ผ่านการรับรอง</span>`
+        : `<span class="status-badge badge-repair" title="รอดำเนินการ / ยังไม่มีใบรับรอง"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ</span>`;
+
+      const assignedBadge = driver.assignedPlate && driver.assignedPlate.trim() !== ''
+        ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${driver.assignedPlate}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate}</span>`
+        : `<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-minus"></i> ยังไม่ระบุ</span>`;
+
+      tr.innerHTML = `
+        <td style="text-align:center;">${photoHtml}</td>
+        <td><span class="plate-tag" style="font-size:0.8rem;">${driver.empId || '-'}</span></td>
+        <td>
+          <div style="font-weight:600; color:var(--text-primary); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')">${driver.name}</div>
+          ${driver.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-comment-dots"></i> ${driver.notes}</div>` : ''}
+        </td>
+        <td><span style="font-size:0.85rem;">${driver.company || '-'}</span></td>
+        <td><span style="font-size:0.85rem;">${driver.department || '-'}</span></td>
+        <td>${assignedBadge}</td>
+        <td>${certBadge}</td>
+        <td style="text-align:center;">
+          <div class="action-btn-group" style="justify-content:center;">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
+              <i class="fa-regular fa-eye"></i> ดู
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ">
+              <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${driver.name}')" title="ลบข้อมูลผู้ขับ">
+              <i class="fa-solid fa-trash-can"></i> ลบ
+            </button>
+          </div>
+        </td>
+      `;
+
+      adminDriverTableBody.appendChild(tr);
+    });
+  }
+
   // --------------------------------------------------------------------------
   // Supabase Background Sync Handler (ไม่มี UI ในหน้า Admin — จัดการโดยระบบหลังบ้านอัตโนมัติ)
   // --------------------------------------------------------------------------
@@ -2460,9 +2758,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listen to remote driver sync event — อัปเดต Driver Table และ Dropdowns เมื่อ sync สำเร็จ
   window.addEventListener('driver-data-synced', (e) => {
+    renderDashboard();
     renderDriverTable();
     populateDriverSelectOptions();
     populateForkliftSelectOptions();
+    if (state.isAdmin) renderAdminPanel();
     const dashDriversCount = document.getElementById('dash-drivers-count');
     if (dashDriversCount && window.forkliftStore.getAllDrivers) {
       dashDriversCount.textContent = window.forkliftStore.getAllDrivers().length;
