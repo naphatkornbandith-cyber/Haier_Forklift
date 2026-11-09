@@ -673,24 +673,6 @@
                   </div>
                 </div>
 
-                <!-- หมายเลขตัวถัง (Frame No. ห้ามซ้ำกัน) -->
-                <div class="form-group">
-                  <label class="form-label" for="reg-frame-no">
-                    หมายเลขตัวถัง (Frame No. / Chassis No.) <span class="required">*</span>
-                  </label>
-                  <input type="text" id="reg-frame-no" class="form-control" 
-                         placeholder="เช่น F-489201 หรือ 2FB-1082" required>
-                  <span class="form-hint">ระบุหมายเลขตัวถัง/ซีเรียลนัมเบอร์ของรถ (ระบบตรวจสอบความซ้ำซ้อนทันที)</span>
-                  
-                  <!-- Duplicate Frame No. Callout -->
-                  <div id="duplicate-frame-alert" class="duplicate-plate-callout">
-                    <i class="fa-solid fa-triangle-exclamation" style="font-size:1.2rem;"></i>
-                    <div>
-                      <div id="duplicate-frame-msg">หมายเลขตัวถังนี้ (Frame No.) เคยลงทะเบียนแล้วในระบบ</div>
-                    </div>
-                  </div>
-                </div>
-
                 <!-- เลขทะเบียนรถ -->
                 <div class="form-group">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
@@ -1487,6 +1469,20 @@
             <div style="font-size:0.75rem; color:#fef08a; margin-top:0.35rem;">
               * เมื่อท่านระบุวันที่ตรวจเช็คล่าสุดในรอบปัจจุบัน การแจ้งเตือนจะถูกรีเซ็ตและนับรอบ 1 ปีใหม่อัตโนมัติ
             </div>
+          </div>
+
+          <!-- Alert Note if Rental Contract -->
+          <div id="update-rental-alert-section" style="display:none; background:rgba(56, 189, 248, 0.12); border-left:3px solid #38bdf8; padding:0.75rem; border-radius:4px; margin-bottom:1.25rem;">
+            <div style="font-weight:600; color:#38bdf8;"><i class="fa-solid fa-file-contract"></i> สัญญาเช่ารถ (Rental Contract)</div>
+            <div id="update-rental-text" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;"></div>
+          </div>
+
+          <div class="form-group" id="update-rental-expiry-group" style="display:none; margin-bottom:1rem;">
+            <label class="form-label" for="update-contract-expiry">
+              <i class="fa-solid fa-calendar-plus" style="color:var(--haier-cyan);"></i> วันหมดสัญญาเช่า / วันต่อสัญญาใหม่ (Contract Expiry Date)
+            </label>
+            <input type="date" id="update-contract-expiry" class="form-control">
+            <span class="form-hint">แก้ไขหรือระบุวันสิ้นสุดสัญญาเช่าใหม่เมื่อมีการต่อสัญญารถเช่า</span>
           </div>
 
           <div class="form-group" style="margin-bottom:1rem;">
