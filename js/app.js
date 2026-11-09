@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     // Registration Form Temp State
     regPhotos: {
+      vehicle: '',
       front: '',
       side: '',
       fullFront: ''
@@ -1248,70 +1249,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3 Vehicle Photo Upload Handlers
-  const photoBoxes = [
-    { boxId: 'box-photo-front', fileInputId: 'input-photo-front', key: 'front', defaultSvg: window.SVG_ASSETS.forkliftFront },
-    { boxId: 'box-photo-side', fileInputId: 'input-photo-side', key: 'side', defaultSvg: window.SVG_ASSETS.forkliftSide },
-    { boxId: 'box-photo-full', fileInputId: 'input-photo-full', key: 'fullFront', defaultSvg: window.SVG_ASSETS.forkliftFull }
-  ];
+  // Vehicle Photo Upload Handler (แนบ 1 รูป ไม่ต้องระบุว่ามุมไหน)
+  const boxVehiclePhoto = document.getElementById('box-photo-vehicle');
+  const inputVehiclePhoto = document.getElementById('input-photo-vehicle');
+  const previewVehiclePhoto = document.getElementById('preview-photo-vehicle');
+  const btnRemoveVehiclePhoto = document.getElementById('btn-remove-vehicle-photo');
 
-  photoBoxes.forEach(cfg => {
-    const box = document.getElementById(cfg.boxId);
-    const input = document.getElementById(cfg.fileInputId);
-    const preview = box.querySelector('.photo-box-preview');
-    const content = box.querySelector('.photo-box-content');
-    const removeBtn = box.querySelector('.btn-remove-photo');
-
-    // Click to upload
-    box.addEventListener('click', (e) => {
+  if (boxVehiclePhoto && inputVehiclePhoto) {
+    boxVehiclePhoto.addEventListener('click', (e) => {
       if (e.target.closest('.photo-overlay-actions')) return;
-      input.click();
+      inputVehiclePhoto.click();
     });
 
-    // File selected
-    input.addEventListener('change', () => {
-      const file = input.files[0];
+    inputVehiclePhoto.addEventListener('change', () => {
+      const file = inputVehiclePhoto.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          setPhoto(cfg.key, e.target.result, box, preview, content);
+          setVehiclePhoto(e.target.result);
         };
         reader.readAsDataURL(file);
       }
     });
 
-    // Remove photo
-    if (removeBtn) {
-      removeBtn.addEventListener('click', (e) => {
+    if (btnRemoveVehiclePhoto) {
+      btnRemoveVehiclePhoto.addEventListener('click', (e) => {
         e.stopPropagation();
-        state.regPhotos[cfg.key] = '';
-        input.value = '';
-        preview.src = '';
-        preview.style.display = 'none';
-        content.style.display = 'flex';
-        box.classList.remove('has-image');
+        resetVehiclePhoto();
       });
     }
-  });
-
-  function setPhoto(key, src, box, preview, content) {
-    state.regPhotos[key] = src;
-    preview.src = src;
-    preview.style.display = 'block';
-    content.style.display = 'none';
-    box.classList.add('has-image');
   }
 
-  // Quick fill sample vehicle photos for testing
-  document.getElementById('btn-sample-photos').addEventListener('click', () => {
-    photoBoxes.forEach(cfg => {
-      const box = document.getElementById(cfg.boxId);
-      const preview = box.querySelector('.photo-box-preview');
-      const content = box.querySelector('.photo-box-content');
-      setPhoto(cfg.key, cfg.defaultSvg, box, preview, content);
+  function setVehiclePhoto(src) {
+    state.regPhotos.vehicle = src;
+    state.regPhotos.front = src; // for backward compatibility
+    if (previewVehiclePhoto) {
+      previewVehiclePhoto.src = src;
+      previewVehiclePhoto.style.display = 'block';
+    }
+    const content = boxVehiclePhoto?.querySelector('.photo-box-content');
+    if (content) content.style.display = 'none';
+    boxVehiclePhoto?.classList.add('has-image');
+  }
+
+  function resetVehiclePhoto() {
+    state.regPhotos = { vehicle: '', front: '', side: '', fullFront: '' };
+    if (inputVehiclePhoto) inputVehiclePhoto.value = '';
+    if (previewVehiclePhoto) {
+      previewVehiclePhoto.src = '';
+      previewVehiclePhoto.style.display = 'none';
+    }
+    const content = boxVehiclePhoto?.querySelector('.photo-box-content');
+    if (content) content.style.display = 'flex';
+    boxVehiclePhoto?.classList.remove('has-image');
+  }
+
+  // Quick fill sample vehicle photo for testing
+  const btnSamplePhoto = document.getElementById('btn-sample-photos');
+  if (btnSamplePhoto) {
+    btnSamplePhoto.addEventListener('click', () => {
+      setVehiclePhoto(window.SVG_ASSETS.forkliftFront);
+      showToast('โหลดภาพถ่ายตัวอย่างสภาพรถ Forklift แล้ว', 'success');
     });
-    showToast('โหลดภาพถ่ายตัวอย่างครบทั้ง 3 มุมแล้ว', 'success');
-  });
+  }
 
   // --------------------------------------------------------------------------
   // Dedicated Driver Registration Form Handlers (ลงทะเบียนผู้ขับขี่ใหม่)
@@ -1693,16 +1693,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (inspectDateElPost) {
         inspectDateElPost.value = new Date().toISOString().split('T')[0];
       }
-      photoBoxes.forEach(cfg => {
-        const box = document.getElementById(cfg.boxId);
-        const preview = box.querySelector('.photo-box-preview');
-        const content = box.querySelector('.photo-box-content');
-        preview.src = '';
-        preview.style.display = 'none';
-        content.style.display = 'flex';
-        box.classList.remove('has-image');
-      });
-      state.regPhotos = { front: '', side: '', fullFront: '' };
+      resetVehiclePhoto();
 
       // Reset selected driver & preview
       const selectDriverPost = document.getElementById('reg-select-driver');
@@ -1806,21 +1797,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ` : ''}
       </div>
 
-      <!-- 3 Vehicle Photos -->
-      <h4 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--haier-cyan);"><i class="fa-solid fa-camera"></i> ภาพถ่ายรถ 3 มุม</h4>
-      <div class="photos-upload-grid" style="margin-bottom:1.5rem;">
-        <div style="background:var(--haier-navy-darker); border-radius:8px; overflow:hidden; border:1px solid var(--surface-border); text-align:center;">
-          <img src="${photos.front || window.SVG_ASSETS.forkliftFront}" style="width:100%; height:160px; object-fit:cover;">
-          <div style="padding:0.4rem; font-size:0.78rem; font-weight:600;">1. ภาพด้านหน้ารถ</div>
-        </div>
-        <div style="background:var(--haier-navy-darker); border-radius:8px; overflow:hidden; border:1px solid var(--surface-border); text-align:center;">
-          <img src="${photos.side || window.SVG_ASSETS.forkliftSide}" style="width:100%; height:160px; object-fit:cover;">
-          <div style="padding:0.4rem; font-size:0.78rem; font-weight:600;">2. ภาพด้านข้างรถ</div>
-        </div>
-        <div style="background:var(--haier-navy-darker); border-radius:8px; overflow:hidden; border:1px solid var(--surface-border); text-align:center;">
-          <img src="${photos.fullFront || window.SVG_ASSETS.forkliftFull}" style="width:100%; height:160px; object-fit:cover;">
-          <div style="padding:0.4rem; font-size:0.78rem; font-weight:600;">3. ภาพด้านหน้าที่เห็นทั้งคัน</div>
-        </div>
+      <!-- Vehicle Photo (1 รูป) -->
+      <h4 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--haier-cyan);"><i class="fa-solid fa-camera"></i> ภาพถ่ายสภาพรถ Forklift</h4>
+      <div style="background:var(--haier-navy-darker); border-radius:8px; overflow:hidden; border:1px solid var(--surface-border); text-align:center; max-width:440px; margin-bottom:1.5rem;">
+        <img src="${photos.vehicle || photos.front || photos.side || photos.fullFront || window.SVG_ASSETS.forkliftFront}" style="width:100%; max-height:240px; object-fit:cover;">
+        <div style="padding:0.45rem; font-size:0.8rem; font-weight:600; color:var(--text-secondary);">ภาพถ่ายสภาพตัวรถ Forklift</div>
       </div>
 
       <!-- Driver & Certificate -->

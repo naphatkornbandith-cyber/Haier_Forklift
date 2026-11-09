@@ -611,7 +611,7 @@
               <i class="fa-solid fa-file-circle-plus"></i> แบบฟอร์มขึ้นทะเบียนและสำรวจรถ Forklift
             </h2>
             <p class="section-subtitle">
-              กรอกข้อมูลขึ้นทะเบียน ตรวจสอบสภาพรถ ภาพถ่ายรถ 3 มุมมอง และใบรับรองการอบรมผู้ขับขี่รถยก
+              กรอกข้อมูลขึ้นทะเบียน ตรวจสอบสภาพรถ ภาพถ่ายสภาพรถ Forklift และใบรับรองการอบรมผู้ขับขี่รถยก
             </p>
           </div>
           <button class="btn btn-secondary" data-switch-tab="dashboard-tab">
@@ -925,63 +925,30 @@
                 </div>
               </div>
 
-              <!-- 3 Vehicle Photos Section -->
+              <!-- Vehicle Photo Section (แนบ 1 รูป ไม่ต้องระบุว่ามุมไหน) -->
               <div class="checklist-toolbar">
                 <div>
                   <h4 style="font-size:0.95rem; font-weight:600; color:#fff;">
-                    <i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> แนบภาพถ่ายสภาพรถ Forklift (บังคับ 3 มุมมอง)
+                    <i class="fa-solid fa-camera" style="color:var(--haier-cyan);"></i> แนบภาพถ่ายสภาพรถ Forklift
                   </h4>
-                  <p class="form-hint">ด้านหน้ารถ, ด้านข้างรถ และด้านหน้าที่เห็นทั้งคัน เพื่อใช้เป็นหลักฐานการตรวจรับ</p>
+                  <p class="form-hint">แนบภาพถ่ายสภาพตัวรถ Forklift จำนวน 1 รูป เพื่อใช้เป็นหลักฐานและบันทึกประวัติการตรวจสภาพ</p>
                 </div>
                 <button type="button" id="btn-sample-photos" class="btn btn-secondary btn-sm">
                   <i class="fa-solid fa-wand-magic-sparkles"></i> ใช้ภาพตัวอย่างสำหรับทดสอบ
                 </button>
               </div>
 
-              <div class="photos-upload-grid">
-                <!-- 1. ด้านหน้ารถ -->
-                <div class="photo-box" id="box-photo-front">
-                  <input type="file" id="input-photo-front" accept="image/*" style="display:none;">
-                  <img class="photo-box-preview" style="display:none;" alt="ภาพด้านหน้ารถ">
+              <div style="max-width: 380px; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                <div class="photo-box" id="box-photo-vehicle">
+                  <input type="file" id="input-photo-vehicle" accept="image/*" style="display:none;">
+                  <img class="photo-box-preview" id="preview-photo-vehicle" style="display:none;" alt="ภาพถ่ายสภาพรถ Forklift">
                   <div class="photo-box-content">
-                    <i class="fa-solid fa-truck-front photo-box-icon"></i>
-                    <div class="photo-box-title">1. ด้านหน้ารถ (Front View)</div>
-                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ</div>
+                    <i class="fa-solid fa-truck-ramp-box photo-box-icon"></i>
+                    <div class="photo-box-title">แนบภาพถ่ายสภาพรถ Forklift</div>
+                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ (1 รูป)</div>
                   </div>
                   <div class="photo-overlay-actions">
-                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo">
-                      <i class="fa-solid fa-trash"></i> ลบรูป
-                    </button>
-                  </div>
-                </div>
-
-                <!-- 2. ด้านข้างรถ -->
-                <div class="photo-box" id="box-photo-side">
-                  <input type="file" id="input-photo-side" accept="image/*" style="display:none;">
-                  <img class="photo-box-preview" style="display:none;" alt="ภาพด้านข้างรถ">
-                  <div class="photo-box-content">
-                    <i class="fa-solid fa-truck-moving photo-box-icon"></i>
-                    <div class="photo-box-title">2. ด้านข้างรถ (Side View)</div>
-                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ</div>
-                  </div>
-                  <div class="photo-overlay-actions">
-                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo">
-                      <i class="fa-solid fa-trash"></i> ลบรูป
-                    </button>
-                  </div>
-                </div>
-
-                <!-- 3. ด้านหน้าที่เห็นทั้งคัน -->
-                <div class="photo-box" id="box-photo-full">
-                  <input type="file" id="input-photo-full" accept="image/*" style="display:none;">
-                  <img class="photo-box-preview" style="display:none;" alt="ภาพด้านหน้าที่เห็นทั้งคัน">
-                  <div class="photo-box-content">
-                    <i class="fa-solid fa-truck photo-box-icon"></i>
-                    <div class="photo-box-title">3. ด้านหน้าที่เห็นทั้งคัน (Full Front)</div>
-                    <div class="photo-box-sub">คลิกเพื่ออัปโหลดรูปภาพ</div>
-                  </div>
-                  <div class="photo-overlay-actions">
-                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo">
+                    <button type="button" class="btn btn-danger btn-sm btn-remove-photo" id="btn-remove-vehicle-photo">
                       <i class="fa-solid fa-trash"></i> ลบรูป
                     </button>
                   </div>

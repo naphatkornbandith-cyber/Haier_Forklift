@@ -622,11 +622,12 @@ class ForkliftDataStore {
     if (!forklift.liftingCapacity) issues.push('ยังไม่ระบุความสามารถยกน้ำหนัก');
     if (!forklift.ownerCompany) issues.push('ยังไม่ระบุเจ้าของรถ');
 
-    // Photo checks: 3 photos required
+    // Photo check: 1 vehicle photo required (แนบ 1 รูป ไม่ต้องระบุว่ามุมไหน)
     const p = forklift.photos || {};
-    if (!p.front) issues.push('ขาดภาพถ่ายด้านหน้ารถ');
-    if (!p.side) issues.push('ขาดภาพถ่ายด้านข้างรถ');
-    if (!p.fullFront) issues.push('ขาดภาพถ่ายด้านหน้าที่เห็นทั้งคัน');
+    const hasPhoto = Boolean(p.vehicle || p.front || p.side || p.fullFront || forklift.photo);
+    if (!hasPhoto) {
+      issues.push('ยังไม่ได้แนบภาพถ่ายสภาพรถ Forklift');
+    }
 
     // Driver checks
     const d = forklift.driver || {};
