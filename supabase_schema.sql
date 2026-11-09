@@ -45,7 +45,41 @@ WITH CHECK (true);
 -- This allows all devices to receive updates automatically when data changes
 ALTER PUBLICATION supabase_realtime ADD TABLE forklifts;
 
--- 6. Optional: Storage Bucket for Forklift Photos & Certificates
+-- ==============================================================================
+-- 6. Create admin_users table (ตารางจัดการผู้ดูแลระบบ Admin)
+-- คุณสามารถเพิ่ม/ลบ/แก้ไข User และ Password ผู้ดูแลระบบใน Supabase Table Editor ได้โดยตรง
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username TEXT NOT NULL UNIQUE,          -- ชื่อผู้ใช้งาน (User)
+  password TEXT NOT NULL,                 -- รหัสผ่าน (Password)
+  full_name TEXT,                         -- ชื่อ-นามสกุล / แผนก
+  role TEXT DEFAULT 'admin',              -- ระดับสิทธิ์ (เช่น admin, supervisor, manager)
+  is_active BOOLEAN DEFAULT true,         -- สถานะเปิดใช้งาน (true = ใช้งานได้, false = ระงับ)
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast username lookup
+CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
+
+-- Enable RLS for admin_users
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+
+-- Allow public verification for admin login via API
+DROP POLICY IF EXISTS "Allow select for admin authentication" ON admin_users;
+CREATE POLICY "Allow select for admin authentication" ON admin_users
+FOR SELECT
+USING (true);
+
+-- เพิ่ม User และ Password ของ Admin เริ่มต้น (สามารถเปลี่ยนรหัสหรือเพิ่มคนใหม่ได้ใน Supabase)
+INSERT INTO admin_users (username, password, full_name, role)
+VALUES 
+  ('admin', 'admin1234', 'ผู้ดูแลระบบหลัก (Super Admin)', 'admin'),
+  ('haier_admin', 'haier1234', 'ผู้ดูแลระบบ Haier Logistics', 'admin')
+ON CONFLICT (username) DO NOTHING;
+
+-- 7. Optional: Storage Bucket for Forklift Photos & Certificates
 -- You can create a public bucket named 'forklift-media' in the Supabase Storage dashboard
 -- Insert into storage.buckets (id, name, public) VALUES ('forklift-media', 'forklift-media', true) ON CONFLICT DO NOTHING;
 

@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedForklift: null,
     // Admin Authentication & Filter State
     isAdmin: sessionStorage.getItem('haier_forklift_admin') === 'true',
+    adminUser: JSON.parse(sessionStorage.getItem('haier_forklift_admin_user') || 'null'),
     adminFilter: 'all',
     adminSearchQuery: '',
     // Registration Form Temp State
@@ -1441,10 +1442,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.isAdmin) {
       loginView.style.display = 'none';
       panelView.style.display = 'block';
+      const adminUserNameEl = document.getElementById('admin-current-user-name');
+      if (adminUserNameEl) {
+        const u = state.adminUser;
+        adminUserNameEl.textContent = u ? (u.full_name || u.username) : 'Admin';
+      }
       renderAdminTable();
     } else {
       loginView.style.display = 'flex';
       panelView.style.display = 'none';
+      const userInput = document.getElementById('admin-username');
+      if (userInput) userInput.value = '';
       const pwInput = document.getElementById('admin-password');
       if (pwInput) pwInput.value = '';
       const errEl = document.getElementById('admin-login-error');
@@ -1617,32 +1625,78 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Admin Login Event Handler
+  // Admin Login Event Handler (ตรวจสอบ User & Password ผ่าน Supabase admin_users)
   const formAdminLogin = document.getElementById('form-admin-login');
+  const adminUsernameInput = document.getElementById('admin-username');
   const adminPasswordInput = document.getElementById('admin-password');
   const btnToggleAdminPw = document.getElementById('btn-toggle-admin-pw');
   const iconTogglePw = document.getElementById('icon-toggle-pw');
   const adminLoginError = document.getElementById('admin-login-error');
   const btnAdminLogout = document.getElementById('btn-admin-logout');
+  const btnAdminLoginSubmit = document.getElementById('btn-admin-login-submit');
 
   if (formAdminLogin) {
-    formAdminLogin.addEventListener('submit', (e) => {
+    formAdminLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const enteredPw = adminPasswordInput ? adminPasswordInput.value.trim() : '';
-      if (enteredPw === 'admin1234' || enteredPw === 'haier1234' || enteredPw === 'admin') {
-        state.isAdmin = true;
-        sessionStorage.setItem('haier_forklift_admin', 'true');
-        if (adminLoginError) adminLoginError.style.display = 'none';
-        if (adminPasswordInput) adminPasswordInput.value = '';
-        showToast('เข้าสู่ระบบ Admin สำเร็จ ยินดีต้อนรับสู่โหมดจัดการข้อมูล', 'success');
-        renderAdminPanel();
-      } else {
+      const username = adminUsernameInput ? adminUsernameInput.value.trim() : '';
+      const password = adminPasswordInput ? adminPasswordInput.value.trim() : '';
+
+      if (!username || !password) {
         if (adminLoginError) {
           adminLoginError.style.display = 'block';
-          adminLoginError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง (รหัสผ่านเริ่มต้น: admin1234)';
+          adminLoginError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> กรุณากรอกทั้งชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน';
         }
-        if (adminPasswordInput) {
-          adminPasswordInput.select();
+        return;
+      }
+
+      if (btnAdminLoginSubmit) {
+        btnAdminLoginSubmit.disabled = true;
+        btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบสิทธิ์...';
+      }
+
+      try {
+        let authResult = null;
+        if (window.supabaseService && typeof window.supabaseService.verifyAdminLogin === 'function') {
+          authResult = await window.supabaseService.verifyAdminLogin(username, password);
+        } else {
+          // Fallback
+          const isOk = username === 'admin' && (password === 'admin1234' || password === 'haier1234');
+          authResult = isOk
+            ? { success: true, user: { username: 'admin', full_name: 'ผู้ดูแลระบบหลัก' } }
+            : { success: false, message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' };
+        }
+
+        if (authResult && authResult.success) {
+          state.isAdmin = true;
+          state.adminUser = authResult.user;
+          sessionStorage.setItem('haier_forklift_admin', 'true');
+          sessionStorage.setItem('haier_forklift_admin_user', JSON.stringify(authResult.user));
+
+          if (adminLoginError) adminLoginError.style.display = 'none';
+          if (adminPasswordInput) adminPasswordInput.value = '';
+          if (adminUsernameInput) adminUsernameInput.value = '';
+
+          const displayName = authResult.user?.full_name || authResult.user?.username || 'Admin';
+          showToast(`เข้าสู่ระบบสำเร็จ ยินดีต้อนรับคุณ ${displayName}`, 'success');
+          renderAdminPanel();
+        } else {
+          if (adminLoginError) {
+            adminLoginError.style.display = 'block';
+            adminLoginError.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${authResult?.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง'}`;
+          }
+          if (adminPasswordInput) {
+            adminPasswordInput.select();
+          }
+        }
+      } catch (err) {
+        if (adminLoginError) {
+          adminLoginError.style.display = 'block';
+          adminLoginError.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> การเข้าสู่ระบบผิดพลาด: ${err.message}`;
+        }
+      } finally {
+        if (btnAdminLoginSubmit) {
+          btnAdminLoginSubmit.disabled = false;
+          btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ Admin';
         }
       }
     });
@@ -1663,7 +1717,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAdminLogout.addEventListener('click', () => {
       if (confirm('คุณต้องการออกจากระบบโหมดผู้ดูแลระบบ (Admin) หรือไม่?')) {
         state.isAdmin = false;
+        state.adminUser = null;
         sessionStorage.removeItem('haier_forklift_admin');
+        sessionStorage.removeItem('haier_forklift_admin_user');
         showToast('ออกจากระบบ Admin เรียบร้อยแล้ว', 'info');
         renderAdminPanel();
       }

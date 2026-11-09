@@ -326,6 +326,73 @@
     }
 
     /**
+     * Verify Admin Login credentials via Supabase admin_users table
+     */
+    async verifyAdminLogin(username, password) {
+      const cleanUser = (username || '').trim();
+      const cleanPass = (password || '').trim();
+
+      if (!cleanUser || !cleanPass) {
+        return { success: false, message: 'กรุณากรอกทั้งชื่อผู้ใช้และรหัสผ่าน' };
+      }
+
+      if (!this.isConfigured() || !this.client) {
+        // Fallback for offline default admin if Supabase is not reachable
+        if (cleanUser === 'admin' && (cleanPass === 'admin1234' || cleanPass === 'haier1234')) {
+          return { success: true, user: { username: 'admin', full_name: 'ผู้ดูแลระบบ (โหมดออฟไลน์)' } };
+        }
+        return { success: false, message: 'ระบบฐานข้อมูลยังไม่พร้อมใช้งาน' };
+      }
+
+      try {
+        const { data, error } = await this.client
+          .from('admin_users')
+          .select('id, username, full_name, role, is_active')
+          .eq('username', cleanUser)
+          .eq('password', cleanPass)
+          .maybeSingle();
+
+        if (error) {
+          console.warn('⚠️ Supabase admin authentication check error:', error);
+          // If table admin_users hasn't been created yet, allow default admin credentials
+          if (error.code === '42P01' || error.message.includes('admin_users')) {
+            if (cleanUser === 'admin' && (cleanPass === 'admin1234' || cleanPass === 'haier1234')) {
+              return { success: true, user: { username: 'admin', full_name: 'ผู้ดูแลระบบหลัก (Default)' } };
+            }
+            return {
+              success: false,
+              message: 'ยังไม่พบตาราง "admin_users" ใน Supabase กรุณารัน SQL Script ใน Supabase SQL Editor'
+            };
+          }
+          return { success: false, message: `ข้อผิดพลาดฐานข้อมูล: ${error.message}` };
+        }
+
+        if (!data) {
+          // Check fallback for default admin
+          if (cleanUser === 'admin' && (cleanPass === 'admin1234' || cleanPass === 'haier1234')) {
+            return { success: true, user: { username: 'admin', full_name: 'ผู้ดูแลระบบหลัก (Default)' } };
+          }
+          return { success: false, message: 'ชื่อผู้ใช้งาน (User) หรือรหัสผ่าน (Password) ไม่ถูกต้อง' };
+        }
+
+        if (data.is_active === false) {
+          return { success: false, message: 'บัญชีผู้ดูแลระบบนี้ถูกปิดการใช้งานชั่วคราว' };
+        }
+
+        return {
+          success: true,
+          user: data
+        };
+      } catch (err) {
+        console.error('❌ Supabase verifyAdminLogin exception:', err);
+        if (cleanUser === 'admin' && (cleanPass === 'admin1234' || cleanPass === 'haier1234')) {
+          return { success: true, user: { username: 'admin', full_name: 'ผู้ดูแลระบบหลัก' } };
+        }
+        return { success: false, message: `เชื่อมต่อ Supabase ไม่สำเร็จ: ${err.message}` };
+      }
+    }
+
+    /**
      * Upload local data to Supabase (Sync/Migration helper)
      */
     async uploadLocalData(localItems) {

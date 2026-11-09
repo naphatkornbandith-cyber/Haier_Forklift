@@ -313,28 +313,33 @@
             </div>
             <h3 class="admin-login-title">เข้าสู่ระบบผู้ดูแลระบบ (Admin Login)</h3>
             <p class="admin-login-subtitle">
-              กรุณากรอกรหัสผ่านผู้ดูแลระบบ เพื่อเข้าสู่ส่วนแก้ไขข้อมูลรถ, ข้อมูลผู้ขับขี่ และจัดการสถานะการตรวจสภาพ
+              กรุณากรอกชื่อผู้ใช้งาน (User) และรหัสผ่าน (Password) เพื่อเข้าสู่ระบบจัดการข้อมูลรถโฟล์คลิฟท์
             </p>
 
             <form id="form-admin-login" class="admin-login-form">
+              <div class="form-group" style="margin-bottom: 1.15rem;">
+                <label class="form-label" for="admin-username">ชื่อผู้ใช้งาน (Username) <span class="required">*</span></label>
+                <input type="text" id="admin-username" class="form-control" placeholder="กรอกชื่อผู้ใช้งาน Admin" required autocomplete="username">
+              </div>
+
               <div class="form-group">
-                <label class="form-label" for="admin-password">รหัสผ่านผู้ดูแลระบบ (Admin Password)</label>
+                <label class="form-label" for="admin-password">รหัสผ่าน (Password) <span class="required">*</span></label>
                 <div style="position:relative;">
-                  <input type="password" id="admin-password" class="form-control" placeholder="กรอกรหัสผ่าน (ค่าเริ่มต้น: admin1234)" required autocomplete="current-password" style="padding-right: 2.75rem;">
+                  <input type="password" id="admin-password" class="form-control" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password" style="padding-right: 2.75rem;">
                   <button type="button" id="btn-toggle-admin-pw" class="btn-toggle-pw" title="แสดง/ซ่อนรหัสผ่าน">
                     <i class="fa-solid fa-eye" id="icon-toggle-pw"></i>
                   </button>
                 </div>
                 <div id="admin-login-error" class="admin-login-error" style="display:none;">
-                  <i class="fa-solid fa-circle-exclamation"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                  <i class="fa-solid fa-circle-exclamation"></i> ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง
                 </div>
               </div>
 
-              <div class="admin-login-actions">
+              <div class="admin-login-actions" style="margin-top:1.25rem;">
                 <span style="font-size:0.78rem; color:var(--text-muted);">
-                  <i class="fa-solid fa-key"></i> รหัสผ่านเริ่มต้น: <code style="color:var(--haier-cyan); background:rgba(0,160,233,0.1); padding:0.15rem 0.4rem; border-radius:4px;">admin1234</code>
+                  <i class="fa-solid fa-cloud"></i> ตรวจสอบสิทธิ์ผ่านฐานข้อมูล Supabase
                 </span>
-                <button type="submit" class="btn btn-primary" style="padding:0.65rem 1.75rem;">
+                <button type="submit" id="btn-admin-login-submit" class="btn btn-primary" style="padding:0.65rem 1.75rem;">
                   <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ Admin
                 </button>
               </div>
@@ -349,7 +354,7 @@
             <div>
               <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem;">
                 <span class="admin-active-badge">
-                  <i class="fa-solid fa-shield-halved"></i> โหมดผู้ดูแลระบบ (Admin Mode Active)
+                  <i class="fa-solid fa-shield-halved"></i> ผู้ดูแลระบบ: <strong id="admin-current-user-name" style="margin-left:4px;">Admin</strong>
                 </span>
               </div>
               <h2 class="section-title">
@@ -1099,12 +1104,12 @@
   <!-- Javascript Modules -->
   <!-- Supabase JS Client v2 (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-client.js?v=3"></script>
-  <script src="js/data.js?v=3"></script>
+  <script src="js/supabase-client.js?v=4"></script>
+  <script src="js/data.js?v=4"></script>
   <!-- Chart.js — loaded before app.js; onerror stub prevents crash if CDN unreachable -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
           onerror="window.Chart=null;"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>
  
