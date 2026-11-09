@@ -254,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Calculate KPI Metrics
     let readyCount = 0;
     let repairCount = 0;
+    let expiredStatusCount = 0;
     let lpgAlertCount = 0;
     let incompleteCount = 0;
     let pendingCertCount = 0;
@@ -270,7 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (item.status === 'พร้อมใช้งาน') readyCount++;
-      if (item.status === 'ส่งซ่อม') repairCount++;
+      else if (item.status === 'ส่งซ่อม') repairCount++;
+      else if (item.status === 'หมดสัญญาเช่า') expiredStatusCount++;
 
       const lpgStatus = window.forkliftStore.getLpgStatus(item);
       if (lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) {
@@ -332,12 +334,26 @@ document.addEventListener('DOMContentLoaded', () => {
       { label: 'รถเช่า',    value: rentalCount,  color: ownershipColors[1] }
     ]);
 
-    // Chart 2: Status (พร้อมใช้งาน vs ส่งซ่อม)
+    // Chart 2: Status (พร้อมใช้งาน vs ส่งซ่อม vs หมดสัญญาเช่า)
+    const statusLabels = ['พร้อมใช้งาน', 'ส่งซ่อม / ปรับปรุง'];
+    const statusData = [readyCount, repairCount];
     const statusColors = ['#4ade80', '#f87171'];   // green, red
+    const statusLegends = [
+      { label: 'พร้อมใช้งาน',      value: readyCount,  color: statusColors[0] },
+      { label: 'ส่งซ่อม / ปรับปรุง', value: repairCount, color: statusColors[1] }
+    ];
+
+    if (expiredStatusCount > 0) {
+      statusLabels.push('หมดสัญญา / ส่งคืนแล้ว');
+      statusData.push(expiredStatusCount);
+      statusColors.push('#94a3b8'); // slate gray
+      statusLegends.push({ label: 'หมดสัญญา/ส่งคืน', value: expiredStatusCount, color: '#94a3b8' });
+    }
+
     chartStatus = drawDonut(
       'chart-status',
-      ['พร้อมใช้งาน', 'ส่งซ่อม / ปรับปรุง'],
-      [readyCount, repairCount],
+      statusLabels,
+      statusData,
       statusColors,
       chartStatus
     );
@@ -345,10 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusReady = document.getElementById('chart-status-ready');
     if (statusReady) statusReady.textContent = readyCount;
     // Legend
-    renderLegend('chart-status-legend', [
-      { label: 'พร้อมใช้งาน',      value: readyCount,  color: statusColors[0] },
-      { label: 'ส่งซ่อม / ปรับปรุง', value: repairCount, color: statusColors[1] }
-    ]);
+    renderLegend('chart-status-legend', statusLegends);
     // ────────────────────────────────────────────────────────────────
 
     // Total Alerts on tab badge
@@ -402,6 +415,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.activeFilter === 'incomplete') {
         return window.forkliftStore.getIncompleteIssues(item).length > 0;
       }
+      if (state.activeFilter === 'contract-expired') {
+        const cs = window.forkliftStore.getRentalContractStatus(item);
+        return cs.isRental && (cs.alertLevel === 'expired' || cs.alertLevel === 'warning');
+      }
       return true;
     });
 
@@ -438,9 +455,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
 
       // Status Badge
-      const statusBadge = item.status === 'พร้อมใช้งาน'
-        ? `<span class="status-badge badge-ready"><i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน</span>`
-        : `<span class="status-badge badge-repair"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>`;
+      let statusBadge = '';
+      if (item.status === 'พร้อมใช้งาน') {
+        statusBadge = `<span class="status-badge badge-ready"><i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน</span>`;
+      } else if (item.status === 'ส่งซ่อม') {
+        statusBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>`;
+      } else if (item.status === 'หมดสัญญาเช่า') {
+        statusBadge = `<span class="status-badge badge-expired"><i class="fa-solid fa-truck-arrow-right"></i> หมดสัญญา / ส่งคืนแล้ว</span>`;
+      } else {
+        statusBadge = `<span class="status-badge badge-expired">${item.status}</span>`;
+      }
 
       // Energy Badge
       let energyClass = 'energy-electric';
@@ -935,6 +959,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')">
                 <i class="fa-solid fa-file-contract"></i> จัดการ/ต่อสัญญา
               </button>
+              ${isExpired && item.status !== 'หมดสัญญาเช่า' ? `
+                <button class="btn btn-secondary btn-sm" onclick="window.setForkliftExpiredStatus('${item.id}')" style="color:#fda4af; border-color:rgba(244,63,94,0.4);" title="ปรับสถานะเป็นหมดสัญญาเช่า/ส่งคืนแล้ว เพื่อแยกออกจากรถพร้อมใช้งาน">
+                  <i class="fa-solid fa-truck-arrow-right"></i> ปรับเป็นหมดสัญญา/ส่งคืน
+                </button>
+              ` : ''}
             </div>
           `;
           rentalAlertsContainer.appendChild(alertBox);
@@ -1751,7 +1780,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
           ${item.status === 'พร้อมใช้งาน'
             ? '<span class="status-badge badge-ready" style="font-size:0.9rem;"><i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน</span>'
-            : '<span class="status-badge badge-repair" style="font-size:0.9rem;"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>'
+            : (item.status === 'ส่งซ่อม'
+                ? '<span class="status-badge badge-repair" style="font-size:0.9rem;"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>'
+                : '<span class="status-badge badge-expired" style="font-size:0.9rem;"><i class="fa-solid fa-truck-arrow-right"></i> หมดสัญญาเช่า / ส่งคืนแล้ว</span>')
           }
         </div>
       </div>
@@ -2388,7 +2419,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
       if (rentalSection && rentalText) {
         rentalSection.style.display = 'block';
-        rentalText.innerHTML = `บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor}</strong> | ${rentalStatus.text}`;
+        rentalText.innerHTML = `บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor}</strong> | ${rentalStatus.text}${rentalStatus.alertLevel === 'expired' && item.status !== 'หมดสัญญาเช่า' ? '<br><span style="color:#fca5a5; font-size:0.75rem;"><i class="fa-solid fa-circle-info"></i> สัญญาเช่าสิ้นสุดแล้ว สามารถเปลี่ยนสถานะด้านล่างเป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" เพื่อแยกออกจากยอดรถพร้อมใช้งานในโรงงาน</span>' : ''}`;
       }
     } else {
       if (rentalGroup) rentalGroup.style.display = 'none';
@@ -2433,6 +2464,26 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(err.message, 'error');
     }
   });
+
+  // Quick Action: Set rental forklift to 'หมดสัญญาเช่า / ส่งคืนแล้ว'
+  window.setForkliftExpiredStatus = function(id) {
+    const item = window.forkliftStore.getById(id);
+    if (!item) return;
+
+    if (confirm(`คุณต้องการปรับสถานะรถโฟล์คลิฟท์ "${item.plateNumber}" เป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" ใช่หรือไม่?\n\n* รถคันนี้จะถูกแยกออกจากยอดรถที่พร้อมใช้งานในโรงงานทันที`)) {
+      try {
+        window.forkliftStore.updateStatusAndInspection(id, {
+          status: 'หมดสัญญาเช่า'
+        });
+        showToast(`ปรับสถานะรถ "${item.plateNumber}" เป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" เรียบร้อย`, 'success');
+        renderDashboard();
+        if (state.currentTab === 'admin-tab') renderAdminPanel();
+        if (state.currentTab === 'alerts-tab') renderAlertsCenter();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+  };
 
   // Modal helpers
   function openModal(modal) {
@@ -2636,6 +2687,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.adminFilter === 'incomplete') {
         return window.forkliftStore.getIncompleteIssues(item).length > 0;
       }
+      if (state.adminFilter === 'contract-expired') {
+        const cs = window.forkliftStore.getRentalContractStatus(item);
+        return cs.isRental && (cs.alertLevel === 'expired' || cs.alertLevel === 'warning');
+      }
       return true;
     });
 
@@ -2670,9 +2725,16 @@ document.addEventListener('DOMContentLoaded', () => {
     filtered.forEach(item => {
       const tr = document.createElement('tr');
 
-      const statusBadge = item.status === 'พร้อมใช้งาน'
-        ? `<span class="status-badge badge-ready"><i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน</span>`
-        : `<span class="status-badge badge-repair"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>`;
+      let statusBadge = '';
+      if (item.status === 'พร้อมใช้งาน') {
+        statusBadge = `<span class="status-badge badge-ready"><i class="fa-solid fa-circle-check"></i> พร้อมใช้งาน</span>`;
+      } else if (item.status === 'ส่งซ่อม') {
+        statusBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-triangle-exclamation"></i> ส่งซ่อม</span>`;
+      } else if (item.status === 'หมดสัญญาเช่า') {
+        statusBadge = `<span class="status-badge badge-expired"><i class="fa-solid fa-truck-arrow-right"></i> หมดสัญญา / ส่งคืนแล้ว</span>`;
+      } else {
+        statusBadge = `<span class="status-badge badge-expired">${item.status}</span>`;
+      }
 
       let energyClass = 'energy-electric';
       let energyIcon = 'fa-bolt';
