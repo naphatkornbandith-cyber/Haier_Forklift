@@ -725,10 +725,55 @@
 /* --------------------------------------------------------------------------
    Notifications Center
    -------------------------------------------------------------------------- */
+.alerts-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.alert-summary-box {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-smooth);
+}
+
+.alert-summary-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.alert-summary-box.box-vehicle {
+  border-left: 4px solid var(--haier-cyan);
+}
+
+.alert-summary-box.box-driver {
+  border-left: 4px solid #a78bfa;
+}
+
+.alert-summary-box.box-rental {
+  border-left: 4px solid #38bdf8;
+}
+
 .alerts-tab-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .alerts-tab-grid {
+    grid-template-columns: 1fr;
+  }
+  .alerts-summary-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 .alert-category-card {

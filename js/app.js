@@ -262,6 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let companyCount = 0;
     let rentalCount = 0;
     let rentalAlertCount = 0;
+    let vehicleAlertCount = 0;
+    let driverAlertCount = 0;
     let activeRentalValidCount = 0;
     let warningRentalCount = 0;
     let expiredRentalCount = 0;
@@ -296,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
           activeRentalValidCount++;
         }
 
-        if (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired') {
+        if (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired' || item.status === 'หมดสัญญาเช่า') {
           rentalAlertCount++;
         }
       }
@@ -305,6 +307,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) {
         lpgAlertCount++;
         lpgAlertItems.push({ item, lpgStatus });
+      }
+
+      const vehicleIssues = window.forkliftStore.getVehicleIssues(item);
+      if ((lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) || vehicleIssues.length > 0) {
+        vehicleAlertCount++;
+      }
+
+      const driverIssues = window.forkliftStore.getDriverIssues(item);
+      if (driverIssues.length > 0) {
+        driverAlertCount++;
       }
 
       const issues = window.forkliftStore.getIncompleteIssues(item);
@@ -400,8 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
     // ────────────────────────────────────────────────────────────────
 
-    // Total Alerts on tab badge
-    const totalAlerts = lpgAlertCount + incompleteCount + rentalAlertCount;
+    // Total Alerts on tab badge (แยก 3 หมวด: รถ + คนขับ + สัญญารถ)
+    const totalAlerts = vehicleAlertCount + driverAlertCount + rentalAlertCount;
     if (totalAlerts > 0) {
       alertTabBadge.style.display = 'inline-flex';
       alertTabBadge.textContent = totalAlerts;
@@ -882,165 +894,238 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --------------------------------------------------------------------------
-  // Alerts Center Rendering (แท็บ แจ้งเตือน)
+  // --------------------------------------------------------------------------
+  // Alerts Center Rendering (แท็บ แจ้งเตือน: แยก 3 ส่วน รถ / คนขับ / สัญญารถ)
   // --------------------------------------------------------------------------
   function renderAlertsCenter() {
     const forklifts = window.forkliftStore.getAll();
-    const lpgAlertsContainer = document.getElementById('lpg-alerts-list');
-    const incompleteAlertsContainer = document.getElementById('incomplete-alerts-list');
+    const vehicleAlertsContainer = document.getElementById('vehicle-alerts-list');
+    const driverAlertsContainer = document.getElementById('driver-alerts-list');
     const rentalAlertsContainer = document.getElementById('rental-alerts-list');
 
-    if (lpgAlertsContainer) lpgAlertsContainer.innerHTML = '';
-    if (incompleteAlertsContainer) incompleteAlertsContainer.innerHTML = '';
+    if (vehicleAlertsContainer) vehicleAlertsContainer.innerHTML = '';
+    if (driverAlertsContainer) driverAlertsContainer.innerHTML = '';
     if (rentalAlertsContainer) rentalAlertsContainer.innerHTML = '';
 
-    let lpgCount = 0;
-    let incompleteCount = 0;
-    let rentalCount = 0;
+    let vehicleAlertCount = 0;
+    let driverAlertCount = 0;
+    let rentalAlertCount = 0;
 
     forklifts.forEach(item => {
-      // 1. Check LPG Alert
+      // ======================================================================
+      // 1. หมวดรถ (Vehicle Alerts): LPG 1 ปี + ภาพถ่าย/ข้อมูลสภาพรถไม่ครบ
+      // ======================================================================
       const lpgStatus = window.forkliftStore.getLpgStatus(item);
-      if (lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) {
-        lpgCount++;
-        const isOverdue = lpgStatus.alertLevel === 'overdue';
-        const alertBox = document.createElement('div');
-        alertBox.className = `alert-item-box ${isOverdue ? 'alert-lpg-urgent' : 'alert-lpg-warning'}`;
-        
-        alertBox.innerHTML = `
-          <div class="alert-box-top">
-            <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
-            <span class="status-badge ${isOverdue ? 'badge-lpg-overdue' : 'badge-lpg-warn'}">
-              <i class="fa-solid ${isOverdue ? 'fa-triangle-exclamation' : 'fa-clock'}"></i>
-              ${isOverdue ? `เกินกำหนด ${lpgStatus.overdueDays} วัน` : `เหลืออีก ${lpgStatus.daysRemaining} วัน`}
-            </span>
-          </div>
-          <div class="alert-desc-text">
-            <strong>${item.vehicleType}</strong> | สังกัด: ${item.ownerCompany} (${item.subcontractor || 'Haier'})
-            <br>
-            <span style="color: ${isOverdue ? '#fca5a5' : '#fbbf24'}; font-size:0.82rem;">
-              <i class="fa-solid fa-bell"></i> ${lpgStatus.text}
-            </span>
-          </div>
-          <div class="alert-meta-tags">
-            <span class="badge-energy energy-lpg"><i class="fa-solid fa-fire"></i> ระบบก๊าซ LPG</span>
-            <span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-calendar"></i> ตรวจล่าสุด: ${item.lastInspectionDate || 'ยังไม่มีข้อมูล'}</span>
-            <span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-calendar-xmark"></i> ครบรอบ 1 ปี: ${lpgStatus.dueDateStr || '-'}</span>
-          </div>
-          <div class="alert-action-footer">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
-              <i class="fa-regular fa-eye"></i> ดูข้อมูล
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}', true)">
-              <i class="fa-solid fa-clipboard-check"></i> บันทึกการตรวจเช็คล่าสุดทันที
-            </button>
-          </div>
-        `;
-        if (lpgAlertsContainer) lpgAlertsContainer.appendChild(alertBox);
-      }
+      const vehicleIssues = window.forkliftStore.getVehicleIssues(item);
+      const hasLpgAlert = lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue');
+      const hasVehicleIssues = vehicleIssues.length > 0;
 
-      // 2. Check Incomplete Data Alert
-      const issues = window.forkliftStore.getIncompleteIssues(item);
-      if (issues.length > 0) {
-        incompleteCount++;
-        const alertBox = document.createElement('div');
-        alertBox.className = 'alert-item-box alert-incomplete';
-
-        const issueBadges = issues.map(iss => `<span class="status-badge badge-repair" style="font-size:0.72rem; margin:2px;"><i class="fa-solid fa-circle-exclamation"></i> ${iss}</span>`).join(' ');
-
-        alertBox.innerHTML = `
-          <div class="alert-box-top">
-            <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
-            <span class="status-badge badge-repair">ข้อมูลไม่สมบูรณ์ (${issues.length} รายการ)</span>
-          </div>
-          <div class="alert-desc-text">
-            <strong>${item.vehicleType}</strong> | เจ้าของ: ${item.ownerCompany}
-            <div style="margin-top:0.4rem;">${issueBadges}</div>
-          </div>
-          <div class="alert-action-footer">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
-              <i class="fa-regular fa-eye"></i> ดูข้อมูล
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${item.id}')">
-              <i class="fa-solid fa-file-pen"></i> แก้ไข/แนบเอกสารเพิ่ม
-            </button>
-          </div>
-        `;
-        if (incompleteAlertsContainer) incompleteAlertsContainer.appendChild(alertBox);
-      }
-
-      // 3. Check Rental Contract Expiry Alert (แจ้งเตือนล่วงหน้า 1 เดือน / เกินกำหนด)
-      const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
-      if (rentalStatus.isRental && (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired')) {
-        rentalCount++;
-        if (rentalAlertsContainer) {
-          const isExpired = rentalStatus.alertLevel === 'expired';
+      if (hasLpgAlert || hasVehicleIssues) {
+        vehicleAlertCount++;
+        if (vehicleAlertsContainer) {
+          const isOverdue = lpgStatus.isLpg && lpgStatus.alertLevel === 'overdue';
           const alertBox = document.createElement('div');
-          alertBox.className = `alert-item-box ${isExpired ? 'alert-lpg-urgent' : 'alert-lpg-warning'}`;
+          alertBox.className = `alert-item-box ${isOverdue ? 'alert-lpg-urgent' : (hasLpgAlert ? 'alert-lpg-warning' : 'alert-incomplete')}`;
+
+          let alertTopBadge = '';
+          if (isOverdue) {
+            alertTopBadge = `<span class="status-badge badge-lpg-overdue"><i class="fa-solid fa-triangle-exclamation"></i> เลยกำหนดตรวจ 1 ปี (${lpgStatus.overdueDays} วัน)</span>`;
+          } else if (hasLpgAlert) {
+            alertTopBadge = `<span class="status-badge badge-lpg-warn"><i class="fa-solid fa-clock"></i> ครบกำหนดตรวจใน ${lpgStatus.daysRemaining} วัน</span>`;
+          } else {
+            alertTopBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-circle-exclamation"></i> ข้อมูลรถไม่สมบูรณ์</span>`;
+          }
+
+          let issueBadges = '';
+          if (hasVehicleIssues) {
+            issueBadges = vehicleIssues.map(iss => `<span class="status-badge badge-repair" style="font-size:0.72rem; margin:2px;"><i class="fa-solid fa-triangle-exclamation"></i> ${iss}</span>`).join(' ');
+          }
+
           alertBox.innerHTML = `
             <div class="alert-box-top">
               <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
-              <span class="status-badge ${isExpired ? 'badge-lpg-overdue' : 'badge-lpg-warn'}">
-                <i class="fa-solid ${isExpired ? 'fa-triangle-exclamation' : 'fa-clock'}"></i>
-                ${isExpired ? `หมดสัญญาแล้ว (${rentalStatus.overdueDays} วัน)` : `เหลือสัญญาอีก ${rentalStatus.daysRemaining} วัน`}
-              </span>
+              ${alertTopBadge}
             </div>
             <div class="alert-desc-text">
-              <strong>${item.vehicleType}</strong> | บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor}</strong>
-              <br>
-              <span style="color: ${isExpired ? '#fca5a5' : '#38bdf8'}; font-size:0.82rem;">
-                <i class="fa-solid fa-file-contract"></i> ${rentalStatus.text} (วันหมดสัญญา: ${rentalStatus.expiryDateStr})
+              <strong>${item.vehicleType}</strong> | สังกัด: ${item.ownerCompany} (${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')})
+              ${hasLpgAlert ? `
+                <div style="margin-top:0.35rem; color: ${isOverdue ? '#fca5a5' : '#fbbf24'}; font-size:0.82rem;">
+                  <i class="fa-solid fa-fire"></i> ${lpgStatus.text}
+                </div>
+              ` : ''}
+              ${hasVehicleIssues ? `
+                <div style="margin-top:0.4rem;">${issueBadges}</div>
+              ` : ''}
+            </div>
+            <div class="alert-meta-tags">
+              <span class="badge-energy energy-${item.energyType === 'LPG' ? 'lpg' : (item.energyType === 'ดีเซล' ? 'diesel' : 'electric')}">
+                <i class="fa-solid ${item.energyType === 'LPG' ? 'fa-fire' : (item.energyType === 'ดีเซล' ? 'fa-gas-pump' : 'fa-bolt')}"></i> ${item.energyType}
               </span>
-              ${item.frameNo ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Frame No.: <code>${item.frameNo}</code></div>` : ''}
+              ${item.lastInspectionDate ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-calendar-check"></i> ตรวจล่าสุด: ${item.lastInspectionDate}</span>` : ''}
+              ${lpgStatus.isLpg ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-calendar-xmark"></i> ครบรอบ 1 ปี: ${lpgStatus.dueDateStr || '-'}</span>` : ''}
+              ${item.frameNo ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-fingerprint"></i> Frame: ${item.frameNo}</span>` : ''}
             </div>
             <div class="alert-action-footer">
               <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
                 <i class="fa-regular fa-eye"></i> ดูข้อมูล
               </button>
-              <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')">
-                <i class="fa-solid fa-file-contract"></i> จัดการ/ต่อสัญญา
+              <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}', ${hasLpgAlert})">
+                <i class="fa-solid fa-clipboard-check"></i> ${hasLpgAlert ? 'บันทึกตรวจเช็คทันที' : 'อัปเดตข้อมูลรถ/ภาพ'}
               </button>
-              ${isExpired && item.status !== 'หมดสัญญาเช่า' ? `
-                <button class="btn btn-secondary btn-sm" onclick="window.setForkliftExpiredStatus('${item.id}')" style="color:#fda4af; border-color:rgba(244,63,94,0.4);" title="ปรับสถานะเป็นหมดสัญญาเช่า/ส่งคืนแล้ว เพื่อแยกออกจากรถพร้อมใช้งาน">
-                  <i class="fa-solid fa-truck-arrow-right"></i> ปรับเป็นหมดสัญญา/ส่งคืน
-                </button>
-              ` : ''}
             </div>
           `;
-          rentalAlertsContainer.appendChild(alertBox);
+          vehicleAlertsContainer.appendChild(alertBox);
+        }
+      }
+
+      // ======================================================================
+      // 2. หมวดคนขับ (Driver Alerts): ผู้ขับขี่ + ใบเซอร์ (Cert)
+      // ======================================================================
+      const driver = item.driver;
+      const driverIssues = window.forkliftStore.getDriverIssues(item);
+      const isMissingDriver = !driver || !driver.name || driver.name === 'ยังไม่ระบุ';
+      const isPendingCert = driver && (!driver.certImage || driver.certStatus === 'รอดำเนินการ');
+      const isInvalidCert = driver && driver.certStatus === 'ไม่ถูกต้อง';
+
+      if (isMissingDriver || isPendingCert || isInvalidCert || driverIssues.length > 0) {
+        driverAlertCount++;
+        if (driverAlertsContainer) {
+          const alertBox = document.createElement('div');
+          alertBox.className = `alert-item-box ${isInvalidCert ? 'alert-lpg-urgent' : 'alert-incomplete'}`;
+
+          let driverBadge = '';
+          if (isMissingDriver) {
+            driverBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-user-xmark"></i> ยังไม่ได้ระบุผู้ขับ</span>`;
+          } else if (isInvalidCert) {
+            driverBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-circle-xmark"></i> ใบเซอร์ไม่ถูกต้อง</span>`;
+          } else {
+            driverBadge = `<span class="status-badge badge-cert-pending"><i class="fa-solid fa-hourglass-half"></i> ใบเซอร์: รอดำเนินการ</span>`;
+          }
+
+          const issueBadges = driverIssues.map(iss => `<span class="status-badge ${isInvalidCert ? 'badge-repair' : 'badge-cert-pending'}" style="font-size:0.72rem; margin:2px;"><i class="fa-solid fa-circle-info"></i> ${iss}</span>`).join(' ');
+
+          alertBox.innerHTML = `
+            <div class="alert-box-top">
+              <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+              ${driverBadge}
+            </div>
+            <div class="alert-desc-text">
+              <div style="font-weight:600; color:var(--text-primary); margin-bottom:0.25rem;">
+                <i class="fa-solid fa-user"></i> ${driver?.name && driver.name !== 'ยังไม่ระบุ' ? driver.name : '<span style="color:#f87171;">ยังไม่มีผู้ขับประจำรถ</span>'}
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">
+                รหัสพนักงาน: ${driver?.empId || '-'} | แผนก: ${driver?.department || item.ownerCompany || '-'}
+              </div>
+              <div style="margin-top:0.4rem;">${issueBadges}</div>
+            </div>
+            <div class="alert-action-footer">
+              <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
+                <i class="fa-regular fa-eye"></i> ดูข้อมูล
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${item.id}')" style="background:#8b5cf6; border-color:#8b5cf6;">
+                <i class="fa-solid fa-id-card"></i> ${isMissingDriver ? 'ระบุผู้ขับขี่' : 'จัดการใบเซอร์คนขับ'}
+              </button>
+            </div>
+          `;
+          driverAlertsContainer.appendChild(alertBox);
+        }
+      }
+
+      // ======================================================================
+      // 3. หมวดสัญญารถ (Rental Contract Alerts): สัญญาเช่า 30 วัน / หมดสัญญา
+      // ======================================================================
+      if (item.isSubcontractor) {
+        const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
+        const isContractExpired = item.status === 'หมดสัญญาเช่า' || rentalStatus.alertLevel === 'expired';
+        const isWarning = rentalStatus.alertLevel === 'warning';
+
+        if (isContractExpired || isWarning) {
+          rentalAlertCount++;
+          if (rentalAlertsContainer) {
+            const alertBox = document.createElement('div');
+            alertBox.className = `alert-item-box ${isContractExpired ? 'alert-lpg-urgent' : 'alert-lpg-warning'}`;
+            alertBox.innerHTML = `
+              <div class="alert-box-top">
+                <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+                <span class="status-badge ${isContractExpired ? 'badge-lpg-overdue' : 'badge-lpg-warn'}">
+                  <i class="fa-solid ${isContractExpired ? 'fa-triangle-exclamation' : 'fa-clock'}"></i>
+                  ${isContractExpired ? `หมดสัญญาแล้ว (${rentalStatus.overdueDays || 0} วัน)` : `เหลือสัญญาอีก ${rentalStatus.daysRemaining} วัน`}
+                </span>
+              </div>
+              <div class="alert-desc-text">
+                <strong>${item.vehicleType}</strong> | บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor || 'ผู้ให้บริการภายนอก'}</strong>
+                <br>
+                <span style="color: ${isContractExpired ? '#fca5a5' : '#38bdf8'}; font-size:0.82rem;">
+                  <i class="fa-solid fa-file-contract"></i> ${rentalStatus.text} (วันหมดสัญญา: ${rentalStatus.expiryDateStr || item.contractExpiryDate || '-'})
+                </span>
+                ${item.frameNo ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Frame No.: <code>${item.frameNo}</code></div>` : ''}
+              </div>
+              <div class="alert-action-footer">
+                <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
+                  <i class="fa-regular fa-eye"></i> ดูข้อมูล
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')">
+                  <i class="fa-solid fa-file-contract"></i> จัดการ/ต่อสัญญา
+                </button>
+                ${isContractExpired && item.status !== 'หมดสัญญาเช่า' ? `
+                  <button class="btn btn-secondary btn-sm" onclick="window.setForkliftExpiredStatus('${item.id}')" style="color:#fda4af; border-color:rgba(244,63,94,0.4);" title="ปรับสถานะเป็นหมดสัญญาเช่า/ส่งคืนแล้ว เพื่อแยกออกจากรถพร้อมใช้งาน">
+                    <i class="fa-solid fa-truck-arrow-right"></i> ปรับเป็นหมดสัญญา/ส่งคืน
+                  </button>
+                ` : ''}
+              </div>
+            `;
+            rentalAlertsContainer.appendChild(alertBox);
+          }
         }
       }
     });
 
-    if (lpgAlertsContainer && lpgCount === 0) {
-      lpgAlertsContainer.innerHTML = `
+    // Empty States
+    if (vehicleAlertsContainer && vehicleAlertCount === 0) {
+      vehicleAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
-          <p>${forklifts.length === 0 ? 'ยังไม่มีข้อมูลรถในระบบ' : 'ไม่มีรถพลังงาน LPG ที่ครบหรือใกล้ครบกำหนดตรวจเช็ค 1 ปีในขณะนี้'}</p>
+          <p>${forklifts.length === 0 ? 'ยังไม่มีข้อมูลรถในระบบ' : 'ไม่มีการแจ้งเตือนเกี่ยวกับตัวรถ รถทุกคันตรวจสภาพตรงกำหนดและแนบภาพถ่ายครบถ้วน'}</p>
         </div>
       `;
     }
 
-    if (incompleteAlertsContainer && incompleteCount === 0) {
-      incompleteAlertsContainer.innerHTML = `
+    if (driverAlertsContainer && driverAlertCount === 0) {
+      driverAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
-          <p>${forklifts.length === 0 ? 'ยังไม่มีข้อมูลรถในระบบ' : 'รถทุกคันในระบบมีข้อมูลการสำรวจและเอกสารครบถ้วนสมบูรณ์ 100%'}</p>
+          <p>${forklifts.length === 0 ? 'ยังไม่มีข้อมูลรถในระบบ' : 'ไม่มีการแจ้งเตือนเกี่ยวกับคนขับ ผู้ขับขี่ทุกคนมีข้อมูลครบถ้วนและผ่านการรับรอง'}</p>
         </div>
       `;
     }
 
-    if (rentalAlertsContainer && rentalCount === 0) {
+    if (rentalAlertsContainer && rentalAlertCount === 0) {
       rentalAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
-          <p>${forklifts.filter(f => f.isSubcontractor).length === 0 ? 'ยังไม่มีข้อมูลรถเช่าในระบบ' : 'รถเช่าทุกคันมีสัญญาเช่าที่ยังไม่หมดอายุและไม่อยู่ในระยะแจ้งเตือน 1 เดือน'}</p>
+          <p>${forklifts.filter(f => f.isSubcontractor).length === 0 ? 'ยังไม่มีข้อมูลรถเช่าในระบบ' : 'ไม่มีการแจ้งเตือนสัญญาเช่า รถเช่าทุกคันมีสัญญาใช้งานปกติ'}</p>
         </div>
       `;
     }
 
+    // Update Section Summary Cards & Badges
+    const sumVehicle = document.getElementById('sum-vehicle-alerts');
+    const badgeVehicle = document.getElementById('alert-badge-vehicle');
+    if (sumVehicle) sumVehicle.textContent = `${vehicleAlertCount} คัน`;
+    if (badgeVehicle) badgeVehicle.textContent = `${vehicleAlertCount} รายการ`;
+
+    const sumDriver = document.getElementById('sum-driver-alerts');
+    const badgeDriver = document.getElementById('alert-badge-driver');
+    if (sumDriver) sumDriver.textContent = `${driverAlertCount} รายการ`;
+    if (badgeDriver) badgeDriver.textContent = `${driverAlertCount} รายการ`;
+
+    const sumRental = document.getElementById('sum-rental-alerts');
+    const badgeRental = document.getElementById('alert-badge-rental');
+    if (sumRental) sumRental.textContent = `${rentalAlertCount} คัน`;
+    if (badgeRental) badgeRental.textContent = `${rentalAlertCount} รายการ`;
+
     // Update Tab Badge Counter
-    const totalAlerts = lpgCount + incompleteCount + rentalCount;
+    const totalAlerts = vehicleAlertCount + driverAlertCount + rentalAlertCount;
     if (alertTabBadge) {
       if (totalAlerts > 0) {
         alertTabBadge.style.display = 'inline-flex';

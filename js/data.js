@@ -610,11 +610,10 @@ class ForkliftDataStore {
   }
 
   /**
-   * Incomplete Data Check:
-   * "แจ้งเตือนในกรณีที่กรอกข้อมูลยังไม่ครบ"
-   * e.g. missing 3 photos, missing driver name, missing capacity, or cert pending
+   * Vehicle Data Issues Check:
+   * แจ้งเตือนข้อบกพร่องเกี่ยวกับตัวรถ เช่น ยังไม่แนบภาพถ่ายสภาพรถ หรือข้อมูลสเปกไม่ครบ
    */
-  getIncompleteIssues(forklift) {
+  getVehicleIssues(forklift) {
     const issues = [];
     if (!forklift.plateNumber) issues.push('ยังไม่ระบุเลขทะเบียนรถ');
     if (!forklift.vehicleType) issues.push('ยังไม่ระบุประเภทรถ');
@@ -629,15 +628,36 @@ class ForkliftDataStore {
       issues.push('ยังไม่ได้แนบภาพถ่ายสภาพรถ Forklift');
     }
 
-    // Driver checks
-    const d = forklift.driver || {};
-    if (!d.name) issues.push('ยังไม่ได้ระบุชื่อผู้ขับขี่');
-    if (!d.empId) issues.push('ยังไม่ได้ระบุรหัสพนักงาน');
-    if (!d.certImage || d.certStatus === 'รอดำเนินการ') {
-      issues.push('ใบรับรองการอบรมรถยก: รอดำเนินการ (ยังไม่แนบภาพ)');
-    }
-
     return issues;
+  }
+
+  /**
+   * Driver Data & Certification Issues Check:
+   * แจ้งเตือนข้อบกพร่องเกี่ยวกับคนขับ เช่น ยังไม่ระบุผู้ขับ หรือใบเซอร์รอดำเนินการ/ไม่ถูกต้อง
+   */
+  getDriverIssues(forklift) {
+    const issues = [];
+    const d = forklift.driver || {};
+    if (!d.name || d.name === 'ยังไม่ระบุ') {
+      issues.push('ยังไม่ได้ระบุผู้ขับประจำรถ');
+    } else {
+      if (!d.empId || d.empId === '-') issues.push('ยังไม่ระบุรหัสพนักงาน');
+      if (!d.certImage && (!d.certStatus || d.certStatus === 'รอดำเนินการ')) {
+        issues.push('ใบรับรองการอบรมรถยก: รอดำเนินการ (ยังไม่แนบภาพ)');
+      } else if (d.certStatus === 'รอดำเนินการ') {
+        issues.push('ใบรับรองการอบรมรถยก: รอดำเนินการ (รอตรวจสอบ AI)');
+      } else if (d.certStatus === 'ไม่ถูกต้อง') {
+        issues.push('ใบรับรองการอบรมไม่ถูกต้อง / ไม่ผ่านเกณฑ์');
+      }
+    }
+    return issues;
+  }
+
+  /**
+   * Incomplete Data Check (Combined for backward compatibility)
+   */
+  getIncompleteIssues(forklift) {
+    return [...this.getVehicleIssues(forklift), ...this.getDriverIssues(forklift)];
   }
 }
 
