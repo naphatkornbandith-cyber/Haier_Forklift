@@ -150,6 +150,7 @@
       return {
         id: item.id,
         plate_number: item.plateNumber || '',
+        frame_no: item.frameNo || '',
         vehicle_type: item.vehicleType || '',
         energy_type: item.energyType || '',
         lifting_capacity: item.liftingCapacity || '',
@@ -158,6 +159,7 @@
         is_subcontractor: Boolean(item.isSubcontractor),
         registration_date: item.registrationDate || null,
         last_inspection_date: item.lastInspectionDate || null,
+        contract_expiry_date: item.contractExpiryDate || null,
         status: item.status || 'พร้อมใช้งาน',
         photos: item.photos || {},
         checklist: item.checklist || {},
@@ -171,6 +173,7 @@
       return {
         id: row.id,
         plateNumber: row.plate_number || '',
+        frameNo: row.frame_no || '',
         vehicleType: row.vehicle_type || '',
         energyType: row.energy_type || '',
         liftingCapacity: row.lifting_capacity || '',
@@ -179,6 +182,7 @@
         isSubcontractor: Boolean(row.is_subcontractor),
         registrationDate: row.registration_date || '',
         lastInspectionDate: row.last_inspection_date || '',
+        contractExpiryDate: row.contract_expiry_date || '',
         status: row.status || 'พร้อมใช้งาน',
         photos: row.photos || {},
         checklist: row.checklist || {},

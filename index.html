@@ -631,20 +631,79 @@
                   <span class="section-num-badge">1</span>
                   <div>
                     <h3>ส่วนที่ 1: ลงทะเบียนรถ Forklift</h3>
-                    <p class="form-hint">ระบุเลขทะเบียนรถ (ห้ามซ้ำ), ประเภทรถ, แหล่งพลังงาน, พิกัดยกน้ำหนัก และสังกัดเจ้าของรถ</p>
+                    <p class="form-hint">เลือกประเภทความเป็นเจ้าของ (รถบริษัท / รถเช่า), ระบุหมายเลขตัวถัง (Frame No.), เลขทะเบียน และรายละเอียดตัวรถ</p>
                   </div>
                 </div>
               </div>
 
+              <!-- ปุ่มกดแยกระหว่าง รถของบริษัท vs รถเช่า -->
+              <div style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="font-size:0.95rem; margin-bottom:0.6rem;">
+                  <i class="fa-solid fa-shapes" style="color:var(--haier-cyan);"></i> เลือกประเภทความเป็นเจ้าของรถ (Ownership Type) <span class="required">*</span>
+                </label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <button type="button" class="btn btn-primary ownership-type-btn active" id="btn-owner-company" data-owner-type="company" style="display:flex; align-items:center; justify-content:center; gap:0.6rem; padding:0.85rem; font-size:0.95rem;">
+                    <i class="fa-solid fa-building"></i>
+                    <span><strong>รถของบริษัท</strong> (Haier Owned)</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary ownership-type-btn" id="btn-owner-rental" data-owner-type="rental" style="display:flex; align-items:center; justify-content:center; gap:0.6rem; padding:0.85rem; font-size:0.95rem;">
+                    <i class="fa-solid fa-handshake"></i>
+                    <span><strong>รถเช่า</strong> (Rental / Subcontractor)</span>
+                  </button>
+                </div>
+                <input type="hidden" id="reg-owner-type" value="company">
+              </div>
+
               <div class="form-grid">
+                <!-- หมายเลขตัวถัง (Frame No. ห้ามซ้ำกัน) -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-frame-no">
+                    หมายเลขตัวถัง (Frame No. / Chassis No.) <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-frame-no" class="form-control" 
+                         placeholder="เช่น F-489201 หรือ 2FB-1082" required>
+                  <span class="form-hint">ระบุหมายเลขตัวถัง/ซีเรียลนัมเบอร์ของรถ (ระบบตรวจสอบความซ้ำซ้อนทันที)</span>
+                  
+                  <!-- Duplicate Frame No. Callout -->
+                  <div id="duplicate-frame-alert" class="duplicate-plate-callout">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:1.2rem;"></i>
+                    <div>
+                      <div id="duplicate-frame-msg">หมายเลขตัวถังนี้ (Frame No.) เคยลงทะเบียนแล้วในระบบ</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- หมายเลขตัวถัง (Frame No. ห้ามซ้ำกัน) -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-frame-no">
+                    หมายเลขตัวถัง (Frame No. / Chassis No.) <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-frame-no" class="form-control" 
+                         placeholder="เช่น F-489201 หรือ 2FB-1082" required>
+                  <span class="form-hint">ระบุหมายเลขตัวถัง/ซีเรียลนัมเบอร์ของรถ (ระบบตรวจสอบความซ้ำซ้อนทันที)</span>
+                  
+                  <!-- Duplicate Frame No. Callout -->
+                  <div id="duplicate-frame-alert" class="duplicate-plate-callout">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:1.2rem;"></i>
+                    <div>
+                      <div id="duplicate-frame-msg">หมายเลขตัวถังนี้ (Frame No.) เคยลงทะเบียนแล้วในระบบ</div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- เลขทะเบียนรถ -->
                 <div class="form-group">
-                  <label class="form-label" for="reg-plate">
-                    เลขทะเบียนรถ <span class="required">*</span>
-                  </label>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                    <label class="form-label" for="reg-plate" style="margin-bottom:0;">
+                      เลขทะเบียนรถ <span class="required">*</span>
+                    </label>
+                    <span id="rental-plate-badge" class="badge" style="display:none; background:rgba(6,182,212,0.15); color:var(--haier-cyan); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px; border:1px solid rgba(6,182,212,0.3);">
+                      <i class="fa-solid fa-wand-magic-sparkles"></i> รันเลขอัตโนมัติ SP-{000}
+                    </span>
+                  </div>
                   <input type="text" id="reg-plate" class="form-control" 
                          placeholder="เช่น FL-H08, FL-LPG-09" required>
-                  <span class="form-hint">ระบบจะตรวจสอบความซ้ำซ้อนของเลขทะเบียนแบบ Real-time ทันที</span>
+                  <span class="form-hint" id="reg-plate-hint">ระบุเลขทะเบียนรถบริษัท (ห้ามซ้ำ)</span>
                   
                   <!-- Duplicate Plate Callout -->
                   <div id="duplicate-plate-alert" class="duplicate-plate-callout">
@@ -658,6 +717,16 @@
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <!-- ชื่อบริษัท -->
+                <div class="form-group">
+                  <label class="form-label" for="reg-owner-company" id="label-reg-company">
+                    ชื่อบริษัท (Company Name) <span class="required">*</span>
+                  </label>
+                  <input type="text" id="reg-owner-company" class="form-control" 
+                         value="Haier Electric (Thailand) Company Limited" readonly required>
+                  <span class="form-hint" id="hint-reg-company">ล็อกชื่อบริษัทสำหรับรถของบริษัท</span>
                 </div>
 
                 <!-- ประเภทรถ -->
@@ -705,23 +774,15 @@
                   </select>
                 </div>
 
-                <!-- เจ้าของรถ (ชื่อบริษัท และซัพ) -->
-                <div class="form-group">
-                  <label class="form-label" for="reg-owner-type">
-                    ประเภทกรรมสิทธิ์ / เจ้าของรถ <span class="required">*</span>
+                <!-- วันหมดสัญญาเช่า (เฉพาะกรณีรถเช่า พร้อมแจ้งเตือนล่วงหน้า 1 เดือน) -->
+                <div class="form-group" id="reg-contract-expiry-group" style="display:none;">
+                  <label class="form-label" for="reg-contract-expiry">
+                    วันหมดสัญญาเช่า (Rental Contract Expiry Date) <span class="required">*</span>
                   </label>
-                  <select id="reg-owner-type" class="form-control">
-                    <option value="company" selected>รถของบริษัท Haier (Company Owned)</option>
-                    <option value="subcontractor">รถเช่า (Rental)</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="reg-owner-company">
-                    กรณีเป็นรถเช่าโปรดระบุชื่อบริษัทเจ้าของรถ <span class="required">*</span>
-                  </label>
-                  <input type="text" id="reg-owner-company" class="form-control" 
-                         placeholder="เช่น บจก. ไทย โฟล์คลิฟท์ โลจิสติกส์">
+                  <input type="date" id="reg-contract-expiry" class="form-control">
+                  <div style="font-size:0.78rem; color:#38bdf8; margin-top:0.35rem;">
+                    <i class="fa-solid fa-bell"></i> เชื่อมโยงเข้าศูนย์แจ้งเตือนล่วงหน้า 1 เดือน (30 วัน) ก่อนหมดสัญญาอัตโนมัติ
+                  </div>
                 </div>
 
               </div><!-- /.form-grid -->
@@ -1226,6 +1287,26 @@
 
             <div id="incomplete-alerts-list" class="alert-items-list">
               <!-- Dynamically populated incomplete alerts -->
+            </div>
+          </div>
+
+          <!-- Category 3: Rental Contract Expiry Alerts (สัญญาเช่ารถ) -->
+          <div class="alert-category-card">
+            <div class="alert-card-header">
+              <h3 style="color:#38bdf8;">
+                <i class="fa-solid fa-file-contract"></i> รถเช่าใกล้หมดหรือเลยกำหนดสัญญาเช่า
+              </h3>
+              <span class="status-badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">
+                <i class="fa-solid fa-handshake"></i> สัญญาเช่า (Rental Contract)
+              </span>
+            </div>
+
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
+              * แจ้งเตือนรถเช่าล่วงหน้า 1 เดือน (30 วัน) ก่อนหมดสัญญา และจะแสดงสถานะเกินกำหนดต่อเนื่องจนกว่าจะมีการต่อสัญญา
+            </p>
+
+            <div id="rental-alerts-list" class="alert-items-list">
+              <!-- Dynamically populated Rental contract alerts -->
             </div>
           </div>
 

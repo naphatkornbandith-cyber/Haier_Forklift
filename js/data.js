@@ -371,9 +371,45 @@ class ForkliftDataStore {
     });
   }
 
+  // Duplicate Check: Frame No. (หมายเลขตัวถัง) ห้ามซ้ำกันในระบบ
+  isFrameNoDuplicate(frameNo, excludeId = null) {
+    if (!frameNo) return false;
+    const cleanFrame = frameNo.trim().toUpperCase().replace(/\s+/g, '');
+    const all = this.getAll();
+    return all.some(item => {
+      if (excludeId && item.id === excludeId) return false;
+      if (!item.frameNo) return false;
+      const existingClean = item.frameNo.trim().toUpperCase().replace(/\s+/g, '');
+      return existingClean === cleanFrame;
+    });
+  }
+
+  // เซ็ตการรันเลขทะเบียนสำหรับรถเช่า: "SP-{000}" เช่น SP-001, SP-002, ...
+  getNextRentalPlateNumber() {
+    const all = this.getAll();
+    let maxNum = 0;
+    const regex = /^SP-(\d+)$/i;
+    all.forEach(item => {
+      if (item.plateNumber) {
+        const match = item.plateNumber.trim().match(regex);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    });
+    const nextNum = maxNum + 1;
+    return `SP-${String(nextNum).padStart(3, '0')}`;
+  }
+
   addForklift(newItem) {
     if (this.isPlateDuplicate(newItem.plateNumber)) {
       throw new Error(`เลขทะเบียน "${newItem.plateNumber}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`);
+    }
+    if (newItem.frameNo && this.isFrameNoDuplicate(newItem.frameNo)) {
+      throw new Error(`หมายเลขตัวถัง (Frame No.) "${newItem.frameNo}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`);
     }
     const all = this.getAll();
     const id = 'FL-' + Date.now().toString().slice(-4);
@@ -521,6 +557,54 @@ class ForkliftDataStore {
       daysRemaining: diffDays,
       dueDateStr: dueDate.toISOString().split('T')[0],
       text: `ตรวจเช็คปกติ (ครบกำหนดถัดไปในอีก ${diffDays} วัน)`
+    };
+  }
+
+  /**
+   * Rental Contract Expiry Check:
+   * "วันหมดสัญญาเช่า พร้อมลิงก์เข้าศูนย์แจ้งเตือนล่วงหน้า 1 เดือน"
+   */
+  getRentalContractStatus(forklift, referenceDate = new Date()) {
+    if (!forklift || !forklift.isSubcontractor || !forklift.contractExpiryDate) {
+      return { isRental: Boolean(forklift?.isSubcontractor), alertLevel: 'none', daysRemaining: null, text: 'ไม่ใช่รถเช่าหรือยังไม่ระบุวันหมดสัญญา' };
+    }
+
+    const expiryDate = new Date(forklift.contractExpiryDate);
+    if (isNaN(expiryDate.getTime())) {
+      return { isRental: true, alertLevel: 'none', daysRemaining: null, text: 'วันที่หมดสัญญาไม่ถูกต้อง' };
+    }
+
+    const ref = new Date(referenceDate);
+    const diffTime = expiryDate.getTime() - ref.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return {
+        isRental: true,
+        alertLevel: 'expired',
+        daysRemaining: diffDays,
+        overdueDays: Math.abs(diffDays),
+        expiryDateStr: forklift.contractExpiryDate,
+        text: `หมดสัญญาเช่าแล้ว (${Math.abs(diffDays)} วันที่ผ่านมา)`
+      };
+    }
+
+    if (diffDays <= 30) {
+      return {
+        isRental: true,
+        alertLevel: 'warning',
+        daysRemaining: diffDays,
+        expiryDateStr: forklift.contractExpiryDate,
+        text: `สัญญาเช่าจะหมดอายุในอีก ${diffDays} วัน (แจ้งเตือนล่วงหน้า 1 เดือน)`
+      };
+    }
+
+    return {
+      isRental: true,
+      alertLevel: 'ok',
+      daysRemaining: diffDays,
+      expiryDateStr: forklift.contractExpiryDate,
+      text: `สัญญาเช่ามีอายุเหลืออีก ${diffDays} วัน`
     };
   }
 

@@ -156,6 +156,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const regEnergySelect = document.getElementById('reg-energy');
   const regLpgNote = document.getElementById('reg-lpg-note');
   const btnPassAllChecklist = document.getElementById('btn-pass-all-checklist');
+
+  // Ownership Type & Vehicle Specs (Section 1)
+  const btnOwnerCompany = document.getElementById('btn-owner-company');
+  const btnOwnerRental = document.getElementById('btn-owner-rental');
+  const regOwnerType = document.getElementById('reg-owner-type');
+  const regFrameNoInput = document.getElementById('reg-frame-no');
+  const duplicateFrameAlert = document.getElementById('duplicate-frame-alert');
+  const duplicateFrameMsg = document.getElementById('duplicate-frame-msg');
+  const rentalPlateBadge = document.getElementById('rental-plate-badge');
+  const regPlateHint = document.getElementById('reg-plate-hint');
+  const regOwnerCompany = document.getElementById('reg-owner-company');
+  const labelRegCompany = document.getElementById('label-reg-company');
+  const hintRegCompany = document.getElementById('hint-reg-company');
+  const regContractExpiryGroup = document.getElementById('reg-contract-expiry-group');
+  const regContractExpiry = document.getElementById('reg-contract-expiry');
+
   // Modals
   const modalView = document.getElementById('modal-view-details');
   const modalEditDriver = document.getElementById('modal-edit-driver');
@@ -199,6 +215,9 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAdminPanel();
     } else if (tabId === 'register-tab') {
       populateDriverSelectOptions();
+      if (regOwnerType && regOwnerType.value === 'rental') {
+        regPlateInput.value = window.forkliftStore.getNextRentalPlateNumber();
+      }
     } else if (tabId === 'driver-reg-tab') {
       populateForkliftSelectOptions();
     }
@@ -239,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingCertCount = 0;
     let companyCount = 0;
     let rentalCount = 0;
+    let rentalAlertCount = 0;
     const lpgAlertItems = [];
 
     forklifts.forEach(item => {
@@ -255,6 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) {
         lpgAlertCount++;
         lpgAlertItems.push({ item, lpgStatus });
+      }
+
+      // Check Rental Contract Expiry Status
+      const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
+      if (rentalStatus.isRental && (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired')) {
+        rentalAlertCount++;
       }
 
       const issues = window.forkliftStore.getIncompleteIssues(item);
@@ -325,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ────────────────────────────────────────────────────────────────
 
     // Total Alerts on tab badge
-    const totalAlerts = lpgAlertCount + incompleteCount;
+    const totalAlerts = lpgAlertCount + incompleteCount + rentalAlertCount;
     if (totalAlerts > 0) {
       alertTabBadge.style.display = 'inline-flex';
       alertTabBadge.textContent = totalAlerts;
@@ -461,6 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `
         <td>
           <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+          ${item.frameNo ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Frame: <code>${item.frameNo}</code></div>` : ''}
           ${incompleteBadge}
         </td>
         <td>
@@ -476,8 +503,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${item.ownerCompany}</div>
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            <i class="fa-solid fa-building"></i> ${item.subcontractor || 'Haier Owned'}
+            <i class="fa-solid fa-building"></i> ${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')}
           </div>
+          ${item.isSubcontractor && item.contractExpiryDate ? `
+            <div style="font-size:0.72rem; color:#38bdf8; margin-top:2px;">
+              <i class="fa-solid fa-calendar-xmark"></i> หมดสัญญา: ${item.contractExpiryDate}
+            </div>
+          ` : ''}
         </td>
         <td>
           <div class="driver-info-cell" style="display:flex; align-items:center; gap:0.65rem;">
@@ -790,12 +822,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const forklifts = window.forkliftStore.getAll();
     const lpgAlertsContainer = document.getElementById('lpg-alerts-list');
     const incompleteAlertsContainer = document.getElementById('incomplete-alerts-list');
+    const rentalAlertsContainer = document.getElementById('rental-alerts-list');
 
-    lpgAlertsContainer.innerHTML = '';
-    incompleteAlertsContainer.innerHTML = '';
+    if (lpgAlertsContainer) lpgAlertsContainer.innerHTML = '';
+    if (incompleteAlertsContainer) incompleteAlertsContainer.innerHTML = '';
+    if (rentalAlertsContainer) rentalAlertsContainer.innerHTML = '';
 
     let lpgCount = 0;
     let incompleteCount = 0;
+    let rentalCount = 0;
 
     forklifts.forEach(item => {
       // 1. Check LPG Alert
@@ -835,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
           </div>
         `;
-        lpgAlertsContainer.appendChild(alertBox);
+        if (lpgAlertsContainer) lpgAlertsContainer.appendChild(alertBox);
       }
 
       // 2. Check Incomplete Data Alert
@@ -865,11 +900,48 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
           </div>
         `;
-        incompleteAlertsContainer.appendChild(alertBox);
+        if (incompleteAlertsContainer) incompleteAlertsContainer.appendChild(alertBox);
+      }
+
+      // 3. Check Rental Contract Expiry Alert (แจ้งเตือนล่วงหน้า 1 เดือน / เกินกำหนด)
+      const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
+      if (rentalStatus.isRental && (rentalStatus.alertLevel === 'warning' || rentalStatus.alertLevel === 'expired')) {
+        rentalCount++;
+        if (rentalAlertsContainer) {
+          const isExpired = rentalStatus.alertLevel === 'expired';
+          const alertBox = document.createElement('div');
+          alertBox.className = `alert-item-box ${isExpired ? 'alert-lpg-urgent' : 'alert-lpg-warning'}`;
+          alertBox.innerHTML = `
+            <div class="alert-box-top">
+              <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+              <span class="status-badge ${isExpired ? 'badge-lpg-overdue' : 'badge-lpg-warn'}">
+                <i class="fa-solid ${isExpired ? 'fa-triangle-exclamation' : 'fa-clock'}"></i>
+                ${isExpired ? `หมดสัญญาแล้ว (${rentalStatus.overdueDays} วัน)` : `เหลือสัญญาอีก ${rentalStatus.daysRemaining} วัน`}
+              </span>
+            </div>
+            <div class="alert-desc-text">
+              <strong>${item.vehicleType}</strong> | บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor}</strong>
+              <br>
+              <span style="color: ${isExpired ? '#fca5a5' : '#38bdf8'}; font-size:0.82rem;">
+                <i class="fa-solid fa-file-contract"></i> ${rentalStatus.text} (วันหมดสัญญา: ${rentalStatus.expiryDateStr})
+              </span>
+              ${item.frameNo ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Frame No.: <code>${item.frameNo}</code></div>` : ''}
+            </div>
+            <div class="alert-action-footer">
+              <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
+                <i class="fa-regular fa-eye"></i> ดูข้อมูล
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${item.id}')">
+                <i class="fa-solid fa-pen-to-square"></i> จัดการ/ต่อสัญญา
+              </button>
+            </div>
+          `;
+          rentalAlertsContainer.appendChild(alertBox);
+        }
       }
     });
 
-    if (lpgCount === 0) {
+    if (lpgAlertsContainer && lpgCount === 0) {
       lpgAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
@@ -878,7 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
-    if (incompleteCount === 0) {
+    if (incompleteAlertsContainer && incompleteCount === 0) {
       incompleteAlertsContainer.innerHTML = `
         <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
@@ -886,12 +958,149 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
     }
+
+    if (rentalAlertsContainer && rentalCount === 0) {
+      rentalAlertsContainer.innerHTML = `
+        <div style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="font-size:2.2rem; color:var(--status-ready); margin-bottom:0.75rem;"></i>
+          <p>${forklifts.filter(f => f.isSubcontractor).length === 0 ? 'ยังไม่มีข้อมูลรถเช่าในระบบ' : 'รถเช่าทุกคันมีสัญญาเช่าที่ยังไม่หมดอายุและไม่อยู่ในระยะแจ้งเตือน 1 เดือน'}</p>
+        </div>
+      `;
+    }
+
+    // Update Tab Badge Counter
+    const totalAlerts = lpgCount + incompleteCount + rentalCount;
+    if (alertTabBadge) {
+      if (totalAlerts > 0) {
+        alertTabBadge.style.display = 'inline-flex';
+        alertTabBadge.textContent = totalAlerts;
+      } else {
+        alertTabBadge.style.display = 'none';
+      }
+    }
   }
 
   // --------------------------------------------------------------------------
   // Registration Form Logic
   // --------------------------------------------------------------------------
-  
+
+  // Ownership Type Switcher: รถของบริษัท vs รถเช่า
+  function setOwnershipType(type) {
+    if (!regOwnerType) return;
+    const isRental = type === 'rental';
+    regOwnerType.value = isRental ? 'rental' : 'company';
+
+    if (btnOwnerCompany && btnOwnerRental) {
+      if (isRental) {
+        btnOwnerRental.classList.add('active', 'btn-primary');
+        btnOwnerRental.classList.remove('btn-secondary');
+        btnOwnerCompany.classList.remove('active', 'btn-primary');
+        btnOwnerCompany.classList.add('btn-secondary');
+      } else {
+        btnOwnerCompany.classList.add('active', 'btn-primary');
+        btnOwnerCompany.classList.remove('btn-secondary');
+        btnOwnerRental.classList.remove('active', 'btn-primary');
+        btnOwnerRental.classList.add('btn-secondary');
+      }
+    }
+
+    if (isRental) {
+      // รถเช่า:
+      // - เลขทะเบียนระบบรันให้เอง เซ็ตการรันเลขคือ "SP-{000}"
+      const nextRentalPlate = window.forkliftStore.getNextRentalPlateNumber();
+      regPlateInput.value = nextRentalPlate;
+      regPlateInput.readOnly = true;
+      regPlateInput.classList.remove('is-invalid');
+      regPlateInput.classList.add('is-valid');
+      if (duplicateAlert) duplicateAlert.classList.remove('show');
+      if (rentalPlateBadge) rentalPlateBadge.style.display = 'inline-block';
+      if (regPlateHint) regPlateHint.textContent = 'ระบบรันเลขทะเบียนอัตโนมัติตามรูปแบบ SP-{000} (ล็อกไม่ให้แก้ไข)';
+
+      // - ชื่อบริษัทที่เช่า (กรอกเอง)
+      if (regOwnerCompany) {
+        if (regOwnerCompany.value === 'Haier Electric (Thailand) Company Limited') {
+          regOwnerCompany.value = '';
+        }
+        regOwnerCompany.readOnly = false;
+        regOwnerCompany.placeholder = 'เช่น บจก. สยาม โฟล์คลิฟท์ หรือ บจก. ไทย โลจิสติกส์';
+      }
+      if (labelRegCompany) {
+        labelRegCompany.innerHTML = 'ชื่อบริษัทที่เช่า (Rental Supplier) <span class="required">*</span>';
+      }
+      if (hintRegCompany) {
+        hintRegCompany.textContent = 'ระบุชื่อบริษัทผู้ให้เช่ารถ Forklift';
+      }
+
+      // - วันหมดสัญญาเช่า พร้อมลิงก์เข้าศูนย์แจ้งเตือนล่วงหน้า 1 เดือน
+      if (regContractExpiryGroup) regContractExpiryGroup.style.display = 'block';
+      if (regContractExpiry) regContractExpiry.required = true;
+    } else {
+      // รถของบริษัท:
+      // - เลขทะเบียนกรอกเอง
+      if (regPlateInput.value.startsWith('SP-')) {
+        regPlateInput.value = '';
+        regPlateInput.classList.remove('is-valid');
+      }
+      regPlateInput.readOnly = false;
+      if (rentalPlateBadge) rentalPlateBadge.style.display = 'none';
+      if (regPlateHint) regPlateHint.textContent = 'ระบุเลขทะเบียนรถบริษัท (ห้ามซ้ำ)';
+
+      // - บริษัท Haier Electric (Thailand) Company Limited ล็อกชื่อบริษัท
+      if (regOwnerCompany) {
+        regOwnerCompany.value = 'Haier Electric (Thailand) Company Limited';
+        regOwnerCompany.readOnly = true;
+      }
+      if (labelRegCompany) {
+        labelRegCompany.innerHTML = 'ชื่อบริษัท (Company Name) <span class="required">*</span>';
+      }
+      if (hintRegCompany) {
+        hintRegCompany.textContent = 'ล็อกชื่อบริษัทสำหรับรถของบริษัท';
+      }
+
+      // - ซ่อนวันหมดสัญญาเช่า
+      if (regContractExpiryGroup) regContractExpiryGroup.style.display = 'none';
+      if (regContractExpiry) {
+        regContractExpiry.required = false;
+        regContractExpiry.value = '';
+      }
+    }
+  }
+
+  if (btnOwnerCompany) {
+    btnOwnerCompany.addEventListener('click', () => setOwnershipType('company'));
+  }
+  if (btnOwnerRental) {
+    btnOwnerRental.addEventListener('click', () => setOwnershipType('rental'));
+  }
+
+  // Real-time Frame No. (หมายเลขตัวถัง) validation - ห้ามซ้ำกัน
+  if (regFrameNoInput) {
+    regFrameNoInput.addEventListener('input', () => {
+      const val = regFrameNoInput.value.trim();
+      if (!val) {
+        regFrameNoInput.classList.remove('is-invalid', 'is-valid');
+        if (duplicateFrameAlert) duplicateFrameAlert.classList.remove('show');
+        return;
+      }
+
+      const isDuplicate = window.forkliftStore.isFrameNoDuplicate(val);
+      if (isDuplicate) {
+        regFrameNoInput.classList.add('is-invalid');
+        regFrameNoInput.classList.remove('is-valid');
+        if (duplicateFrameAlert) {
+          duplicateFrameAlert.classList.add('show');
+          if (duplicateFrameMsg) {
+            duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${val}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
+          }
+        }
+      } else {
+        regFrameNoInput.classList.remove('is-invalid');
+        regFrameNoInput.classList.add('is-valid');
+        if (duplicateFrameAlert) duplicateFrameAlert.classList.remove('show');
+      }
+    });
+  }
+
   // Real-time duplicate plate number validation
   regPlateInput.addEventListener('input', () => {
     const val = regPlateInput.value.trim();
@@ -1323,7 +1532,33 @@ document.addEventListener('DOMContentLoaded', () => {
   regForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const plateNumber = regPlateInput.value.trim().toUpperCase();
+    // 1. Validate Frame No. (หมายเลขตัวถัง - เงื่อนไขห้ามซ้ำกัน)
+    const frameNo = regFrameNoInput ? regFrameNoInput.value.trim().toUpperCase() : '';
+    if (!frameNo) {
+      showToast('กรุณาระบุหมายเลขตัวถัง (Frame No. / Chassis No.)', 'error');
+      regFrameNoInput?.focus();
+      return;
+    }
+    if (window.forkliftStore.isFrameNoDuplicate(frameNo)) {
+      showToast(`หมายเลขตัวถัง (Frame No.) "${frameNo}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`, 'error');
+      if (duplicateFrameAlert) {
+        duplicateFrameAlert.classList.add('show');
+        if (duplicateFrameMsg) {
+          duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${frameNo}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
+        }
+      }
+      regFrameNoInput?.focus();
+      return;
+    }
+
+    // 2. Determine Ownership Type & Validate Plate No.
+    const isSub = regOwnerType ? (regOwnerType.value === 'rental') : false;
+    let plateNumber = regPlateInput.value.trim().toUpperCase();
+    if (isSub && !plateNumber) {
+      plateNumber = window.forkliftStore.getNextRentalPlateNumber();
+      regPlateInput.value = plateNumber;
+    }
+
     if (!plateNumber) {
       showToast('กรุณาระบุเลขทะเบียนรถ', 'error');
       regPlateInput.focus();
@@ -1352,15 +1587,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const ownerCompanyEl = document.getElementById('reg-owner-company');
     const ownerCompanyVal = ownerCompanyEl ? ownerCompanyEl.value.trim() : '';
 
-    const ownerTypeEl = document.getElementById('reg-owner-type');
-    const isSub = ownerTypeEl ? ownerTypeEl.value === 'subcontractor' : false;
+    // Validate rental specific fields
+    let contractExpiryDate = null;
+    if (isSub) {
+      if (!ownerCompanyVal) {
+        showToast('กรุณาระบุชื่อบริษัทที่เช่า (Rental Supplier)', 'error');
+        ownerCompanyEl?.focus();
+        return;
+      }
+      contractExpiryDate = regContractExpiry ? regContractExpiry.value : '';
+      if (!contractExpiryDate) {
+        showToast('กรุณาระบุวันหมดสัญญาเช่าสำหรับรถเช่า', 'error');
+        regContractExpiry?.focus();
+        return;
+      }
+    }
 
     const ownerCompany = isSub
-      ? (ownerCompanyVal || 'บริษัทรถเช่า / ซัพพลายเออร์')
+      ? ownerCompanyVal
       : 'Haier Electric (Thailand) Company Limited';
 
     const subcontractor = isSub
-      ? (ownerCompanyVal || 'ผู้รับเหมาช่วง / รถเช่า')
+      ? ownerCompanyVal
       : 'Haier Owned';
 
     const inspectDateEl = document.getElementById('reg-inspect-date');
@@ -1409,12 +1657,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const newForklift = {
       plateNumber,
+      frameNo,
       vehicleType,
       energyType,
       liftingCapacity,
       ownerCompany,
       subcontractor,
       isSubcontractor: isSub,
+      contractExpiryDate: isSub ? contractExpiryDate : null,
       registrationDate: new Date().toISOString().split('T')[0],
       lastInspectionDate: inspectionDate,
       status,
@@ -1426,12 +1676,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       window.forkliftStore.addForklift(newForklift);
-      showToast(`ขึ้นทะเบียนรถโฟล์คลิฟท์ "${plateNumber}" สำเร็จเรียบร้อย!`, 'success');
+      showToast(`ขึ้นทะเบียนรถโฟล์คลิฟท์ "${plateNumber}" (${isSub ? 'รถเช่า' : 'รถบริษัท'}) สำเร็จเรียบร้อย!`, 'success');
       
       // Reset Form
       regForm.reset();
       regPlateInput.classList.remove('is-valid', 'is-invalid');
       duplicateAlert.classList.remove('show');
+      if (regFrameNoInput) {
+        regFrameNoInput.classList.remove('is-valid', 'is-invalid');
+      }
+      if (duplicateFrameAlert) {
+        duplicateFrameAlert.classList.remove('show');
+      }
+      setOwnershipType('company');
       const inspectDateElPost = document.getElementById('reg-inspect-date');
       if (inspectDateElPost) {
         inspectDateElPost.value = new Date().toISOString().split('T')[0];
@@ -1512,11 +1769,13 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="stat-card" style="margin-bottom:1.5rem;">
         <h4 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--haier-cyan);"><i class="fa-solid fa-circle-info"></i> ข้อมูลจำเพาะของรถ</h4>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; font-size:0.85rem;">
+          <div><span style="color:var(--text-muted);">Frame No.:</span> <strong>${item.frameNo || '-'}</strong></div>
           <div><span style="color:var(--text-muted);">ประเภทรถ:</span> <strong>${item.vehicleType}</strong></div>
           <div><span style="color:var(--text-muted);">ระบบพลังงาน:</span> <strong>${item.energyType}</strong></div>
           <div><span style="color:var(--text-muted);">ความสามารถยก:</span> <strong>${item.liftingCapacity || '-'}</strong></div>
           <div><span style="color:var(--text-muted);">เจ้าของรถ:</span> <strong>${item.ownerCompany}</strong></div>
-          <div><span style="color:var(--text-muted);">ซัพพลายเออร์:</span> <strong>${item.subcontractor || 'Haier Owned'}</strong></div>
+          <div><span style="color:var(--text-muted);">ซัพพลายเออร์:</span> <strong>${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')}</strong></div>
+          ${item.isSubcontractor ? `<div><span style="color:var(--text-muted);">วันหมดสัญญาเช่า:</span> <strong>${item.contractExpiryDate || '-'}</strong></div>` : ''}
           <div><span style="color:var(--text-muted);">วันที่ขึ้นทะเบียน:</span> <strong>${item.registrationDate || '-'}</strong></div>
           <div><span style="color:var(--text-muted);">ตรวจสภาพล่าสุด:</span> <strong>${item.lastInspectionDate || '-'}</strong></div>
         </div>
@@ -1525,6 +1784,24 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="margin-top:1rem; padding:0.75rem; background:rgba(245, 158, 11, 0.1); border-left:3px solid #fbbf24; border-radius:4px;">
             <strong><i class="fa-solid fa-fire"></i> ข้อมูลตรวจเช็คก๊าซ LPG ประจำปี:</strong>
             <div style="font-size:0.82rem; margin-top:2px;">${lpgStatus.text} (ครบกำหนดรอบถัดไป: ${lpgStatus.dueDateStr || '-'})</div>
+          </div>
+        ` : ''}
+
+        ${item.isSubcontractor && item.contractExpiryDate ? `
+          <div style="margin-top:1rem; padding:0.75rem; background:rgba(56, 189, 248, 0.1); border-left:3px solid #38bdf8; border-radius:4px;">
+            <strong><i class="fa-solid fa-file-contract"></i> สัญญาเช่ารถ (Rental Contract):</strong>
+            <div style="font-size:0.82rem; margin-top:2px;">
+              วันหมดสัญญา: <strong>${item.contractExpiryDate}</strong>
+              ${(() => {
+                const cs = window.forkliftStore.getRentalContractStatus(item);
+                if (cs.alertLevel === 'expired') {
+                  return ` &nbsp;<span class="status-badge badge-repair" style="font-size:0.75rem;"><i class="fa-solid fa-triangle-exclamation"></i> หมดสัญญาแล้ว (${cs.overdueDays} วัน)</span>`;
+                } else if (cs.alertLevel === 'warning') {
+                  return ` &nbsp;<span class="status-badge badge-lpg-warn" style="font-size:0.75rem;"><i class="fa-solid fa-clock"></i> เหลือสัญญาอีก ${cs.daysRemaining} วัน (แจ้งเตือนล่วงหน้า 1 เดือน)</span>`;
+                }
+                return ` &nbsp;<span class="status-badge badge-ready" style="font-size:0.75rem;"><i class="fa-solid fa-check"></i> ปกติ (เหลืออีก ${cs.daysRemaining} วัน)</span>`;
+              })()}
+            </div>
           </div>
         ` : ''}
       </div>
@@ -2425,6 +2702,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `
         <td>
           <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+          ${item.frameNo ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Frame: <code>${item.frameNo}</code></div>` : ''}
           ${incompleteBadge}
         </td>
         <td>
@@ -2440,8 +2718,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${item.ownerCompany}</div>
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            <i class="fa-solid fa-building"></i> ${item.subcontractor || 'Haier Owned'}
+            <i class="fa-solid fa-building"></i> ${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')}
           </div>
+          ${item.isSubcontractor && item.contractExpiryDate ? `
+            <div style="font-size:0.72rem; color:#38bdf8; margin-top:2px;">
+              <i class="fa-solid fa-calendar-xmark"></i> หมดสัญญา: ${item.contractExpiryDate}
+            </div>
+          ` : ''}
         </td>
         <td>
           <div class="driver-info-cell" style="display:flex; align-items:center; gap:0.65rem;">
@@ -2808,6 +3091,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Initialize ownership type (defaults to 'company' owned)
+  setOwnershipType('company');
 
   // Initialize energy-specific checklist row based on default dropdown value
   updateChecklistForEnergy(regEnergySelect.value);

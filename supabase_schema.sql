@@ -7,6 +7,7 @@
 CREATE TABLE IF NOT EXISTS forklifts (
   id TEXT PRIMARY KEY,
   plate_number TEXT NOT NULL UNIQUE,
+  frame_no TEXT,                           -- หมายเลขตัวถัง (Frame No. / Chassis No. ห้ามซ้ำ)
   vehicle_type TEXT,
   energy_type TEXT,
   lifting_capacity TEXT,
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS forklifts (
   is_subcontractor BOOLEAN DEFAULT false,
   registration_date DATE,
   last_inspection_date DATE,
+  contract_expiry_date DATE,               -- วันหมดสัญญาเช่า (สำหรับรถเช่า แจ้งเตือนล่วงหน้า 1 เดือน)
   status TEXT DEFAULT 'พร้อมใช้งาน',
   photos JSONB DEFAULT '{}'::jsonb,        -- เก็บรูป 3 มุม { front, side, fullFront }
   checklist JSONB DEFAULT '{}'::jsonb,     -- เก็บผลตรวจ 7 รายการ
@@ -24,8 +26,13 @@ CREATE TABLE IF NOT EXISTS forklifts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- เพิ่มคอลัมน์ในกรณีตารางเดิมมีอยู่แล้ว (Migration)
+ALTER TABLE forklifts ADD COLUMN IF NOT EXISTS frame_no TEXT;
+ALTER TABLE forklifts ADD COLUMN IF NOT EXISTS contract_expiry_date DATE;
+
 -- 2. Create Index on plate_number and status for fast querying
 CREATE INDEX IF NOT EXISTS idx_forklifts_plate ON forklifts(plate_number);
+CREATE INDEX IF NOT EXISTS idx_forklifts_frame ON forklifts(frame_no);
 CREATE INDEX IF NOT EXISTS idx_forklifts_status ON forklifts(status);
 CREATE INDEX IF NOT EXISTS idx_forklifts_energy ON forklifts(energy_type);
 
