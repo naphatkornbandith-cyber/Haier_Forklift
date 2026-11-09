@@ -309,6 +309,32 @@
     }
 
     /**
+     * Subscribe to real-time changes across all devices
+     */
+    subscribeToChanges(callback) {
+      if (!this.isConfigured() || !this.client) return null;
+      try {
+        const channel = this.client
+          .channel('public:forklifts')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'forklifts' },
+            (payload) => {
+              console.log('🔄 Supabase Realtime Change received from another device:', payload);
+              if (typeof callback === 'function') {
+                callback(payload);
+              }
+            }
+          )
+          .subscribe();
+        return channel;
+      } catch (err) {
+        console.warn('Realtime subscription error:', err);
+        return null;
+      }
+    }
+
+    /**
      * Upload local data to Supabase (Sync/Migration helper)
      */
     async uploadLocalData(localItems) {

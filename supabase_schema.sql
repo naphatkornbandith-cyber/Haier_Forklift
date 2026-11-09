@@ -41,7 +41,11 @@ FOR ALL
 USING (true)
 WITH CHECK (true);
 
--- 5. Optional: Storage Bucket for Forklift Photos & Certificates
+-- 5. Enable Realtime Sync between multiple devices
+-- This allows all devices to receive updates automatically when data changes
+ALTER PUBLICATION supabase_realtime ADD TABLE forklifts;
+
+-- 6. Optional: Storage Bucket for Forklift Photos & Certificates
 -- You can create a public bucket named 'forklift-media' in the Supabase Storage dashboard
 -- Insert into storage.buckets (id, name, public) VALUES ('forklift-media', 'forklift-media', true) ON CONFLICT DO NOTHING;
 

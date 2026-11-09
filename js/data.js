@@ -28,7 +28,21 @@ class ForkliftDataStore {
     // Auto-sync from remote if Supabase is available
     setTimeout(() => {
       this.syncFromRemote();
-    }, 150);
+      this.setupRealtimeSync();
+    }, 200);
+
+    // Auto-sync whenever user switches back to this browser tab or unlocks device
+    window.addEventListener('focus', () => {
+      this.syncFromRemote();
+    });
+  }
+
+  setupRealtimeSync() {
+    if (window.supabaseService && typeof window.supabaseService.subscribeToChanges === 'function') {
+      window.supabaseService.subscribeToChanges((payload) => {
+        this.syncFromRemote();
+      });
+    }
   }
 
   init() {
