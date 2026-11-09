@@ -932,8 +932,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
                 <i class="fa-regular fa-eye"></i> ดูข้อมูล
               </button>
-              <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${item.id}')">
-                <i class="fa-solid fa-pen-to-square"></i> จัดการ/ต่อสัญญา
+              <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')">
+                <i class="fa-solid fa-file-contract"></i> จัดการ/ต่อสัญญา
               </button>
             </div>
           `;
@@ -2367,11 +2367,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const lpgSection = document.getElementById('update-lpg-alert-section');
     const lpgStatus = window.forkliftStore.getLpgStatus(item);
-    if (lpgStatus.isLpg) {
-      lpgSection.style.display = 'block';
-      document.getElementById('update-lpg-text').textContent = lpgStatus.text;
+    if (lpgSection) {
+      if (lpgStatus.isLpg) {
+        lpgSection.style.display = 'block';
+        document.getElementById('update-lpg-text').textContent = lpgStatus.text;
+      } else {
+        lpgSection.style.display = 'none';
+      }
+    }
+
+    // Rental Contract Section & Expiry Date
+    const rentalSection = document.getElementById('update-rental-alert-section');
+    const rentalGroup = document.getElementById('update-rental-expiry-group');
+    const rentalExpiryInput = document.getElementById('update-contract-expiry');
+    const rentalText = document.getElementById('update-rental-text');
+
+    if (item.isSubcontractor) {
+      if (rentalGroup) rentalGroup.style.display = 'block';
+      if (rentalExpiryInput) rentalExpiryInput.value = item.contractExpiryDate || '';
+      const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
+      if (rentalSection && rentalText) {
+        rentalSection.style.display = 'block';
+        rentalText.innerHTML = `บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor}</strong> | ${rentalStatus.text}`;
+      }
     } else {
-      lpgSection.style.display = 'none';
+      if (rentalGroup) rentalGroup.style.display = 'none';
+      if (rentalSection) rentalSection.style.display = 'none';
+      if (rentalExpiryInput) rentalExpiryInput.value = '';
     }
 
     openModal(modalUpdateStatus);
@@ -2385,14 +2407,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const inspectionDate = document.getElementById('update-inspection-date').value;
     const notes = document.getElementById('update-notes').value.trim();
 
+    const item = window.forkliftStore.getById(id);
+    let contractExpiryDate = undefined;
+    if (item && item.isSubcontractor) {
+      const expiryInput = document.getElementById('update-contract-expiry');
+      if (expiryInput) {
+        contractExpiryDate = expiryInput.value || null;
+      }
+    }
+
     try {
       window.forkliftStore.updateStatusAndInspection(id, {
         status,
         inspectionDate,
-        notes
+        notes,
+        contractExpiryDate
       });
 
-      showToast(`บันทึกการตรวจเช็คและอัปเดตสถานะรถเรียบร้อยแล้ว`, 'success');
+      showToast(`บันทึกการตรวจเช็คและอัปเดตข้อมูลรถเรียบร้อยแล้ว`, 'success');
       closeModal(modalUpdateStatus);
       renderDashboard();
       if (state.currentTab === 'admin-tab') renderAdminPanel();
