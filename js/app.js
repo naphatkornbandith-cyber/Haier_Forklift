@@ -264,15 +264,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const lpgAlertItems = [];
 
     forklifts.forEach(item => {
-      if (item.isSubcontractor) {
-        rentalCount++;
-      } else {
-        companyCount++;
-      }
+      // ตรวจสอบว่าหมดสัญญาเช่า/ส่งคืนแล้วหรือไม่
+      const isContractExpired = item.status === 'หมดสัญญาเช่า';
 
-      if (item.status === 'พร้อมใช้งาน') readyCount++;
-      else if (item.status === 'ส่งซ่อม') repairCount++;
-      else if (item.status === 'หมดสัญญาเช่า') expiredStatusCount++;
+      if (isContractExpired) {
+        expiredStatusCount++;
+        // รถที่หมดสัญญาเช่า/ส่งคืนแล้ว จะถูกหักลบออกจากจำนวนรถทั้งหมดในโรงงาน (Active Fleet)
+      } else {
+        if (item.isSubcontractor) {
+          rentalCount++;
+        } else {
+          companyCount++;
+        }
+
+        if (item.status === 'พร้อมใช้งาน') readyCount++;
+        else if (item.status === 'ส่งซ่อม') repairCount++;
+      }
 
       const lpgStatus = window.forkliftStore.getLpgStatus(item);
       if (lpgStatus.isLpg && (lpgStatus.alertLevel === 'warning' || lpgStatus.alertLevel === 'overdue')) {
@@ -294,8 +301,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // คำนวณจำนวนรถทั้งหมดที่ใช้งานจริงในโรงงาน (หักลบรถที่หมดสัญญาเช่า/ส่งคืนแล้วออก)
+    const activeTotalCount = companyCount + rentalCount;
+
     // Update KPI UI
-    kpiTotal.textContent = forklifts.length;
+    kpiTotal.textContent = activeTotalCount;
     if (kpiCompany) kpiCompany.textContent = companyCount;
     if (kpiRental) kpiRental.textContent = rentalCount;
     kpiReady.textContent = readyCount;
@@ -304,9 +314,9 @@ document.addEventListener('DOMContentLoaded', () => {
     kpiIncomplete.textContent = incompleteCount;
     kpiPendingCert.textContent = pendingCertCount;
 
-    // Update Dashboard View Tab Counts
+    // Update Dashboard View Tab Counts (แสดงจำนวนรถที่ใช้งานจริงในระบบ)
     const dashFleetCount = document.getElementById('dash-fleet-count');
-    if (dashFleetCount) dashFleetCount.textContent = forklifts.length;
+    if (dashFleetCount) dashFleetCount.textContent = activeTotalCount;
     const dashDriversCount = document.getElementById('dash-drivers-count');
     if (dashDriversCount && window.forkliftStore.getAllDrivers) {
       dashDriversCount.textContent = window.forkliftStore.getAllDrivers().length;
@@ -327,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     // Update center label
     const ownerTotal = document.getElementById('chart-ownership-total');
-    if (ownerTotal) ownerTotal.textContent = forklifts.length;
+    if (ownerTotal) ownerTotal.textContent = activeTotalCount;
     // Legend
     renderLegend('chart-ownership-legend', [
       { label: 'รถบริษัท',  value: companyCount, color: ownershipColors[0] },
@@ -400,14 +410,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Filter pills
-      if (state.activeFilter === 'all') return true;
+      if (state.activeFilter === 'all') return item.status !== 'หมดสัญญาเช่า';
       if (state.activeFilter === 'ready') return item.status === 'พร้อมใช้งาน';
       if (state.activeFilter === 'repair') return item.status === 'ส่งซ่อม';
-      if (state.activeFilter === 'electric') return item.energyType === 'ไฟฟ้า';
-      if (state.activeFilter === 'lpg') return item.energyType === 'LPG';
-      if (state.activeFilter === 'diesel') return item.energyType === 'ดีเซล';
-      if (state.activeFilter === 'haier') return !item.isSubcontractor;
-      if (state.activeFilter === 'subcontractor') return item.isSubcontractor;
+      if (state.activeFilter === 'electric') return item.energyType === 'ไฟฟ้า' && item.status !== 'หมดสัญญาเช่า';
+      if (state.activeFilter === 'lpg') return item.energyType === 'LPG' && item.status !== 'หมดสัญญาเช่า';
+      if (state.activeFilter === 'diesel') return item.energyType === 'ดีเซล' && item.status !== 'หมดสัญญาเช่า';
+      if (state.activeFilter === 'haier') return !item.isSubcontractor && item.status !== 'หมดสัญญาเช่า';
+      if (state.activeFilter === 'subcontractor') return item.isSubcontractor && item.status !== 'หมดสัญญาเช่า';
       if (state.activeFilter === 'lpg-alert') {
         const s = window.forkliftStore.getLpgStatus(item);
         return s.isLpg && (s.alertLevel === 'warning' || s.alertLevel === 'overdue');
