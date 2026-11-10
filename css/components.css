@@ -141,6 +141,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-label {
@@ -162,6 +164,8 @@
 }
 
 .form-control {
+  width: 100%;
+  box-sizing: border-box;
   background: var(--haier-navy-darker);
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
@@ -449,15 +453,19 @@
   gap: 1.5rem;
   margin-bottom: 1.5rem;
   align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .driver-photo-box {
   min-height: 220px;
   height: 100%;
   border-radius: var(--radius-md);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .driver-form-layout {
     grid-template-columns: 1fr;
   }

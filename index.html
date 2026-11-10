@@ -201,6 +201,28 @@
             <div class="stat-value" id="kpi-pending-cert">0</div>
             <div class="stat-footer" style="color:#c4b5fd;"><i class="fa-solid fa-id-card"></i> ผู้ขับยังไม่แนบภาพใบเซอร์</div>
           </div>
+
+          <!-- Total Drivers Registered -->
+          <div class="stat-card" style="cursor:pointer;" onclick="window.setDashView('drivers')" title="คลิกเพื่อดูทะเบียนผู้ขับขี่ทั้งหมดในแดชบอร์ด">
+            <div class="stat-header">
+              <span class="stat-title">ผู้ขับขี่ในระบบ</span>
+              <div class="stat-icon icon-purple"><i class="fa-solid fa-users"></i></div>
+            </div>
+            <div class="stat-value" id="kpi-drivers">0</div>
+            <div class="stat-sub-info">
+              <span class="stat-sub-item sub-ready" title="ผู้ขับขี่ที่มีผลตรวจใบรับรองผ่านการรับรอง">
+                <i class="fa-solid fa-award sub-icon" style="color:#34d399;"></i>
+                <span class="sub-label">ผ่านการรับรอง:</span>
+                <strong class="sub-value" id="kpi-drivers-certified">0</strong>
+              </span>
+              <span class="stat-sub-item highlight-warn" title="ผู้ขับขี่ที่ยังรอผลตรวจสอบใบรับรอง">
+                <i class="fa-solid fa-hourglass-half sub-icon" style="color:#fbbf24;"></i>
+                <span class="sub-label">รอดำเนินการ:</span>
+                <strong class="sub-value" id="kpi-drivers-pending">0</strong>
+              </span>
+            </div>
+            <div class="stat-footer" style="color:var(--haier-cyan);"><i class="fa-solid fa-arrow-pointer"></i> คลิกเพื่อดูทะเบียนผู้ขับขี่</div>
+          </div>
         </div>
 
         <!-- ═══ Pie Chart Section ════════════════════════════════════════ -->
@@ -1157,8 +1179,8 @@
                     <label class="form-label" for="new-driver-dept">
                       แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
                     </label>
-                   <select id="new-driver-dept" class="form-control"required>
-                      <option value="---กรุณาระบุ---" selected>---กรุณาระบุ---</option>
+                    <select id="new-driver-dept" class="form-control" required>
+                      <option value="" selected>---กรุณาระบุ---</option>
                       <option value="UT">UT</option>
                       <option value="RM-WH">RM-WH</option>
                       <option value="FG">FG</option>

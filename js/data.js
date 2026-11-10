@@ -177,6 +177,18 @@ class ForkliftDataStore {
       localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(drivers));
     } catch (e) {
       console.error('Failed to save drivers data:', e);
+      // Fallback for QuotaExceededError: strip large base64 image strings to ensure driver records are preserved
+      try {
+        const lightweight = drivers.map(d => ({
+          ...d,
+          photo: d.photo && d.photo.length > 50000 ? '' : d.photo,
+          certImage: d.certImage && d.certImage.length > 50000 ? '' : d.certImage
+        }));
+        localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(lightweight));
+        console.warn('⚠️ Saved lightweight driver records due to storage quota');
+      } catch (err2) {
+        console.error('Critical: unable to save even lightweight drivers data', err2);
+      }
     }
   }
 
@@ -229,6 +241,11 @@ class ForkliftDataStore {
           hasTrained: completeDriver.hasTrained
         };
         this.saveAll(forklifts);
+        if (window.supabaseService && window.supabaseService.isConfigured()) {
+          window.supabaseService.update(forklifts[flIdx].id, forklifts[flIdx]).catch(e => {
+            console.warn('Supabase update forklift warning:', e);
+          });
+        }
       }
     }
 
@@ -273,6 +290,11 @@ class ForkliftDataStore {
           hasTrained: drivers[idx].hasTrained
         };
         this.saveAll(forklifts);
+        if (window.supabaseService && window.supabaseService.isConfigured()) {
+          window.supabaseService.update(forklifts[flIdx].id, forklifts[flIdx]).catch(e => {
+            console.warn('Supabase update forklift warning:', e);
+          });
+        }
       }
     }
 

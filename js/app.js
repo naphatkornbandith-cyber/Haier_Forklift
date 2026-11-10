@@ -340,16 +340,36 @@ document.addEventListener('DOMContentLoaded', () => {
     kpiIncomplete.textContent = incompleteCount;
     kpiPendingCert.textContent = pendingCertCount;
 
+    // Update Drivers KPI Metrics
+    const allDrivers = (window.forkliftStore && typeof window.forkliftStore.getAllDrivers === 'function')
+      ? window.forkliftStore.getAllDrivers()
+      : [];
+    const kpiDrivers = document.getElementById('kpi-drivers');
+    if (kpiDrivers) kpiDrivers.textContent = allDrivers.length;
+    const kpiDriversCert = document.getElementById('kpi-drivers-certified');
+    if (kpiDriversCert) {
+      kpiDriversCert.textContent = allDrivers.filter(d => d.certStatus === 'ผ่านการรับรอง').length;
+    }
+    const kpiDriversPend = document.getElementById('kpi-drivers-pending');
+    if (kpiDriversPend) {
+      kpiDriversPend.textContent = allDrivers.filter(d => d.certStatus !== 'ผ่านการรับรอง').length;
+    }
+
     // Update Dashboard View Tab Counts (แสดงจำนวนรถที่ใช้งานจริงในระบบ)
     const dashFleetCount = document.getElementById('dash-fleet-count');
     if (dashFleetCount) dashFleetCount.textContent = activeTotalCount;
     const dashDriversCount = document.getElementById('dash-drivers-count');
-    if (dashDriversCount && window.forkliftStore.getAllDrivers) {
-      dashDriversCount.textContent = window.forkliftStore.getAllDrivers().length;
+    if (dashDriversCount) {
+      dashDriversCount.textContent = allDrivers.length;
     }
 
     // Render Driver Table in Dashboard
     renderDriverTable();
+
+    // Ensure current active dashboard view (fleet vs drivers) is displayed
+    if (typeof setDashView === 'function') {
+      setDashView(state.dashView || 'fleet', true);
+    }
 
     // ── Pie/Donut Charts ──────────────────────────────────────────────
     // Chart 1: Ownership (รถบริษัท vs รถเช่า)
@@ -640,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dashFleetViewContainer = document.getElementById('dash-fleet-view-container');
   const dashDriverViewContainer = document.getElementById('dash-driver-view-container');
 
-  function setDashView(view) {
+  function setDashView(view, skipRender = false) {
     state.dashView = view;
     if (view === 'fleet') {
       if (btnViewFleet) {
@@ -653,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (dashFleetViewContainer) dashFleetViewContainer.style.display = 'block';
       if (dashDriverViewContainer) dashDriverViewContainer.style.display = 'none';
-      renderDashboard();
+      if (!skipRender) renderDashboard();
     } else {
       if (btnViewDrivers) {
         btnViewDrivers.classList.add('active', 'btn-primary');
@@ -668,6 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderDriverTable();
     }
   }
+  window.setDashView = setDashView;
 
   if (btnViewFleet) {
     btnViewFleet.addEventListener('click', () => setDashView('fleet'));
@@ -1404,6 +1425,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  /**
+   * Helper: Compress image before storing to prevent localStorage QuotaExceededError
+   */
+  function compressImage(fileOrDataUrl, maxDimension = 800, quality = 0.75) {
+    return new Promise((resolve) => {
+      if (!fileOrDataUrl) return resolve('');
+
+      const processImg = (src) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            const scale = Math.min(maxDimension / width, maxDimension / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+      };
+
+      if (typeof fileOrDataUrl === 'string') {
+        processImg(fileOrDataUrl);
+      } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = (e) => processImg(e.target.result);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(fileOrDataUrl);
+      } else {
+        resolve('');
+      }
+    });
+  }
+
   // Vehicle Photo Upload Handler (แนบ 1 รูป ไม่ต้องระบุว่ามุมไหน)
   const boxVehiclePhoto = document.getElementById('box-photo-vehicle');
   const inputVehiclePhoto = document.getElementById('input-photo-vehicle');
@@ -1416,14 +1477,11 @@ document.addEventListener('DOMContentLoaded', () => {
       inputVehiclePhoto.click();
     });
 
-    inputVehiclePhoto.addEventListener('change', () => {
+    inputVehiclePhoto.addEventListener('change', async () => {
       const file = inputVehiclePhoto.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setVehiclePhoto(e.target.result);
-        };
-        reader.readAsDataURL(file);
+        const compressed = await compressImage(file, 900, 0.75);
+        setVehiclePhoto(compressed);
       }
     });
 
@@ -1484,21 +1542,18 @@ document.addEventListener('DOMContentLoaded', () => {
       inputNewDriverPhoto.click();
     });
 
-    inputNewDriverPhoto.addEventListener('change', () => {
+    inputNewDriverPhoto.addEventListener('change', async () => {
       const file = inputNewDriverPhoto.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          state.newDriverPhoto = e.target.result;
-          if (previewNewDriverPhoto) {
-            previewNewDriverPhoto.src = e.target.result;
-            previewNewDriverPhoto.style.display = 'block';
-          }
-          const content = boxNewDriverPhoto.querySelector('.photo-box-content');
-          if (content) content.style.display = 'none';
-          boxNewDriverPhoto.classList.add('has-image');
-        };
-        reader.readAsDataURL(file);
+        const compressed = await compressImage(file, 600, 0.75);
+        state.newDriverPhoto = compressed;
+        if (previewNewDriverPhoto) {
+          previewNewDriverPhoto.src = compressed;
+          previewNewDriverPhoto.style.display = 'block';
+        }
+        const content = boxNewDriverPhoto.querySelector('.photo-box-content');
+        if (content) content.style.display = 'none';
+        boxNewDriverPhoto.classList.add('has-image');
       }
     });
 
@@ -1554,29 +1609,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newDriverCertStatus) {
           newDriverCertStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ระบบ AI กำลังตรวจสอบความถูกต้องของใบรับรอง...`;
         }
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-          if (previewNewDriverCert) {
-            previewNewDriverCert.src = ev.target.result;
-            previewNewDriverCert.style.display = 'block';
+        const compressed = await compressImage(file, 900, 0.75);
+        if (previewNewDriverCert) {
+          previewNewDriverCert.src = compressed;
+          previewNewDriverCert.style.display = 'block';
+        }
+        if (window.aiVerifier && typeof window.aiVerifier.verify === 'function') {
+          const result = await window.aiVerifier.verify(compressed, { driverName });
+          state.newDriverCert.image = compressed;
+          state.newDriverCert.status = result.status;
+          const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
+          if (newDriverCertStatus) {
+            newDriverCertStatus.innerHTML = `ผลตรวจ AI: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
           }
-          if (window.aiVerifier && typeof window.aiVerifier.verify === 'function') {
-            const result = await window.aiVerifier.verify(ev.target.result, { driverName });
-            state.newDriverCert.image = ev.target.result;
-            state.newDriverCert.status = result.status;
-            const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
-            if (newDriverCertStatus) {
-              newDriverCertStatus.innerHTML = `ผลตรวจ AI: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
-            }
-          } else {
-            state.newDriverCert.image = ev.target.result;
-            state.newDriverCert.status = 'ผ่านการรับรอง';
-            if (newDriverCertStatus) {
-              newDriverCertStatus.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-check"></i> แนบภาพใบรับรองเรียบร้อยแล้ว (ผ่านการรับรอง)</span>`;
-            }
+        } else {
+          state.newDriverCert.image = compressed;
+          state.newDriverCert.status = 'ผ่านการรับรอง';
+          if (newDriverCertStatus) {
+            newDriverCertStatus.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-check"></i> แนบภาพใบรับรองเรียบร้อยแล้ว (ผ่านการรับรอง)</span>`;
           }
-        };
-        reader.readAsDataURL(file);
+        }
       } else {
         state.newDriverCert.image = '';
         state.newDriverCert.status = 'รอดำเนินการ';
@@ -1614,7 +1666,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('new-driver-company')?.focus();
         return;
       }
-      if (!department) {
+      if (!department || department === '---กรุณาระบุ---') {
         showToast('กรุณาระบุแผนกที่ปฏิบัติงาน', 'error');
         document.getElementById('new-driver-dept')?.focus();
         return;
@@ -1672,7 +1724,8 @@ document.addEventListener('DOMContentLoaded', () => {
         populateDriverSelectOptions();
         populateForkliftSelectOptions();
 
-        // Switch to Dashboard and show Drivers view
+        // Switch to Dashboard and show Drivers view immediately
+        state.dashView = 'drivers';
         switchTab('dashboard-tab');
         setDashView('drivers');
       } catch (err) {
