@@ -3453,26 +3453,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --------------------------------------------------------------------------
-  // Cloud & Mobile App Device Synchronization Engine
+  // Cloud & Mobile App Device Synchronization Engine (ทำงานเบื้องหลังอัตโนมัติ)
   // --------------------------------------------------------------------------
-  const cloudSyncBadge = document.getElementById('cloud-sync-status');
-  const cloudSyncText = document.getElementById('cloud-sync-text');
-  const btnManualSync = document.getElementById('btn-manual-sync');
-
-  function updateCloudStatusUI(status, message) {
-    if (!cloudSyncBadge) return;
-    cloudSyncBadge.classList.remove('status-connected', 'status-syncing', 'status-offline');
-    if (status === 'connected') {
-      cloudSyncBadge.classList.add('status-connected');
-    } else if (status === 'syncing') {
-      cloudSyncBadge.classList.add('status-syncing');
-    } else if (status === 'offline') {
-      cloudSyncBadge.classList.add('status-offline');
-    }
-    if (cloudSyncText && message) {
-      cloudSyncText.textContent = message;
-    }
-  }
 
   // Register PWA Service Worker for standalone App support
   if ('serviceWorker' in navigator) {
@@ -3485,76 +3467,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Manual Cloud Sync Trigger (Click spinning icon)
-  if (btnManualSync) {
-    btnManualSync.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!navigator.onLine) {
-        showToast('ขณะนี้อุปกรณ์อยู่ในโหมดออฟไลน์ ไม่สามารถเชื่อมต่อคลาวด์ได้', 'warn');
-        updateCloudStatusUI('offline', 'โหมดออฟไลน์ (บันทึกในเครื่อง)');
-        return;
-      }
-      btnManualSync.classList.add('spinning');
-      updateCloudStatusUI('syncing', 'กำลังซิงค์คลาวด์...');
-      try {
-        if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
-          await window.forkliftStore.syncFromRemote();
-          updateCloudStatusUI('connected', 'คลาวด์ซิงค์แล้ว');
-          showToast('ซิงค์ข้อมูลระหว่างแอพในเครื่องและคลาวด์ Supabase สำเร็จเรียบร้อย', 'success');
-        }
-      } catch (err) {
-        updateCloudStatusUI('offline', 'ซิงค์ไม่สำเร็จ');
-        showToast(`การซิงค์ข้อมูลล้มเหลว: ${err.message}`, 'error');
-      } finally {
-        setTimeout(() => {
-          btnManualSync.classList.remove('spinning');
-          updateCloudStatusUI('connected', 'คลาวด์เชื่อมต่อแล้ว');
-        }, 1200);
-      }
-    });
-  }
-
-  // Network Online/Offline Listeners for App Devices
+  // Network Online/Offline Listeners for App Devices (ซิงค์ข้อมูลเบื้องหลังอัตโนมัติเมื่อต่อเน็ต)
   window.addEventListener('online', () => {
-    updateCloudStatusUI('syncing', 'เชื่อมต่ออินเทอร์เน็ตแล้ว...');
-    showToast('เชื่อมต่ออินเทอร์เน็ตแล้ว ระบบกำลังนำข้อมูลที่บันทึกไว้ในแอพขึ้นคลาวด์...', 'info');
     if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
-      window.forkliftStore.syncFromRemote().then(() => {
-        updateCloudStatusUI('connected', 'คลาวด์เชื่อมต่อแล้ว');
+      window.forkliftStore.syncFromRemote().catch(e => {
+        console.warn('Background auto-sync on online warning:', e);
       });
     }
-  });
-
-  window.addEventListener('offline', () => {
-    updateCloudStatusUI('offline', 'โหมดออฟไลน์ (บันทึกในเครื่อง)');
-    showToast('อุปกรณ์อยู่ในโหมดออฟไลน์ — ข้อมูลที่บันทึกจะถูกเก็บในเครื่องและซิงค์ขึ้นคลาวด์อัตโนมัติเมื่อต่อเน็ต', 'warn');
   });
 
   // Resume / Foreground Sync (when returning to app on mobile/tablet)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && navigator.onLine) {
       if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
-        window.forkliftStore.syncFromRemote();
+        window.forkliftStore.syncFromRemote().catch(e => {
+          console.warn('Background auto-sync on resume warning:', e);
+        });
       }
     }
   });
 
-  // Periodic Auto-Sync every 60 seconds
+  // Periodic Auto-Sync every 60 seconds in the background
   setInterval(() => {
     if (navigator.onLine && window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
-      window.forkliftStore.syncFromRemote();
+      window.forkliftStore.syncFromRemote().catch(e => {
+        console.warn('Periodic background sync warning:', e);
+      });
     }
   }, 60000);
-
-  // Set initial cloud status
-  if (!navigator.onLine) {
-    updateCloudStatusUI('offline', 'โหมดออฟไลน์ (บันทึกในเครื่อง)');
-  } else if (!window.supabaseService || !window.supabaseService.isConfigured()) {
-    updateCloudStatusUI('offline', 'ใช้งานเฉพาะในเครื่อง');
-  } else {
-    updateCloudStatusUI('connected', 'คลาวด์เชื่อมต่อแล้ว');
-  }
 
   // Initial render from local cache
   renderDashboard();
