@@ -820,7 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ (Admin เท่านั้น)">
               <i class="fa-solid fa-user-pen"></i>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${driver.name}')" title="ลบผู้ขับขี่ (Admin เท่านั้น)">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${(driver.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="ลบผู้ขับขี่ (Admin เท่านั้น)">
               <i class="fa-solid fa-trash"></i>
             </button>
             ` : `<span style="font-size:0.72rem; color:var(--text-muted); padding:0 0.4rem;"><i class="fa-solid fa-lock"></i> Admin</span>`}
@@ -1534,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setVehiclePhoto(src) {
     state.regPhotos.vehicle = src;
-    state.regPhotos.front = src; // for backward compatibility
+    state.regPhotos.front = ''; // Avoid duplicating identical base64 string twice in storage
     if (previewVehiclePhoto) {
       previewVehiclePhoto.src = src;
       previewVehiclePhoto.style.display = 'block';
@@ -1898,9 +1898,11 @@ document.addEventListener('DOMContentLoaded', () => {
         certStatus: 'รอดำเนินการ'
       };
 
+      let matchedDriverForReg = null;
       if (selectedDriverId) {
         const foundDriver = window.forkliftStore.getDriverById(selectedDriverId);
         if (foundDriver) {
+          matchedDriverForReg = foundDriver;
           driverObj = {
             driverId: foundDriver.id,
             name: foundDriver.name,
@@ -1912,8 +1914,6 @@ document.addEventListener('DOMContentLoaded', () => {
             certImage: foundDriver.certImage || '',
             certStatus: foundDriver.certStatus || 'รอดำเนินการ'
           };
-          // ผูกทะเบียนรถเข้ากับข้อมูลผู้ขับขี่ในทะเบียนผู้ขับ
-          await window.forkliftStore.updateDriverData(foundDriver.id, { assignedPlate: plateNumber });
         }
       }
 
@@ -1940,6 +1940,11 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       await window.forkliftStore.addForklift(newForklift);
+
+      // ผูกทะเบียนรถเข้ากับข้อมูลผู้ขับขี่ในทะเบียนผู้ขับ หลังจากบันทึกข้อมูลรถสำเร็จแล้ว
+      if (matchedDriverForReg) {
+        await window.forkliftStore.updateDriverData(matchedDriverForReg.id, { assignedPlate: plateNumber });
+      }
       showToast(`ขึ้นทะเบียนรถโฟล์คลิฟท์ "${plateNumber}" (${isSub ? 'รถเช่า' : 'รถบริษัท'}) สำเร็จเรียบร้อย!`, 'success');
       
       // Reset Form
@@ -3138,7 +3143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')" title="แก้ไขสถานะรถและบันทึกการตรวจเช็ค">
               <i class="fa-solid fa-screwdriver-wrench"></i> สถานะ/ตรวจเช็ค
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${item.id}', '${item.plateNumber}')" title="ลบข้อมูลรถคันนี้">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${item.id}', '${(item.plateNumber || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="ลบข้อมูลรถคันนี้">
               <i class="fa-solid fa-trash-can"></i> ลบ
             </button>
           </div>
@@ -3418,7 +3423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ">
               <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${driver.name}')" title="ลบข้อมูลผู้ขับ">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${(driver.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="ลบข้อมูลผู้ขับ">
               <i class="fa-solid fa-trash-can"></i> ลบ
             </button>
           </div>

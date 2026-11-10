@@ -586,9 +586,24 @@
       }
 
       const rows = localItems.map(item => this.toDbRow(item));
-      const { data, error } = await this.client
+      let { data, error } = await this.client
         .from('forklifts')
         .upsert(rows, { onConflict: 'id' });
+
+      // Fallback if contract_expiry_date column does not exist yet in Supabase table
+      if (error && (error.code === '42703' || (error.message && error.message.includes('contract_expiry_date')))) {
+        console.warn('⚠️ Column contract_expiry_date not found during batch upload, retrying without it...');
+        const fallbackRows = rows.map(r => {
+          const copy = { ...r };
+          delete copy.contract_expiry_date;
+          return copy;
+        });
+        const retry = await this.client
+          .from('forklifts')
+          .upsert(fallbackRows, { onConflict: 'id' });
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         throw new Error(`อัปโหลดข้อมูลขึ้น Supabase ล้มเหลว: ${error.message}`);

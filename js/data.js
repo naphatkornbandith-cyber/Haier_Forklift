@@ -36,6 +36,8 @@ function generateUniqueId(prefix) {
 class ForkliftDataStore {
   constructor() {
     this.isSyncing = false;
+    this.memoryFleet = null;
+    this.memoryDrivers = null;
     this.init();
     // Auto-sync from remote if Supabase is available
     setTimeout(() => {
@@ -168,6 +170,9 @@ class ForkliftDataStore {
     if (!window.supabaseService || !window.supabaseService.isConfigured()) {
       return false;
     }
+    if (this.isSyncing) {
+      return false;
+    }
 
     try {
       this.isSyncing = true;
@@ -175,8 +180,10 @@ class ForkliftDataStore {
       await this.processPendingDeletions();
 
       // 1. Sync Forklifts
-      const remoteData = await window.supabaseService.fetchAll();
-      if (Array.isArray(remoteData)) {
+      const rawRemoteData = await window.supabaseService.fetchAll();
+      if (Array.isArray(rawRemoteData)) {
+        const deletedQueue = this.getDeletedQueue('forklift');
+        const remoteData = rawRemoteData.filter(r => !deletedQueue.includes(r.id));
         const localItems = this.getAll();
 
         if (remoteData.length === 0 && localItems.length > 0) {
@@ -190,20 +197,37 @@ class ForkliftDataStore {
             console.warn('⚠️ ไม่สามารถอัปโหลดข้อมูลรถขึ้น Supabase ได้:', upErr);
           }
         } else {
-          // Merge remote with local so locally stored photos/certs are preserved and not wiped out by empty cloud fields
+          // Merge remote with local, preserving newer local edits and locally stored photos/certs
           const mergedForklifts = remoteData.map(remoteFl => {
             const localMatch = localItems.find(l => l.id === remoteFl.id || l.plateNumber === remoteFl.plateNumber);
+            const remoteTime = remoteFl.updatedAt ? new Date(remoteFl.updatedAt).getTime() : 0;
+            const localTime = localMatch?.updatedAt ? new Date(localMatch.updatedAt).getTime() : 0;
+            const preferLocal = localMatch && localTime > remoteTime;
+            const baseFl = preferLocal ? { ...remoteFl, ...localMatch, id: remoteFl.id } : remoteFl;
+
+            if (preferLocal && navigator.onLine) {
+              window.supabaseService.update(remoteFl.id, baseFl).catch(e => console.warn('Sync push local forklift update warning:', e));
+            }
+
+            const mergedPhotos = {
+              ...(localMatch?.photos || {}),
+              ...(remoteFl.photos || {}),
+              ...(preferLocal ? (localMatch?.photos || {}) : {})
+            };
+            // Deduplicate identical vehicle/front base64 strings to save 50% storage
+            if (mergedPhotos.vehicle && mergedPhotos.front === mergedPhotos.vehicle) {
+              mergedPhotos.front = '';
+            }
+
             return {
-              ...remoteFl,
-              photos: {
-                ...(localMatch?.photos || {}),
-                ...(remoteFl.photos || {})
-              },
+              ...baseFl,
+              photos: mergedPhotos,
               driver: {
                 ...(localMatch?.driver || {}),
                 ...(remoteFl.driver || {}),
-                photo: remoteFl.driver?.photo || localMatch?.driver?.photo || '',
-                certImage: remoteFl.driver?.certImage || localMatch?.driver?.certImage || ''
+                ...(preferLocal ? (localMatch?.driver || {}) : {}),
+                photo: (preferLocal ? localMatch?.driver?.photo : remoteFl.driver?.photo) || remoteFl.driver?.photo || localMatch?.driver?.photo || '',
+                certImage: (preferLocal ? localMatch?.driver?.certImage : remoteFl.driver?.certImage) || remoteFl.driver?.certImage || localMatch?.driver?.certImage || ''
               },
               _isPendingUpload: false
             };
@@ -211,9 +235,11 @@ class ForkliftDataStore {
 
           // ดึงเฉพาะรถที่สร้างบนเครื่องนี้ขณะออฟไลน์ (_isPendingUpload === true) เพื่ออัปโหลดขึ้น Supabase
           // ป้องกันการ Resurrect รถที่ถูกลบไปแล้วจากอุปกรณ์อื่น
-          const pendingForklifts = localItems.filter(localFl =>
+          const currentLocalItems = this.getAll();
+          const pendingForklifts = currentLocalItems.filter(localFl =>
             localFl._isPendingUpload === true &&
-            !remoteData.some(r => r.id === localFl.id || r.plateNumber === localFl.plateNumber)
+            !deletedQueue.includes(localFl.id) &&
+            !mergedForklifts.some(r => r.id === localFl.id || r.plateNumber === localFl.plateNumber)
           );
 
           if (pendingForklifts.length > 0) {
@@ -241,8 +267,10 @@ class ForkliftDataStore {
 
       // 2. Sync Drivers
       if (typeof window.supabaseService.fetchDrivers === 'function') {
-        const remoteDrivers = await window.supabaseService.fetchDrivers();
-        if (Array.isArray(remoteDrivers)) {
+        const rawRemoteDrivers = await window.supabaseService.fetchDrivers();
+        if (Array.isArray(rawRemoteDrivers)) {
+          const deletedDriversQueue = this.getDeletedQueue('driver');
+          const remoteDrivers = rawRemoteDrivers.filter(d => !deletedDriversQueue.includes(d.id));
           const localDrivers = this.getAllDrivers();
           if (remoteDrivers.length === 0 && localDrivers.length > 0) {
             console.log(`📤 ตรวจพบข้อมูลผู้ขับในเครื่อง ${localDrivers.length} รายการ กำลังนำขึ้น Supabase...`);
@@ -250,22 +278,32 @@ class ForkliftDataStore {
             localDrivers.forEach(d => { d._isPendingUpload = false; });
             this.saveAllDrivers(localDrivers);
           } else {
-            // Merge remote with local so locally stored driver photos/certs are preserved and not wiped out by empty cloud fields
+            // Merge remote with local, preserving newer local edits and locally stored driver photos/certs
             const mergedDrivers = remoteDrivers.map(remoteD => {
               const localMatch = localDrivers.find(l => l.id === remoteD.id || (l.empId && l.empId === remoteD.empId));
+              const remoteTime = remoteD.updatedAt ? new Date(remoteD.updatedAt).getTime() : 0;
+              const localTime = localMatch?.updatedAt ? new Date(localMatch.updatedAt).getTime() : 0;
+              const preferLocal = localMatch && localTime > remoteTime;
+              const baseD = preferLocal ? { ...remoteD, ...localMatch, id: remoteD.id } : remoteD;
+
+              if (preferLocal && navigator.onLine && typeof window.supabaseService.updateDriverRow === 'function') {
+                window.supabaseService.updateDriverRow(remoteD.id, baseD).catch(e => console.warn('Sync push local driver update warning:', e));
+              }
+
               return {
-                ...remoteD,
-                photo: remoteD.photo || localMatch?.photo || '',
-                certImage: remoteD.certImage || localMatch?.certImage || '',
+                ...baseD,
+                photo: (preferLocal ? localMatch?.photo : remoteD.photo) || remoteD.photo || localMatch?.photo || '',
+                certImage: (preferLocal ? localMatch?.certImage : remoteD.certImage) || remoteD.certImage || localMatch?.certImage || '',
                 _isPendingUpload: false
               };
             });
 
             // ดึงเฉพาะผู้ขับที่สร้างบนเครื่องนี้ขณะออฟไลน์ (_isPendingUpload === true) เพื่ออัปโหลดขึ้น Supabase
-            // ป้องกันการ Resurrect ผู้ขับที่ถูกลบไปแล้วจากอุปกรณ์อื่น
-            const pendingDrivers = localDrivers.filter(localD =>
+            const currentLocalDrivers = this.getAllDrivers();
+            const pendingDrivers = currentLocalDrivers.filter(localD =>
               localD._isPendingUpload === true &&
-              !remoteDrivers.some(m => m.id === localD.id || (m.empId && m.empId === localD.empId))
+              !deletedDriversQueue.includes(localD.id) &&
+              !mergedDrivers.some(m => m.id === localD.id || (m.empId && m.empId === localD.empId))
             );
 
             if (pendingDrivers.length > 0) {
@@ -305,24 +343,30 @@ class ForkliftDataStore {
   // ──────────────────────────────────────────────────────────────────────────
 
   getAllDrivers() {
+    if (Array.isArray(this.memoryDrivers)) {
+      return this.memoryDrivers;
+    }
     try {
       const raw = localStorage.getItem(DRIVERS_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const parsed = raw ? JSON.parse(raw) : [];
+      this.memoryDrivers = parsed;
+      return parsed;
     } catch (e) {
       return [];
     }
   }
 
   saveAllDrivers(drivers) {
+    this.memoryDrivers = drivers;
     try {
       localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(drivers));
     } catch (e) {
       console.warn('⚠️ Drivers storage quota warning, optimizing images...', e);
       try {
-        const lightweight = drivers.map(d => ({
+        const lightweight = drivers.map((d, idx) => ({
           ...d,
-          photo: (d.photo && d.photo.length > 80000) ? '' : d.photo,
-          certImage: (d.certImage && d.certImage.length > 80000) ? '' : d.certImage
+          photo: (idx >= 10 && d.photo && d.photo.length > 80000) ? '' : d.photo,
+          certImage: (idx >= 10 && d.certImage && d.certImage.length > 80000) ? '' : d.certImage
         }));
         localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(lightweight));
         console.warn('✅ Saved optimized driver records');
@@ -378,6 +422,19 @@ class ForkliftDataStore {
       }
     }
 
+    // If assigned to a forklift, unassign any previous driver who held this plate
+    if (completeDriver.assignedPlate) {
+      drivers.forEach(d => {
+        if (d.assignedPlate === completeDriver.assignedPlate) {
+          d.assignedPlate = '';
+          d.updatedAt = new Date().toISOString();
+          if (window.supabaseService && window.supabaseService.isConfigured()) {
+            window.supabaseService.updateDriverRow(d.id, d).catch(e => console.warn(e));
+          }
+        }
+      });
+    }
+
     drivers.unshift(completeDriver);
     this.saveAllDrivers(drivers);
 
@@ -387,6 +444,7 @@ class ForkliftDataStore {
       const flIdx = forklifts.findIndex(f => f.plateNumber === completeDriver.assignedPlate);
       if (flIdx !== -1) {
         forklifts[flIdx].driver = {
+          driverId: completeDriver.id,
           name: completeDriver.name,
           empId: completeDriver.empId,
           company: completeDriver.company,
@@ -418,6 +476,26 @@ class ForkliftDataStore {
     const idx = drivers.findIndex(d => d.id === id);
     if (idx === -1) throw new Error('ไม่พบข้อมูลผู้ขับขี่ที่ต้องการแก้ไข');
 
+    if (driverData.empId && this.isDriverEmpIdDuplicate(driverData.empId, id)) {
+      throw new Error(`รหัสพนักงาน "${driverData.empId}" ซ้ำกับผู้ขับขี่คนอื่นในระบบ`);
+    }
+
+    const oldPlate = drivers[idx].assignedPlate || '';
+    const newPlate = driverData.assignedPlate !== undefined ? (driverData.assignedPlate || '') : oldPlate;
+
+    // If assigned to a new plate, unassign any other driver who previously had newPlate
+    if (newPlate && newPlate !== oldPlate) {
+      drivers.forEach((d, dIdx) => {
+        if (dIdx !== idx && d.assignedPlate === newPlate) {
+          d.assignedPlate = '';
+          d.updatedAt = new Date().toISOString();
+          if (window.supabaseService && window.supabaseService.isConfigured()) {
+            window.supabaseService.updateDriverRow(d.id, d).catch(e => console.warn(e));
+          }
+        }
+      });
+    }
+
     drivers[idx] = {
       ...drivers[idx],
       ...driverData,
@@ -433,12 +511,37 @@ class ForkliftDataStore {
       }
     }
 
-    // Also update driver in assigned forklift if applicable
-    if (drivers[idx].assignedPlate) {
-      const forklifts = this.getAll();
-      const flIdx = forklifts.findIndex(f => f.plateNumber === drivers[idx].assignedPlate);
+    const forklifts = this.getAll();
+    let fleetChanged = false;
+
+    // 1. If driver moved away from oldPlate, clear driver on oldPlate forklift
+    if (oldPlate && oldPlate !== newPlate) {
+      const oldFlIdx = forklifts.findIndex(f => f.plateNumber === oldPlate);
+      if (oldFlIdx !== -1 && (forklifts[oldFlIdx].driver?.driverId === id || forklifts[oldFlIdx].driver?.empId === drivers[idx].empId)) {
+        forklifts[oldFlIdx].driver = {
+          name: 'ยังไม่ระบุ',
+          empId: '-',
+          company: forklifts[oldFlIdx].ownerCompany,
+          department: '-',
+          photo: '',
+          hasTrained: false,
+          certImage: '',
+          certStatus: 'รอดำเนินการ'
+        };
+        forklifts[oldFlIdx].updatedAt = new Date().toISOString();
+        fleetChanged = true;
+        if (window.supabaseService && window.supabaseService.isConfigured()) {
+          window.supabaseService.update(forklifts[oldFlIdx].id, forklifts[oldFlIdx]).catch(e => console.warn(e));
+        }
+      }
+    }
+
+    // 2. Also update driver in currently assigned forklift if applicable
+    if (newPlate) {
+      const flIdx = forklifts.findIndex(f => f.plateNumber === newPlate);
       if (flIdx !== -1) {
         forklifts[flIdx].driver = {
+          driverId: drivers[idx].id,
           name: drivers[idx].name,
           empId: drivers[idx].empId,
           company: drivers[idx].company,
@@ -449,13 +552,17 @@ class ForkliftDataStore {
           hasTrained: drivers[idx].hasTrained
         };
         forklifts[flIdx].updatedAt = new Date().toISOString();
-        this.saveAll(forklifts);
+        fleetChanged = true;
         if (window.supabaseService && window.supabaseService.isConfigured()) {
           window.supabaseService.update(forklifts[flIdx].id, forklifts[flIdx]).catch(e => {
             console.warn('Supabase update forklift warning:', e);
           });
         }
       }
+    }
+
+    if (fleetChanged) {
+      this.saveAll(forklifts);
     }
 
     window.dispatchEvent(new CustomEvent('driver-data-synced', {
@@ -514,9 +621,14 @@ class ForkliftDataStore {
   }
 
   getAll() {
+    if (Array.isArray(this.memoryFleet)) {
+      return this.memoryFleet;
+    }
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : INITIAL_FORKLIFTS;
+      const parsed = raw ? JSON.parse(raw) : INITIAL_FORKLIFTS;
+      this.memoryFleet = parsed;
+      return parsed;
     } catch (e) {
       console.error('Failed to load fleet data:', e);
       return INITIAL_FORKLIFTS;
@@ -524,30 +636,38 @@ class ForkliftDataStore {
   }
 
   saveAll(data) {
+    // Clean duplicate base64 strings if front === vehicle before saving
+    data.forEach(item => {
+      if (item.photos && item.photos.vehicle && item.photos.front === item.photos.vehicle) {
+        item.photos.front = '';
+      }
+    });
+    this.memoryFleet = data;
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.warn('⚠️ LocalStorage storage quota exceeded, applying progressive image optimization...', e);
       try {
-        // Level 1: Strip heavy images (>80KB base64) across vehicle photos & driver photos
-        const lightweight = data.map(item => ({
+        // Level 1: Keep photos on most recent records, strip heavy images (>80KB) on older items
+        const lightweight = data.map((item, idx) => ({
           ...item,
           photos: item.photos ? {
-            vehicle: (item.photos.vehicle && item.photos.vehicle.length > 80000) ? '' : (item.photos.vehicle || ''),
-            front: (item.photos.front && item.photos.front.length > 80000) ? '' : (item.photos.front || ''),
-            side: (item.photos.side && item.photos.side.length > 80000) ? '' : (item.photos.side || ''),
-            fullFront: (item.photos.fullFront && item.photos.fullFront.length > 80000) ? '' : (item.photos.fullFront || '')
+            vehicle: (idx >= 8 && item.photos.vehicle && item.photos.vehicle.length > 80000) ? '' : (item.photos.vehicle || ''),
+            front: (idx >= 8 && item.photos.front && item.photos.front.length > 80000) ? '' : (item.photos.front || ''),
+            side: (idx >= 8 && item.photos.side && item.photos.side.length > 80000) ? '' : (item.photos.side || ''),
+            fullFront: (idx >= 8 && item.photos.fullFront && item.photos.fullFront.length > 80000) ? '' : (item.photos.fullFront || '')
           } : item.photos,
           driver: item.driver ? {
             ...item.driver,
-            photo: (item.driver.photo && item.driver.photo.length > 80000) ? '' : (item.driver.photo || ''),
-            certImage: (item.driver.certImage && item.driver.certImage.length > 80000) ? '' : (item.driver.certImage || '')
+            photo: (idx >= 8 && item.driver.photo && item.driver.photo.length > 80000) ? '' : (item.driver.photo || ''),
+            certImage: (idx >= 8 && item.driver.certImage && item.driver.certImage.length > 80000) ? '' : (item.driver.certImage || '')
           } : item.driver
         }));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
         console.warn('✅ Saved fleet records with optimized images due to storage limit');
       } catch (err2) {
-        console.warn('⚠️ Level 2 fallback: Stripping all images to guarantee all vehicle records are saved', err2);
+        console.warn('⚠️ Level 2 fallback: Stripping local images to guarantee all vehicle records are saved', err2);
         try {
           const minimal = data.map(item => ({
             ...item,
@@ -565,6 +685,23 @@ class ForkliftDataStore {
 
   clearAll() {
     this.saveAll([]);
+    // Unassign all drivers' assignedPlate when all forklifts are cleared
+    const drivers = this.getAllDrivers();
+    let driversUpdated = false;
+    drivers.forEach(d => {
+      if (d.assignedPlate) {
+        d.assignedPlate = '';
+        d.updatedAt = new Date().toISOString();
+        driversUpdated = true;
+        if (window.supabaseService && window.supabaseService.isConfigured()) {
+          window.supabaseService.updateDriverRow(d.id, d).catch(e => console.warn(e));
+        }
+      }
+    });
+    if (driversUpdated) {
+      this.saveAllDrivers(drivers);
+    }
+
     if (window.supabaseService && window.supabaseService.isConfigured()) {
       window.supabaseService.clearAll().catch(e => {
         console.warn('Supabase clearAll warning:', e);
@@ -730,8 +867,31 @@ class ForkliftDataStore {
 
   async deleteForklift(id) {
     this.addToDeletedQueue('forklift', id);
+    const targetFl = this.getById(id);
     const all = this.getAll().filter(item => item.id !== id);
     this.saveAll(all);
+
+    // Unassign any driver in Driver Registry who was assigned to this forklift's plateNumber
+    if (targetFl && targetFl.plateNumber) {
+      const drivers = this.getAllDrivers();
+      let driverChanged = false;
+      drivers.forEach(d => {
+        if (d.assignedPlate === targetFl.plateNumber) {
+          d.assignedPlate = '';
+          d.updatedAt = new Date().toISOString();
+          driverChanged = true;
+          if (window.supabaseService && window.supabaseService.isConfigured()) {
+            window.supabaseService.updateDriverRow(d.id, d).catch(e => console.warn(e));
+          }
+        }
+      });
+      if (driverChanged) {
+        this.saveAllDrivers(drivers);
+        window.dispatchEvent(new CustomEvent('driver-data-synced', {
+          detail: { count: drivers.length }
+        }));
+      }
+    }
 
     // Delete from Supabase
     if (window.supabaseService && window.supabaseService.isConfigured()) {
