@@ -6,9 +6,10 @@
   <title>Haier Forklift</title>
   <meta name="description" content="แบบฟอร์มสำรวจและระบบบริหารจัดการรถ Forklift ไฮเออร์ (Haier Forklift Management System) พร้อมระบบ AI ตรวจสอบใบรับรองผู้ขับขี่ และระบบแจ้งเตือนตรวจเช็คก๊าซ LPG ประจำปี">
 
-  <!-- App Icons / Favicon -->
+  <!-- App Icons / Favicon & PWA Manifest -->
   <link rel="icon" type="image/png" href="assets/app-icon.png">
   <link rel="apple-touch-icon" href="assets/app-icon.png">
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -49,6 +50,13 @@
           <div class="factory-badge">
             <span class="status-dot-pulse"></span>
             <span>Haier Electric (Thailand) Company Limited - Prachinburi</span>
+          </div>
+          <div id="cloud-sync-status" class="sync-status-badge status-connected" title="สถานะเชื่อมต่อคลาวด์ Supabase (สำหรับแอพและเว็บบนทุกอุปกรณ์)">
+            <span class="sync-dot"></span>
+            <span id="cloud-sync-text">คลาวด์เชื่อมต่อแล้ว</span>
+            <button id="btn-manual-sync" type="button" class="btn-sync-icon" title="กดเพื่ออัปโหลด/ซิงค์ข้อมูลกับคลาวด์ทันที">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
           </div>
           <div class="time-display" id="current-time-display">--:--:--</div>
         </div>

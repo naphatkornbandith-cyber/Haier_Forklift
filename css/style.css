@@ -918,6 +918,7 @@ body {
 @media (max-width: 992px) {
   .main-header { padding: 0.75rem 1rem; }
   .main-content { padding: 1.25rem; }
-  .header-status-meta { display: none; }
+  .factory-badge, .time-display { display: none; }
+  .header-status-meta { display: flex; align-items: center; gap: 0.5rem; }
   .table-container { overflow-x: auto; }
 }

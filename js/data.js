@@ -142,6 +142,22 @@ class ForkliftDataStore {
               }
             };
           });
+
+          // ตรวจสอบและดึงข้อมูลรถที่บันทึกจากแอพ/เครื่องมือแต่ยังไม่ได้ขึ้นคลาวด์ พร้อมส่งขึ้น Supabase ทันที
+          const unsyncedForklifts = localItems.filter(localFl =>
+            !remoteData.some(r => r.id === localFl.id || r.plateNumber === localFl.plateNumber)
+          );
+          if (unsyncedForklifts.length > 0) {
+            console.log(`📤 ตรวจพบรถที่บันทึกจากแอพในเครื่อง ${unsyncedForklifts.length} คัน กำลังอัปโหลดขึ้นคลาวด์...`);
+            try {
+              await window.supabaseService.uploadLocalData(unsyncedForklifts);
+              console.log('✅ อัปโหลดรถจากแอพขึ้นคลาวด์ Supabase สำเร็จ');
+            } catch (upErr) {
+              console.warn('⚠️ ไม่สามารถอัปโหลดรถที่ค้างในแอพขึ้นคลาวด์ได้:', upErr);
+            }
+            unsyncedForklifts.forEach(fl => mergedForklifts.unshift(fl));
+          }
+
           this.saveAll(mergedForklifts);
           window.dispatchEvent(new CustomEvent('forklift-data-synced', {
             detail: { source: 'supabase', count: mergedForklifts.length }
@@ -168,12 +184,20 @@ class ForkliftDataStore {
                 certImage: remoteD.certImage || localMatch?.certImage || ''
               };
             });
-            // Also retain any local drivers not yet in remote
-            localDrivers.forEach(localD => {
-              if (!mergedDrivers.some(m => m.id === localD.id || (m.empId && m.empId === localD.empId))) {
-                mergedDrivers.push(localD);
+            // ตรวจสอบและดึงข้อมูลผู้ขับที่บันทึกจากแอพ/เครื่องมือแต่ยังไม่ได้ขึ้นคลาวด์ พร้อมส่งขึ้น Supabase ทันที
+            const unsyncedDrivers = localDrivers.filter(localD =>
+              !remoteDrivers.some(m => m.id === localD.id || (m.empId && m.empId === localD.empId))
+            );
+            if (unsyncedDrivers.length > 0) {
+              console.log(`📤 ตรวจพบข้อมูลผู้ขับที่บันทึกจากแอพ ${unsyncedDrivers.length} คน กำลังอัปโหลดขึ้นคลาวด์...`);
+              try {
+                await window.supabaseService.uploadLocalDrivers(unsyncedDrivers);
+                console.log('✅ อัปโหลดข้อมูลผู้ขับจากแอพขึ้นคลาวด์ Supabase สำเร็จ');
+              } catch (upErr) {
+                console.warn('⚠️ ไม่สามารถอัปโหลดผู้ขับที่ค้างในแอพขึ้นคลาวด์ได้:', upErr);
               }
-            });
+              unsyncedDrivers.forEach(d => mergedDrivers.unshift(d));
+            }
             this.saveAllDrivers(mergedDrivers);
             window.dispatchEvent(new CustomEvent('driver-data-synced', {
               detail: { source: 'supabase', count: mergedDrivers.length }

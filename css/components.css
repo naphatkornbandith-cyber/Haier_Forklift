@@ -1319,3 +1319,93 @@
   flex-wrap: wrap;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Cloud & App Device Sync Status Badge
+   ────────────────────────────────────────────────────────────────────────── */
+.sync-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(10, 25, 47, 0.85);
+  border: 1px solid rgba(0, 160, 233, 0.35);
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.sync-status-badge.status-connected {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.12);
+  color: #a7f3d0;
+}
+
+.sync-status-badge.status-syncing {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+}
+
+.sync-status-badge.status-offline {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #34d399;
+  box-shadow: 0 0 7px #34d399;
+  flex-shrink: 0;
+}
+
+.sync-status-badge.status-syncing .sync-dot {
+  background-color: #fbbf24;
+  box-shadow: 0 0 7px #fbbf24;
+  animation: pulse-sync 0.9s infinite alternate;
+}
+
+.sync-status-badge.status-offline .sync-dot {
+  background-color: #f87171;
+  box-shadow: 0 0 7px #f87171;
+}
+
+@keyframes pulse-sync {
+  from { opacity: 0.35; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.25); }
+}
+
+.btn-sync-icon {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: transform 0.2s ease, color 0.2s ease;
+  margin-left: 2px;
+}
+
+.btn-sync-icon:hover {
+  color: var(--haier-cyan-glow);
+  transform: scale(1.2);
+}
+
+.btn-sync-icon.spinning i {
+  animation: spin-sync 0.8s linear infinite;
+}
+
+@keyframes spin-sync {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
