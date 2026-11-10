@@ -814,7 +814,7 @@
                   <span class="section-num-badge">2</span>
                   <div>
                     <h3>ส่วนที่ 2: กรอกข้อมูลการตรวจเช็คขณะขึ้นทะเบียน</h3>
-                    <p class="form-hint">บันทึกผล Checklist ความปลอดภัย, แนบภาพถ่าย 3 มุมบังคับ และระบุสถานะความพร้อม</p>
+                    <p class="form-hint">บันทึกผล Checklist ความปลอดภัย, แนบภาพถ่าย และระบุสถานะความพร้อม</p>
                   </div>
                 </div>
               </div>
@@ -1150,15 +1150,19 @@
                       สังกัด (ชื่อบริษัท และซัพพลายเออร์) <span class="required">*</span>
                     </label>
                     <input type="text" id="new-driver-company" class="form-control" 
-                           value="Haier Electric Appliances (Thailand)" required>
+                           value="Haier Electric (Thailand) Company Limited" required>
                   </div>
 
                   <div class="form-group">
                     <label class="form-label" for="new-driver-dept">
                       แผนกที่ปฏิบัติงาน (Department) <span class="required">*</span>
                     </label>
-                    <input type="text" id="new-driver-dept" class="form-control" 
-                           placeholder="เช่น คลังสินค้าสำเร็จรูป WH-A, แผนกประกอบ Assembly Line" required>
+                   <select id="new-driver-dept" class="form-control"required>
+                      <option value="UT" selected>UT</option>
+                      <option value="RM-WH">RM-WH</option>
+                      <option value="FG">FG</option>
+                      <option value="TF">TF</option>
+                    </select>
                   </div>
 
                   <div class="form-group">
