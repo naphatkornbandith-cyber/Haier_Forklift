@@ -165,7 +165,8 @@
         checklist: item.checklist || {},
         driver: item.driver || {},
         notes: item.notes || '',
-        created_at: item.createdAt || new Date().toISOString()
+        created_at: item.createdAt || new Date().toISOString(),
+        updated_at: item.updatedAt || new Date().toISOString()
       };
     }
 
@@ -188,7 +189,8 @@
         checklist: row.checklist || {},
         driver: row.driver || {},
         notes: row.notes || '',
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        updatedAt: row.updated_at || row.created_at || new Date().toISOString()
       };
     }
 
@@ -234,6 +236,15 @@
 
       if (error) {
         console.error('❌ Supabase insert error:', error);
+        if (error.code === '23505') {
+          const detail = ((error.message || '') + ' ' + (error.details || '')).toLowerCase();
+          if (detail.includes('plate_number')) {
+            throw new Error(`เลขทะเบียน "${item.plateNumber}" มีอยู่ในระบบแล้ว (ลงทะเบียนจากอุปกรณ์อื่น) ไม่สามารถบันทึกซ้ำได้`);
+          }
+          if (detail.includes('frame_no')) {
+            throw new Error(`หมายเลขตัวถัง (Frame No.) "${item.frameNo}" มีอยู่ในระบบแล้ว (ลงทะเบียนจากอุปกรณ์อื่น) ไม่สามารถบันทึกซ้ำได้`);
+          }
+        }
         throw new Error(`บันทึกลง Supabase ล้มเหลว: ${error.message}`);
       }
 
@@ -309,6 +320,9 @@
     subscribeToChanges(callback) {
       if (!this.isConfigured() || !this.client) return null;
       try {
+        if (this.currentChannel) {
+          try { this.client.removeChannel(this.currentChannel); } catch (e) {}
+        }
         const channel = this.client
           .channel('public:fleet_and_drivers')
           .on(
@@ -331,7 +345,14 @@
               }
             }
           )
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Supabase Realtime connected across devices');
+            } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+              console.warn('⚠️ Realtime channel status:', status);
+            }
+          });
+        this.currentChannel = channel;
         return channel;
       } catch (err) {
         console.warn('Realtime subscription error:', err);
@@ -356,7 +377,8 @@
         has_trained: Boolean(item.hasTrained),
         assigned_plate: item.assignedPlate || '',
         notes: item.notes || '',
-        created_at: item.createdAt || new Date().toISOString()
+        created_at: item.createdAt || new Date().toISOString(),
+        updated_at: item.updatedAt || new Date().toISOString()
       };
     }
 
@@ -373,7 +395,8 @@
         hasTrained: Boolean(row.has_trained),
         assignedPlate: row.assigned_plate || '',
         notes: row.notes || '',
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        updatedAt: row.updated_at || row.created_at || new Date().toISOString()
       };
     }
 
@@ -406,6 +429,9 @@
 
       if (error) {
         console.error('❌ Supabase insertDriver error:', error);
+        if (error.code === '23505') {
+          throw new Error(`รหัสพนักงาน "${driver.empId}" มีอยู่ในระบบแล้ว (ลงทะเบียนจากอุปกรณ์อื่น) ไม่สามารถบันทึกซ้ำได้`);
+        }
         throw new Error(`บันทึกข้อมูลผู้ขับขี่ลง Supabase ล้มเหลว: ${error.message}`);
       }
       return data && data[0] ? this.driverFromDbRow(data[0]) : driver;

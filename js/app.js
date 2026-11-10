@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const driver = item.driver || { name: 'ยังไม่ระบุ', empId: '-', certStatus: 'รอดำเนินการ' };
       let certBadge = '';
       if (driver.certStatus === 'ผ่านการรับรอง') {
-        certBadge = `<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง (AI Verified)</span>`;
+        certBadge = `<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง</span>`;
       } else if (driver.certStatus === 'ไม่ถูกต้อง') {
         certBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-circle-xmark"></i> ใบเซอร์ไม่ถูกต้อง</span>`;
       } else {
@@ -1684,8 +1684,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 4. Submit Driver Registration Form
   const driverRegForm = document.getElementById('driver-reg-form');
   if (driverRegForm) {
-    driverRegForm.addEventListener('submit', (e) => {
+    driverRegForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = driverRegForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
 
       const name = (document.getElementById('new-driver-name')?.value || '').trim();
       const empId = (document.getElementById('new-driver-empid')?.value || '').trim();
@@ -1736,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       try {
-        window.forkliftStore.addDriver(newDriver);
+        await window.forkliftStore.addDriver(newDriver);
         showToast(`ลงทะเบียนผู้ขับขี่ "${name}" (${empId}) สำเร็จเรียบร้อย!`, 'success');
 
         // Reset form
@@ -1773,6 +1775,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setDashView('drivers');
       } catch (err) {
         showToast(err.message, 'error');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
     });
   }
@@ -1780,8 +1784,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   // Submit Registration Form
   // --------------------------------------------------------------------------
-  regForm.addEventListener('submit', (e) => {
+  regForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const submitBtn = regForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
 
     // 1. Validate Frame No. (หมายเลขตัวถัง - เงื่อนไขห้ามซ้ำกัน)
     const frameNo = regFrameNoInput ? regFrameNoInput.value.trim().toUpperCase() : '';
@@ -1899,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', () => {
           certStatus: foundDriver.certStatus || 'รอดำเนินการ'
         };
         // ผูกทะเบียนรถเข้ากับข้อมูลผู้ขับขี่ในทะเบียนผู้ขับ
-        window.forkliftStore.updateDriverData(foundDriver.id, { assignedPlate: plateNumber });
+        await window.forkliftStore.updateDriverData(foundDriver.id, { assignedPlate: plateNumber });
       }
     }
 
@@ -1926,7 +1932,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     try {
-      window.forkliftStore.addForklift(newForklift);
+      await window.forkliftStore.addForklift(newForklift);
       showToast(`ขึ้นทะเบียนรถโฟล์คลิฟท์ "${plateNumber}" (${isSub ? 'รถเช่า' : 'รถบริษัท'}) สำเร็จเรียบร้อย!`, 'success');
       
       // Reset Form
@@ -1975,6 +1981,8 @@ document.addEventListener('DOMContentLoaded', () => {
       switchTab('dashboard-tab');
     } catch (err) {
       showToast(err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   });
 
@@ -2077,7 +2085,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="margin-top:0.85rem;">
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.25rem;">สถานะใบรับรองการอบรม:</div>
             ${driver.certStatus === 'ผ่านการรับรอง'
-              ? '<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการอบรม</span>'
+              ? '<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง</span>'
               : (driver.certStatus === 'ไม่ถูกต้อง'
                   ? '<span class="status-badge badge-repair"><i class="fa-solid fa-xmark"></i> ไม่ถูกต้อง</span>'
                   : '<span class="status-badge badge-cert-pending"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ (ไม่มีภาพแนบ)</span>')
@@ -2130,7 +2138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isCert = driver.certStatus === 'ผ่านการรับรอง';
     const certBadge = isCert
-      ? `<span class="status-badge badge-ready"><i class="fa-solid fa-certificate"></i> ผ่านการรับรองความปลอดภัย</span>`
+      ? `<span class="status-badge badge-ready"><i class="fa-solid fa-certificate"></i> ผ่านการรับรอง</span>`
       : `<span class="status-badge badge-repair"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ (รอใบเซอร์)</span>`;
 
     const certImageHtml = driver.certImage
@@ -2216,14 +2224,14 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Delete Driver action
-  window.deleteDriverItem = function(driverId, driverName) {
+  window.deleteDriverItem = async function(driverId, driverName) {
     if (!state.isAdmin) {
       showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
       return;
     }
     if (confirm(`คุณต้องการลบข้อมูลผู้ขับขี่ "${driverName}" ออกจากระบบทะเบียนผู้ขับหรือไม่?`)) {
       try {
-        window.forkliftStore.deleteDriver(driverId);
+        await window.forkliftStore.deleteDriver(driverId);
         showToast(`ลบข้อมูลผู้ขับขี่ "${driverName}" เรียบร้อยแล้ว`, 'success');
         renderDashboard();
         renderDriverTable();
@@ -2568,12 +2576,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Save Edit Driver Form
-  document.getElementById('form-edit-driver').addEventListener('submit', (e) => {
+  document.getElementById('form-edit-driver').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.isAdmin) {
       showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
       return;
     }
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
     const id = document.getElementById('edit-driver-id').value;
     const mode = (document.getElementById('edit-driver-mode')?.value || 'forklift');
     const name = document.getElementById('edit-driver-name').value.trim();
@@ -2584,7 +2594,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       if (mode === 'registry') {
-        window.forkliftStore.updateDriverData(id, {
+        await window.forkliftStore.updateDriverData(id, {
           name,
           empId,
           company,
@@ -2614,19 +2624,19 @@ document.addEventListener('DOMContentLoaded', () => {
           hasTrained: state.editDriverCert.status === 'ผ่านการรับรอง'
         };
 
-        window.forkliftStore.updateDriver(id, driverData);
+        await window.forkliftStore.updateDriver(id, driverData);
 
         // ปลดล็อครถคันนี้จากผู้ขับขี่คนเดิมในทะเบียน (ถ้ามี)
         const allDrivers = window.forkliftStore.getAllDrivers();
-        allDrivers.forEach(d => {
+        for (const d of allDrivers) {
           if (d.assignedPlate === plateNumber && d.id !== selectedDriverId) {
-            window.forkliftStore.updateDriverData(d.id, { assignedPlate: '' });
+            await window.forkliftStore.updateDriverData(d.id, { assignedPlate: '' });
           }
-        });
+        }
 
         // หากเลือกผู้ขับจากทะเบียน ให้ผูกเลขทะเบียนรถนี้เข้ากับทะเบียนผู้ขับขี่ด้วย
         if (selectedDriverId) {
-          window.forkliftStore.updateDriverData(selectedDriverId, { assignedPlate: plateNumber });
+          await window.forkliftStore.updateDriverData(selectedDriverId, { assignedPlate: plateNumber });
         }
 
         showToast(`อัปเดตผู้ขับขี่ประจำรถ "${plateNumber}" เรียบร้อยแล้ว`, 'success');
@@ -2641,6 +2651,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.currentTab === 'alerts-tab') renderAlertsCenter();
     } catch (err) {
       showToast(err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   });
 
@@ -2695,12 +2707,14 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Save Status & Inspection Form
-  document.getElementById('form-update-status').addEventListener('submit', (e) => {
+  document.getElementById('form-update-status').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.isAdmin) {
       showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
       return;
     }
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
     const id = document.getElementById('update-status-id').value;
     const status = document.getElementById('update-status-select').value;
     const inspectionDate = document.getElementById('update-inspection-date').value;
@@ -2716,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      window.forkliftStore.updateStatusAndInspection(id, {
+      await window.forkliftStore.updateStatusAndInspection(id, {
         status,
         inspectionDate,
         notes,
@@ -2730,11 +2744,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.currentTab === 'alerts-tab') renderAlertsCenter();
     } catch (err) {
       showToast(err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   });
 
   // Quick Action: Set rental forklift to 'หมดสัญญาเช่า / ส่งคืนแล้ว'
-  window.setForkliftExpiredStatus = function(id) {
+  window.setForkliftExpiredStatus = async function(id) {
     if (!state.isAdmin) {
       showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
       return;
@@ -2744,7 +2760,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (confirm(`คุณต้องการปรับสถานะรถโฟล์คลิฟท์ "${item.plateNumber}" เป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" ใช่หรือไม่?\n\n* รถคันนี้จะถูกแยกออกจากยอดรถที่พร้อมใช้งานในโรงงานทันที`)) {
       try {
-        window.forkliftStore.updateStatusAndInspection(id, {
+        await window.forkliftStore.updateStatusAndInspection(id, {
           status: 'หมดสัญญาเช่า'
         });
         showToast(`ปรับสถานะรถ "${item.plateNumber}" เป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" เรียบร้อย`, 'success');
@@ -2788,7 +2804,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   // Delete Forklift Operations
   // --------------------------------------------------------------------------
-  window.deleteForkliftItem = function(id, plateNumber, closeViewModal = false) {
+  window.deleteForkliftItem = async function(id, plateNumber, closeViewModal = false) {
     if (!state.isAdmin) {
       showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
       return;
@@ -2798,19 +2814,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const msg = `คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลรถโฟล์คลิฟท์ทะเบียน "${displayName}" ออกจากระบบ?\n\n* ข้อมูลรถ, ภาพถ่าย 3 มุมมอง และประวัติการตรวจสภาพจะถูกลบอย่างถาวร`;
     if (confirm(msg)) {
-      window.forkliftStore.deleteForklift(id);
-      showToast(`ลบข้อมูลรถทะเบียน "${displayName}" เรียบร้อยแล้ว`, 'success');
+      try {
+        await window.forkliftStore.deleteForklift(id);
+        showToast(`ลบข้อมูลรถทะเบียน "${displayName}" เรียบร้อยแล้ว`, 'success');
 
-      if (closeViewModal) {
-        document.querySelectorAll('.modal-backdrop').forEach(closeModal);
-      }
+        if (closeViewModal) {
+          document.querySelectorAll('.modal-backdrop').forEach(closeModal);
+        }
 
-      renderDashboard();
-      if (state.currentTab === 'admin-tab') {
-        renderAdminPanel();
-      }
-      if (state.currentTab === 'alerts-tab') {
-        renderAlertsCenter();
+        renderDashboard();
+        if (state.currentTab === 'admin-tab') {
+          renderAdminPanel();
+        }
+        if (state.currentTab === 'alerts-tab') {
+          renderAlertsCenter();
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
       }
     }
   };
@@ -3043,7 +3063,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const driver = item.driver || { name: 'ยังไม่ระบุ', empId: '-', certStatus: 'รอดำเนินการ' };
       let certBadge = '';
       if (driver.certStatus === 'ผ่านการรับรอง') {
-        certBadge = `<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง (AI Verified)</span>`;
+        certBadge = `<span class="status-badge badge-cert-valid"><i class="fa-solid fa-award"></i> ผ่านการรับรอง</span>`;
       } else if (driver.certStatus === 'ไม่ถูกต้อง') {
         certBadge = `<span class="status-badge badge-repair"><i class="fa-solid fa-circle-xmark"></i> ใบเซอร์ไม่ถูกต้อง</span>`;
       } else {
@@ -3416,6 +3436,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.currentTab === 'alerts-tab') {
       renderAlertsCenter();
     }
+    // หากกำลังเปิดดู Modal รายละเอียดรถคันใดอยู่ ให้รีเฟรชข้อมูลล่าสุดแบบเรียลไทม์
+    const modalView = document.getElementById('modal-view-details');
+    if (modalView && modalView.classList.contains('show') && state.selectedForklift) {
+      const refreshedItem = window.forkliftStore.getById(state.selectedForklift.id);
+      if (refreshedItem) {
+        window.viewForkliftDetails(refreshedItem.id);
+      } else {
+        closeModal(modalView);
+        showToast('ข้อมูลรถคันนี้ถูกลบออกจากระบบโดยอุปกรณ์อื่นแล้ว', 'warn');
+      }
+    }
   });
 
   // Listen to remote driver sync event — อัปเดต Driver Table และ Dropdowns เมื่อ sync สำเร็จ
@@ -3428,6 +3459,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashDriversCount = document.getElementById('dash-drivers-count');
     if (dashDriversCount && window.forkliftStore.getAllDrivers) {
       dashDriversCount.textContent = window.forkliftStore.getAllDrivers().length;
+    }
+    // หากกำลังเปิดดู Modal รายละเอียดผู้ขับ ให้รีเฟรชข้อมูลล่าสุดแบบเรียลไทม์
+    if (modalViewDriverDetails && modalViewDriverDetails.classList.contains('show') && selectedDriverIdForView) {
+      const refreshedDriver = window.forkliftStore.getDriverById(selectedDriverIdForView);
+      if (refreshedDriver) {
+        window.viewDriverDetails(refreshedDriver.id);
+      } else {
+        closeModal(modalViewDriverDetails);
+        showToast('ข้อมูลผู้ขับขี่คนนี้ถูกลบออกจากระบบโดยอุปกรณ์อื่นแล้ว', 'warn');
+      }
     }
   });
 
