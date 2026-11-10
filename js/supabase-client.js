@@ -147,6 +147,12 @@
     // ──────────────────────────────────────────────────────────────────────────
 
     toDbRow(item) {
+      const isValidDate = (d) => {
+        if (!d || typeof d !== 'string') return null;
+        const trimmed = d.trim();
+        return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.substring(0, 10) : null;
+      };
+
       return {
         id: item.id,
         plate_number: item.plateNumber || '',
@@ -157,9 +163,9 @@
         owner_company: item.ownerCompany || '',
         subcontractor: item.subcontractor || '',
         is_subcontractor: Boolean(item.isSubcontractor),
-        registration_date: item.registrationDate || null,
-        last_inspection_date: item.lastInspectionDate || null,
-        contract_expiry_date: item.contractExpiryDate || null,
+        registration_date: isValidDate(item.registrationDate),
+        last_inspection_date: isValidDate(item.lastInspectionDate),
+        contract_expiry_date: isValidDate(item.contractExpiryDate),
         status: item.status || 'พร้อมใช้งาน',
         photos: item.photos || {},
         checklist: item.checklist || {},
@@ -229,10 +235,20 @@
       if (!this.isConfigured() || !this.client) return null;
 
       const row = this.toDbRow(item);
-      const { data, error } = await this.client
+      let { data, error } = await this.client
         .from('forklifts')
         .insert([row])
         .select();
+
+      // Fallback: If remote table schema is missing optional columns (e.g. contract_expiry_date or frame_no)
+      if (error && error.code === '42703') {
+        console.warn('⚠️ Supabase schema missing optional column, retrying insert with fallback...');
+        const fallbackRow = { ...row };
+        delete fallbackRow.contract_expiry_date;
+        const retry = await this.client.from('forklifts').insert([fallbackRow]).select();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.error('❌ Supabase insert error:', error);
@@ -261,11 +277,20 @@
       // Remove id from update payload
       delete row.id;
 
-      const { data, error } = await this.client
+      let { data, error } = await this.client
         .from('forklifts')
         .update(row)
         .eq('id', id)
         .select();
+
+      // Fallback: If remote table schema is missing optional columns
+      if (error && error.code === '42703') {
+        const fallbackRow = { ...row };
+        delete fallbackRow.contract_expiry_date;
+        const retry = await this.client.from('forklifts').update(fallbackRow).eq('id', id).select();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.error('❌ Supabase update error:', error);

@@ -1204,15 +1204,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isRental) {
       // รถเช่า:
-      // - เลขทะเบียนระบบรันให้เอง เซ็ตการรันเลขคือ "SP-{000}"
-      const nextRentalPlate = window.forkliftStore.getNextRentalPlateNumber();
-      regPlateInput.value = nextRentalPlate;
-      regPlateInput.readOnly = true;
+      // - แนะนำเลขทะเบียนอัตโนมัติตามรูปแบบ "SP-{000}" แต่เปิดให้ผู้ใช้แก้ไขหรือระบุเลขทะเบียนจริงได้
+      if (!regPlateInput.value || regPlateInput.value.startsWith('SP-') || regPlateInput.value.startsWith('FL-')) {
+        const nextRentalPlate = window.forkliftStore.getNextRentalPlateNumber();
+        regPlateInput.value = nextRentalPlate;
+      }
+      regPlateInput.readOnly = false;
+      regPlateInput.placeholder = 'เช่น SP-001 หรือเลขทะเบียนรถเช่า';
       regPlateInput.classList.remove('is-invalid');
       regPlateInput.classList.add('is-valid');
       if (duplicateAlert) duplicateAlert.classList.remove('show');
       if (rentalPlateBadge) rentalPlateBadge.style.display = 'inline-block';
-      if (regPlateHint) regPlateHint.textContent = 'ระบบรันเลขทะเบียนอัตโนมัติตามรูปแบบ SP-{000} (ล็อกไม่ให้แก้ไข)';
+      if (regPlateHint) regPlateHint.textContent = 'ระบบรันเลขแนะนำ SP-{000} ให้ (สามารถแก้ไขหรือใช้เลขทะเบียนจริงได้)';
 
       // - ชื่อบริษัทที่เช่า (กรอกเอง)
       if (regOwnerCompany) {
@@ -1223,15 +1226,15 @@ document.addEventListener('DOMContentLoaded', () => {
         regOwnerCompany.placeholder = 'เช่น บจก. สยาม โฟล์คลิฟท์ หรือ บจก. ไทย โลจิสติกส์';
       }
       if (labelRegCompany) {
-        labelRegCompany.innerHTML = 'ชื่อบริษัทที่เช่า (Rental Supplier) <span class="required">*</span>';
+        labelRegCompany.innerHTML = 'ชื่อบริษัทผู้ให้เช่า (Rental Supplier) <span class="required">*</span>';
       }
       if (hintRegCompany) {
         hintRegCompany.textContent = 'ระบุชื่อบริษัทผู้ให้เช่ารถ Forklift';
       }
 
-      // - วันหมดสัญญาเช่า พร้อมลิงก์เข้าศูนย์แจ้งเตือนล่วงหน้า 1 เดือน
+      // - วันหมดสัญญาเช่า พร้อมลิงก์เข้าศูนย์แจ้งเตือนล่วงหน้า 1 เดือน (ไม่บังคับหากไม่มี)
       if (regContractExpiryGroup) regContractExpiryGroup.style.display = 'block';
-      if (regContractExpiry) regContractExpiry.required = true;
+      if (regContractExpiry) regContractExpiry.required = false;
     } else {
       // รถของบริษัท:
       // - เลขทะเบียนกรอกเอง
@@ -1240,6 +1243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         regPlateInput.classList.remove('is-valid');
       }
       regPlateInput.readOnly = false;
+      regPlateInput.placeholder = 'เช่น FL-H08, FL-LPG-09';
       if (rentalPlateBadge) rentalPlateBadge.style.display = 'none';
       if (regPlateHint) regPlateHint.textContent = 'ระบุเลขทะเบียนรถบริษัท (ห้ามซ้ำ)';
 
@@ -1262,6 +1266,14 @@ document.addEventListener('DOMContentLoaded', () => {
         regContractExpiry.value = '';
       }
     }
+  }
+
+  if (rentalPlateBadge) {
+    rentalPlateBadge.addEventListener('click', () => {
+      const nextPlate = window.forkliftStore.getNextRentalPlateNumber();
+      regPlateInput.value = nextPlate;
+      regPlateInput.dispatchEvent(new Event('input'));
+    });
   }
 
   if (btnOwnerCompany) {
@@ -1689,55 +1701,55 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitBtn = driverRegForm.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
 
-      const name = (document.getElementById('new-driver-name')?.value || '').trim();
-      const empId = (document.getElementById('new-driver-empid')?.value || '').trim();
-      const company = (document.getElementById('new-driver-company')?.value || '').trim();
-      const department = (document.getElementById('new-driver-dept')?.value || '').trim();
-      const assignedPlate = (document.getElementById('new-driver-assigned-plate')?.value || '').trim();
-      const notes = (document.getElementById('new-driver-notes')?.value || '').trim();
-
-      if (!name) {
-        showToast('กรุณาระบุชื่อ-นามสกุล ผู้ขับขี่', 'error');
-        document.getElementById('new-driver-name')?.focus();
-        return;
-      }
-      if (!empId) {
-        showToast('กรุณาระบุรหัสพนักงาน', 'error');
-        document.getElementById('new-driver-empid')?.focus();
-        return;
-      }
-      if (!company) {
-        showToast('กรุณาระบุสังกัด (บริษัท/ซัพพลายเออร์)', 'error');
-        document.getElementById('new-driver-company')?.focus();
-        return;
-      }
-      if (!department || department === '---กรุณาระบุ---') {
-        showToast('กรุณาระบุแผนกที่ปฏิบัติงาน', 'error');
-        document.getElementById('new-driver-dept')?.focus();
-        return;
-      }
-
-      if (window.forkliftStore.isDriverEmpIdDuplicate(empId)) {
-        showToast(`รหัสพนักงาน "${empId}" มีอยู่ในระบบแล้ว กรุณาตรวจสอบ`, 'error');
-        if (newDriverEmpIdAlert) newDriverEmpIdAlert.style.display = 'block';
-        document.getElementById('new-driver-empid')?.focus();
-        return;
-      }
-
-      const newDriver = {
-        name,
-        empId,
-        company,
-        department,
-        assignedPlate,
-        notes,
-        photo: state.newDriverPhoto,
-        certImage: state.newDriverCert.image,
-        certStatus: state.newDriverCert.status || 'รอดำเนินการ',
-        hasTrained: state.newDriverCert.status === 'ผ่านการรับรอง'
-      };
-
       try {
+        const name = (document.getElementById('new-driver-name')?.value || '').trim();
+        const empId = (document.getElementById('new-driver-empid')?.value || '').trim();
+        const company = (document.getElementById('new-driver-company')?.value || '').trim();
+        const department = (document.getElementById('new-driver-dept')?.value || '').trim();
+        const assignedPlate = (document.getElementById('new-driver-assigned-plate')?.value || '').trim();
+        const notes = (document.getElementById('new-driver-notes')?.value || '').trim();
+
+        if (!name) {
+          showToast('กรุณาระบุชื่อ-นามสกุล ผู้ขับขี่', 'error');
+          document.getElementById('new-driver-name')?.focus();
+          return;
+        }
+        if (!empId) {
+          showToast('กรุณาระบุรหัสพนักงาน', 'error');
+          document.getElementById('new-driver-empid')?.focus();
+          return;
+        }
+        if (!company) {
+          showToast('กรุณาระบุสังกัด (บริษัท/ซัพพลายเออร์)', 'error');
+          document.getElementById('new-driver-company')?.focus();
+          return;
+        }
+        if (!department || department === '---กรุณาระบุ---') {
+          showToast('กรุณาระบุแผนกที่ปฏิบัติงาน', 'error');
+          document.getElementById('new-driver-dept')?.focus();
+          return;
+        }
+
+        if (window.forkliftStore.isDriverEmpIdDuplicate(empId)) {
+          showToast(`รหัสพนักงาน "${empId}" มีอยู่ในระบบแล้ว กรุณาตรวจสอบ`, 'error');
+          if (newDriverEmpIdAlert) newDriverEmpIdAlert.style.display = 'block';
+          document.getElementById('new-driver-empid')?.focus();
+          return;
+        }
+
+        const newDriver = {
+          name,
+          empId,
+          company,
+          department,
+          assignedPlate,
+          notes,
+          photo: state.newDriverPhoto,
+          certImage: state.newDriverCert.image,
+          certStatus: state.newDriverCert.status || 'รอดำเนินการ',
+          hasTrained: state.newDriverCert.status === 'ผ่านการรับรอง'
+        };
+
         await window.forkliftStore.addDriver(newDriver);
         showToast(`ลงทะเบียนผู้ขับขี่ "${name}" (${empId}) สำเร็จเรียบร้อย!`, 'success');
 
@@ -1789,149 +1801,144 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = regForm.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
 
-    // 1. Validate Frame No. (หมายเลขตัวถัง - เงื่อนไขห้ามซ้ำกัน)
-    const frameNo = regFrameNoInput ? regFrameNoInput.value.trim().toUpperCase() : '';
-    if (!frameNo) {
-      showToast('กรุณาระบุหมายเลขตัวถัง (Frame No. / Chassis No.)', 'error');
-      regFrameNoInput?.focus();
-      return;
-    }
-    if (window.forkliftStore.isFrameNoDuplicate(frameNo)) {
-      showToast(`หมายเลขตัวถัง (Frame No.) "${frameNo}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`, 'error');
-      if (duplicateFrameAlert) {
-        duplicateFrameAlert.classList.add('show');
-        if (duplicateFrameMsg) {
-          duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${frameNo}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
+    try {
+      // 1. Validate Frame No. (หมายเลขตัวถัง - เงื่อนไขห้ามซ้ำกัน)
+      const frameNo = regFrameNoInput ? regFrameNoInput.value.trim().toUpperCase() : '';
+      if (!frameNo) {
+        showToast('กรุณาระบุหมายเลขตัวถัง (Frame No. / Chassis No.)', 'error');
+        regFrameNoInput?.focus();
+        return;
+      }
+      if (window.forkliftStore.isFrameNoDuplicate(frameNo)) {
+        showToast(`หมายเลขตัวถัง (Frame No.) "${frameNo}" มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้`, 'error');
+        if (duplicateFrameAlert) {
+          duplicateFrameAlert.classList.add('show');
+          if (duplicateFrameMsg) {
+            duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${frameNo}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
+          }
+        }
+        regFrameNoInput?.focus();
+        return;
+      }
+
+      // 2. Determine Ownership Type & Validate Plate No.
+      const isSub = regOwnerType ? (regOwnerType.value === 'rental') : false;
+      let plateNumber = regPlateInput.value.trim().toUpperCase();
+      if (isSub && !plateNumber) {
+        plateNumber = window.forkliftStore.getNextRentalPlateNumber();
+        regPlateInput.value = plateNumber;
+      }
+
+      if (!plateNumber) {
+        showToast('กรุณาระบุเลขทะเบียนรถ', 'error');
+        regPlateInput.focus();
+        return;
+      }
+
+      // Condition Check: Duplicate plate prevention
+      if (window.forkliftStore.isPlateDuplicate(plateNumber)) {
+        showToast(`เลขทะเบียน "${plateNumber}" มีอยู่ในระบบแล้ว ไม่สามารถลงซ้ำได้`, 'error');
+        duplicateAlert.classList.add('show');
+        regPlateInput.focus();
+        return;
+      }
+
+      const vehicleTypeEl = document.getElementById('reg-type');
+      const vehicleType = vehicleTypeEl ? vehicleTypeEl.value : 'Warehouse Forklift';
+
+      const energyTypeEl = document.getElementById('reg-energy');
+      const energyType = energyTypeEl ? energyTypeEl.value : 'ไฟฟ้า';
+
+      const capacityEl = document.getElementById('reg-capacity');
+      const liftingCapacity = (capacityEl && capacityEl.value && capacityEl.value !== 'กรุณาระบุ') 
+        ? capacityEl.value 
+        : '1.5 ตัน';
+
+      const ownerCompanyEl = document.getElementById('reg-owner-company');
+      const ownerCompanyVal = ownerCompanyEl ? ownerCompanyEl.value.trim() : '';
+
+      // Validate rental specific fields
+      let contractExpiryDate = null;
+      if (isSub) {
+        if (!ownerCompanyVal) {
+          showToast('กรุณาระบุชื่อบริษัทผู้ให้เช่า (Rental Supplier)', 'error');
+          ownerCompanyEl?.focus();
+          return;
+        }
+        contractExpiryDate = (regContractExpiry && regContractExpiry.value) ? regContractExpiry.value : null;
+      }
+
+      const ownerCompany = isSub
+        ? ownerCompanyVal
+        : 'Haier Electric (Thailand) Company Limited';
+
+      const subcontractor = isSub
+        ? ownerCompanyVal
+        : 'Haier Owned';
+
+      const inspectDateEl = document.getElementById('reg-inspect-date');
+      const inspectionDate = (inspectDateEl && inspectDateEl.value) 
+        ? inspectDateEl.value 
+        : new Date().toISOString().split('T')[0];
+
+      const statusRadio = document.querySelector('input[name="reg-status"]:checked');
+      const status = statusRadio ? statusRadio.value : 'พร้อมใช้งาน';
+
+      // ดึงข้อมูลผู้ขับขี่จาก "ทะเบียนผู้ขับขี่" ที่เลือกไว้
+      const driverSelectEl = document.getElementById('reg-select-driver');
+      const selectedDriverId = driverSelectEl ? driverSelectEl.value : '';
+      let driverObj = {
+        name: 'ยังไม่ระบุ',
+        empId: '-',
+        company: ownerCompany,
+        department: '-',
+        photo: '',
+        hasTrained: false,
+        certImage: '',
+        certStatus: 'รอดำเนินการ'
+      };
+
+      if (selectedDriverId) {
+        const foundDriver = window.forkliftStore.getDriverById(selectedDriverId);
+        if (foundDriver) {
+          driverObj = {
+            driverId: foundDriver.id,
+            name: foundDriver.name,
+            empId: foundDriver.empId,
+            company: foundDriver.company || ownerCompany,
+            department: foundDriver.department || '-',
+            photo: foundDriver.photo || '',
+            hasTrained: Boolean(foundDriver.hasTrained),
+            certImage: foundDriver.certImage || '',
+            certStatus: foundDriver.certStatus || 'รอดำเนินการ'
+          };
+          // ผูกทะเบียนรถเข้ากับข้อมูลผู้ขับขี่ในทะเบียนผู้ขับ
+          await window.forkliftStore.updateDriverData(foundDriver.id, { assignedPlate: plateNumber });
         }
       }
-      regFrameNoInput?.focus();
-      return;
-    }
 
-    // 2. Determine Ownership Type & Validate Plate No.
-    const isSub = regOwnerType ? (regOwnerType.value === 'rental') : false;
-    let plateNumber = regPlateInput.value.trim().toUpperCase();
-    if (isSub && !plateNumber) {
-      plateNumber = window.forkliftStore.getNextRentalPlateNumber();
-      regPlateInput.value = plateNumber;
-    }
+      const notesEl = document.getElementById('reg-notes');
+      const notes = notesEl ? notesEl.value.trim() : '';
 
-    if (!plateNumber) {
-      showToast('กรุณาระบุเลขทะเบียนรถ', 'error');
-      regPlateInput.focus();
-      return;
-    }
+      const newForklift = {
+        plateNumber,
+        frameNo,
+        vehicleType,
+        energyType,
+        liftingCapacity,
+        ownerCompany,
+        subcontractor,
+        isSubcontractor: isSub,
+        contractExpiryDate: isSub ? contractExpiryDate : null,
+        registrationDate: new Date().toISOString().split('T')[0],
+        lastInspectionDate: inspectionDate,
+        status,
+        photos: { ...state.regPhotos },
+        checklist: { ...state.regChecklist },
+        driver: driverObj,
+        notes
+      };
 
-    // Condition Check: Duplicate plate prevention
-    if (window.forkliftStore.isPlateDuplicate(plateNumber)) {
-      showToast(`เลขทะเบียน "${plateNumber}" มีอยู่ในระบบแล้ว ไม่สามารถลงซ้ำได้`, 'error');
-      duplicateAlert.classList.add('show');
-      regPlateInput.focus();
-      return;
-    }
-
-    const vehicleTypeEl = document.getElementById('reg-type');
-    const vehicleType = vehicleTypeEl ? vehicleTypeEl.value : 'Warehouse Forklift';
-
-    const energyTypeEl = document.getElementById('reg-energy');
-    const energyType = energyTypeEl ? energyTypeEl.value : 'ไฟฟ้า';
-
-    const capacityEl = document.getElementById('reg-capacity');
-    const liftingCapacity = (capacityEl && capacityEl.value && capacityEl.value !== 'กรุณาระบุ') 
-      ? capacityEl.value 
-      : '1.5 ตัน';
-
-    const ownerCompanyEl = document.getElementById('reg-owner-company');
-    const ownerCompanyVal = ownerCompanyEl ? ownerCompanyEl.value.trim() : '';
-
-    // Validate rental specific fields
-    let contractExpiryDate = null;
-    if (isSub) {
-      if (!ownerCompanyVal) {
-        showToast('กรุณาระบุชื่อบริษัทที่เช่า (Rental Supplier)', 'error');
-        ownerCompanyEl?.focus();
-        return;
-      }
-      contractExpiryDate = regContractExpiry ? regContractExpiry.value : '';
-      if (!contractExpiryDate) {
-        showToast('กรุณาระบุวันหมดสัญญาเช่าสำหรับรถเช่า', 'error');
-        regContractExpiry?.focus();
-        return;
-      }
-    }
-
-    const ownerCompany = isSub
-      ? ownerCompanyVal
-      : 'Haier Electric (Thailand) Company Limited';
-
-    const subcontractor = isSub
-      ? ownerCompanyVal
-      : 'Haier Owned';
-
-    const inspectDateEl = document.getElementById('reg-inspect-date');
-    const inspectionDate = (inspectDateEl && inspectDateEl.value) 
-      ? inspectDateEl.value 
-      : new Date().toISOString().split('T')[0];
-
-    const statusRadio = document.querySelector('input[name="reg-status"]:checked');
-    const status = statusRadio ? statusRadio.value : 'พร้อมใช้งาน';
-
-    // ดึงข้อมูลผู้ขับขี่จาก "ทะเบียนผู้ขับขี่" ที่เลือกไว้
-    const driverSelectEl = document.getElementById('reg-select-driver');
-    const selectedDriverId = driverSelectEl ? driverSelectEl.value : '';
-    let driverObj = {
-      name: 'ยังไม่ระบุ',
-      empId: '-',
-      company: ownerCompany,
-      department: '-',
-      photo: '',
-      hasTrained: false,
-      certImage: '',
-      certStatus: 'รอดำเนินการ'
-    };
-
-    if (selectedDriverId) {
-      const foundDriver = window.forkliftStore.getDriverById(selectedDriverId);
-      if (foundDriver) {
-        driverObj = {
-          driverId: foundDriver.id,
-          name: foundDriver.name,
-          empId: foundDriver.empId,
-          company: foundDriver.company || ownerCompany,
-          department: foundDriver.department || '-',
-          photo: foundDriver.photo || '',
-          hasTrained: Boolean(foundDriver.hasTrained),
-          certImage: foundDriver.certImage || '',
-          certStatus: foundDriver.certStatus || 'รอดำเนินการ'
-        };
-        // ผูกทะเบียนรถเข้ากับข้อมูลผู้ขับขี่ในทะเบียนผู้ขับ
-        await window.forkliftStore.updateDriverData(foundDriver.id, { assignedPlate: plateNumber });
-      }
-    }
-
-    const notesEl = document.getElementById('reg-notes');
-    const notes = notesEl ? notesEl.value.trim() : '';
-
-    const newForklift = {
-      plateNumber,
-      frameNo,
-      vehicleType,
-      energyType,
-      liftingCapacity,
-      ownerCompany,
-      subcontractor,
-      isSubcontractor: isSub,
-      contractExpiryDate: isSub ? contractExpiryDate : null,
-      registrationDate: new Date().toISOString().split('T')[0],
-      lastInspectionDate: inspectionDate,
-      status,
-      photos: { ...state.regPhotos },
-      checklist: { ...state.regChecklist },
-      driver: driverObj,
-      notes
-    };
-
-    try {
       await window.forkliftStore.addForklift(newForklift);
       showToast(`ขึ้นทะเบียนรถโฟล์คลิฟท์ "${plateNumber}" (${isSub ? 'รถเช่า' : 'รถบริษัท'}) สำเร็จเรียบร้อย!`, 'success');
       
@@ -1975,7 +1982,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (passBtn) passBtn.classList.add('active');
         if (failBtn) failBtn.classList.remove('active');
       });
-
 
       // Switch back to Dashboard to see newly registered forklift
       switchTab('dashboard-tab');

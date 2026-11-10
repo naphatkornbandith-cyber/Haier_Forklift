@@ -580,7 +580,7 @@ class ForkliftDataStore {
     });
   }
 
-  // เซ็ตการรันเลขทะเบียนสำหรับรถเช่า: "SP-{000}" เช่น SP-001, SP-002, ...
+  // เซ็ตการรันเลขทะเบียนสำหรับรถเช่า: "SP-{000}" เช่น SP-001, SP-002, ... (รับประกันไม่ซ้ำกับที่มีอยู่)
   getNextRentalPlateNumber() {
     const all = this.getAll();
     let maxNum = 0;
@@ -596,8 +596,13 @@ class ForkliftDataStore {
         }
       }
     });
-    const nextNum = maxNum + 1;
-    return `SP-${String(nextNum).padStart(3, '0')}`;
+    let nextNum = maxNum + 1;
+    let candidate = `SP-${String(nextNum).padStart(3, '0')}`;
+    while (this.isPlateDuplicate(candidate)) {
+      nextNum++;
+      candidate = `SP-${String(nextNum).padStart(3, '0')}`;
+    }
+    return candidate;
   }
 
   async addForklift(newItem) {
