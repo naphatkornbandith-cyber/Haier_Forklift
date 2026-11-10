@@ -816,12 +816,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
               <i class="fa-regular fa-eye"></i>
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ">
+            ${state.isAdmin ? `
+            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ (Admin เท่านั้น)">
               <i class="fa-solid fa-user-pen"></i>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${driver.name}')" title="ลบผู้ขับขี่">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${driver.name}')" title="ลบผู้ขับขี่ (Admin เท่านั้น)">
               <i class="fa-solid fa-trash"></i>
             </button>
+            ` : `<span style="font-size:0.72rem; color:var(--text-muted); padding:0 0.4rem;"><i class="fa-solid fa-lock"></i> Admin</span>`}
           </div>
         </td>
       `;
@@ -1003,9 +1005,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
                 <i class="fa-regular fa-eye"></i> ดูข้อมูล
               </button>
+              ${state.isAdmin ? `
               <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}', ${hasLpgAlert})">
                 <i class="fa-solid fa-clipboard-check"></i> ${hasLpgAlert ? 'บันทึกตรวจเช็คทันที' : 'อัปเดตข้อมูลรถ/ภาพ'}
               </button>
+              ` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Admin เท่านั้น</span>`}
             </div>
           `;
           vehicleAlertsContainer.appendChild(alertBox);
@@ -1056,9 +1060,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
                 <i class="fa-regular fa-eye"></i> ดูข้อมูล
               </button>
+              ${state.isAdmin ? `
               <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${item.id}')" style="background:#8b5cf6; border-color:#8b5cf6;">
                 <i class="fa-solid fa-id-card"></i> ${isMissingDriver ? 'ระบุผู้ขับขี่' : 'จัดการใบเซอร์คนขับ'}
               </button>
+              ` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Admin เท่านั้น</span>`}
             </div>
           `;
           driverAlertsContainer.appendChild(alertBox);
@@ -1098,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
                   <i class="fa-regular fa-eye"></i> ดูข้อมูล
                 </button>
+                ${state.isAdmin ? `
                 <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')">
                   <i class="fa-solid fa-file-contract"></i> จัดการ/ต่อสัญญา
                 </button>
@@ -1106,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="fa-solid fa-truck-arrow-right"></i> ปรับเป็นหมดสัญญา/ส่งคืน
                   </button>
                 ` : ''}
+                ` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Admin เท่านั้น</span>`}
               </div>
             `;
             rentalAlertsContainer.appendChild(alertBox);
@@ -2165,6 +2173,14 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     openModal(modalViewDriverDetails);
+
+    // Show/hide edit & delete buttons based on admin role
+    if (btnViewDriverEdit) {
+      btnViewDriverEdit.style.display = state.isAdmin ? 'inline-flex' : 'none';
+    }
+    if (btnViewDriverDelete) {
+      btnViewDriverDelete.style.display = state.isAdmin ? 'inline-flex' : 'none';
+    }
   };
 
   if (btnViewDriverEdit) {
@@ -2201,6 +2217,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Delete Driver action
   window.deleteDriverItem = function(driverId, driverName) {
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     if (confirm(`คุณต้องการลบข้อมูลผู้ขับขี่ "${driverName}" ออกจากระบบทะเบียนผู้ขับหรือไม่?`)) {
       try {
         window.forkliftStore.deleteDriver(driverId);
@@ -2218,6 +2238,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open Edit Driver modal directly from Driver Registry table
   window.openEditDriverDirect = function(driverId) {
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const driver = window.forkliftStore.getDriverById(driverId);
     if (!driver) return;
 
@@ -2293,6 +2317,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 2. Edit Driver Modal from Forklift Table (เลือกดึงข้อมูลผู้ขับจากทะเบียนผู้ขับขี่)
   window.openEditDriverModal = function(id) {
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const item = window.forkliftStore.getById(id);
     if (!item) return;
 
@@ -2542,6 +2570,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save Edit Driver Form
   document.getElementById('form-edit-driver').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const id = document.getElementById('edit-driver-id').value;
     const mode = (document.getElementById('edit-driver-mode')?.value || 'forklift');
     const name = document.getElementById('edit-driver-name').value.trim();
@@ -2614,6 +2646,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 3. Update Status & LPG Inspection Modal
   window.openUpdateStatusModal = function(id, isLpgQuickAction = false) {
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const item = window.forkliftStore.getById(id);
     if (!item) return;
 
@@ -2661,6 +2697,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save Status & Inspection Form
   document.getElementById('form-update-status').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const id = document.getElementById('update-status-id').value;
     const status = document.getElementById('update-status-select').value;
     const inspectionDate = document.getElementById('update-inspection-date').value;
@@ -2695,6 +2735,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Quick Action: Set rental forklift to 'หมดสัญญาเช่า / ส่งคืนแล้ว'
   window.setForkliftExpiredStatus = function(id) {
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์แก้ไขข้อมูล — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const item = window.forkliftStore.getById(id);
     if (!item) return;
 
@@ -2745,6 +2789,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Delete Forklift Operations
   // --------------------------------------------------------------------------
   window.deleteForkliftItem = function(id, plateNumber, closeViewModal = false) {
+    if (!state.isAdmin) {
+      showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+      return;
+    }
     const item = window.forkliftStore.getById(id);
     const displayName = (item && item.plateNumber) ? item.plateNumber : (plateNumber || id);
 
@@ -3129,6 +3177,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const displayName = authResult.user?.full_name || authResult.user?.username || 'Admin';
           showToast(`เข้าสู่ระบบสำเร็จ ยินดีต้อนรับคุณ ${displayName}`, 'success');
           renderAdminPanel();
+          renderDashboard();
+          renderDriverTable();
+          if (state.currentTab === 'alerts-tab') renderAlertsCenter();
         } else {
           if (adminLoginError) {
             adminLoginError.style.display = 'block';
@@ -3172,6 +3223,9 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.removeItem('haier_forklift_admin_user');
         showToast('ออกจากระบบ Admin เรียบร้อยแล้ว', 'info');
         renderAdminPanel();
+        renderDashboard();
+        renderDriverTable();
+        if (state.currentTab === 'alerts-tab') renderAlertsCenter();
       }
     });
   }
@@ -3180,6 +3234,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAdminClearData = document.getElementById('btn-admin-clear-data');
   if (btnAdminClearData) {
     btnAdminClearData.addEventListener('click', () => {
+      if (!state.isAdmin) {
+        showToast('คุณไม่มีสิทธิ์ดำเนินการนี้ — เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น', 'error');
+        return;
+      }
       const all = window.forkliftStore.getAll();
       if (all.length === 0) {
         showToast('ขณะนี้ไม่มีข้อมูลรถโฟล์คลิฟท์ในระบบ', 'info');
