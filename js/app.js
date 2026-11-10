@@ -408,27 +408,27 @@ document.addEventListener('DOMContentLoaded', () => {
       { label: 'ส่งซ่อม / ปรับปรุง', value: repairCount, color: statusColors[1] }
     ]);
 
-    // Chart 3: สัดส่วนสัญญาเช่ารถ Forklift (ข้อมูลรถเช่าที่หมดสัญญา)
-    const rentalContractColors = ['#06b6d4', '#fbbf24', '#f87171']; // cyan, yellow, red
+    // Chart 3: สัดส่วนสัญญาเช่ารถ Forklift (มีสัญญาปกติ vs ใกล้หมดสัญญา)
+    const rentalContractColors = ['#06b6d4', '#fbbf24']; // cyan, yellow
+    const totalActiveRental = activeRentalValidCount + warningRentalCount;
     chartRentalContract = drawDonut(
       'chart-rental-contract',
-      ['มีสัญญาใช้งานปกติ', 'ใกล้ครบกำหนด (เตือน 1 ด.)', 'หมดสัญญาเช่าแล้ว'],
-      [activeRentalValidCount, warningRentalCount, expiredRentalCount],
+      ['มีสัญญาใช้งานปกติ', 'ใกล้ครบกำหนด (เตือน 1 ด.)'],
+      [activeRentalValidCount, warningRentalCount],
       rentalContractColors,
       chartRentalContract
     );
     // Update center label
     const rentalExpiredNum = document.getElementById('chart-rental-expired-num');
-    if (rentalExpiredNum) rentalExpiredNum.textContent = expiredRentalCount;
+    if (rentalExpiredNum) rentalExpiredNum.textContent = totalActiveRental;
     const rentalCenterUnit = document.getElementById('chart-rental-center-unit');
     if (rentalCenterUnit) {
-      rentalCenterUnit.textContent = (activeRentalValidCount + warningRentalCount + expiredRentalCount === 0) ? 'ไม่มีรถเช่า' : 'หมดสัญญา';
+      rentalCenterUnit.textContent = (totalActiveRental === 0) ? 'ไม่มีรถเช่า' : 'คัน';
     }
     // Legend
     renderLegend('chart-rental-contract-legend', [
       { label: 'มีสัญญาปกติ',   value: activeRentalValidCount, color: rentalContractColors[0] },
-      { label: 'ใกล้หมดสัญญา',  value: warningRentalCount,     color: rentalContractColors[1] },
-      { label: 'หมดสัญญาแล้ว',  value: expiredRentalCount,     color: rentalContractColors[2] }
+      { label: 'ใกล้หมดสัญญา',  value: warningRentalCount,     color: rentalContractColors[1] }
     ]);
     // ────────────────────────────────────────────────────────────────
 
