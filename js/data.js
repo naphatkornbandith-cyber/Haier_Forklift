@@ -317,18 +317,23 @@ class ForkliftDataStore {
     try {
       localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(drivers));
     } catch (e) {
-      console.error('Failed to save drivers data:', e);
-      // Fallback for QuotaExceededError: only strip excessively huge uncompressed strings (>300KB)
+      console.warn('⚠️ Drivers storage quota warning, optimizing images...', e);
       try {
         const lightweight = drivers.map(d => ({
           ...d,
-          photo: d.photo && d.photo.length > 300000 ? '' : d.photo,
-          certImage: d.certImage && d.certImage.length > 300000 ? '' : d.certImage
+          photo: (d.photo && d.photo.length > 80000) ? '' : d.photo,
+          certImage: (d.certImage && d.certImage.length > 80000) ? '' : d.certImage
         }));
         localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(lightweight));
-        console.warn('⚠️ Saved lightweight driver records due to storage quota');
+        console.warn('✅ Saved optimized driver records');
       } catch (err2) {
-        console.error('Critical: unable to save even lightweight drivers data', err2);
+        try {
+          const minimal = drivers.map(d => ({ ...d, photo: '', certImage: '' }));
+          localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(minimal));
+          console.warn('✅ Saved driver text records without images');
+        } catch (err3) {
+          console.error('Critical: unable to save even minimal driver data', err3);
+        }
       }
     }
   }
@@ -522,20 +527,38 @@ class ForkliftDataStore {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
-      console.error('Failed to save fleet data:', e);
+      console.warn('⚠️ LocalStorage storage quota exceeded, applying progressive image optimization...', e);
       try {
+        // Level 1: Strip heavy images (>80KB base64) across vehicle photos & driver photos
         const lightweight = data.map(item => ({
           ...item,
+          photos: item.photos ? {
+            vehicle: (item.photos.vehicle && item.photos.vehicle.length > 80000) ? '' : (item.photos.vehicle || ''),
+            front: (item.photos.front && item.photos.front.length > 80000) ? '' : (item.photos.front || ''),
+            side: (item.photos.side && item.photos.side.length > 80000) ? '' : (item.photos.side || ''),
+            fullFront: (item.photos.fullFront && item.photos.fullFront.length > 80000) ? '' : (item.photos.fullFront || '')
+          } : item.photos,
           driver: item.driver ? {
             ...item.driver,
-            photo: item.driver.photo && item.driver.photo.length > 300000 ? '' : item.driver.photo,
-            certImage: item.driver.certImage && item.driver.certImage.length > 300000 ? '' : item.driver.certImage
+            photo: (item.driver.photo && item.driver.photo.length > 80000) ? '' : (item.driver.photo || ''),
+            certImage: (item.driver.certImage && item.driver.certImage.length > 80000) ? '' : (item.driver.certImage || '')
           } : item.driver
         }));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
-        console.warn('⚠️ Saved lightweight fleet records due to storage quota');
+        console.warn('✅ Saved fleet records with optimized images due to storage limit');
       } catch (err2) {
-        console.error('Critical: unable to save even lightweight fleet data', err2);
+        console.warn('⚠️ Level 2 fallback: Stripping all images to guarantee all vehicle records are saved', err2);
+        try {
+          const minimal = data.map(item => ({
+            ...item,
+            photos: { vehicle: '', front: '', side: '', fullFront: '' },
+            driver: item.driver ? { ...item.driver, photo: '', certImage: '' } : item.driver
+          }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(minimal));
+          console.warn('✅ Preserved all vehicle records without local images');
+        } catch (err3) {
+          console.error('Critical: unable to save even minimal fleet data', err3);
+        }
       }
     }
   }

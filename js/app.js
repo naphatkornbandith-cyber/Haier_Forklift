@@ -1461,7 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Helper: Compress image before storing to prevent localStorage QuotaExceededError
    */
-  function compressImage(fileOrDataUrl, maxDimension = 800, quality = 0.75) {
+  function compressImage(fileOrDataUrl, maxDimension = 640, quality = 0.65) {
     return new Promise((resolve) => {
       if (!fileOrDataUrl) return resolve('');
 
@@ -1519,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     inputVehiclePhoto.addEventListener('change', async () => {
       const file = inputVehiclePhoto.files[0];
       if (file) {
-        const compressed = await compressImage(file, 900, 0.75);
+        const compressed = await compressImage(file, 640, 0.65);
         setVehiclePhoto(compressed);
       }
     });
@@ -1596,7 +1596,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsDataURL(file);
 
-        const compressed = await compressImage(file, 600, 0.75);
+        const compressed = await compressImage(file, 360, 0.65);
         state.newDriverPhoto = compressed;
         if (previewNewDriverPhoto) {
           previewNewDriverPhoto.src = compressed;
@@ -1665,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newDriverCertStatus) {
           newDriverCertStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ระบบ AI กำลังตรวจสอบความถูกต้องของใบรับรอง...`;
         }
-        const compressed = await compressImage(file, 900, 0.75);
+        const compressed = await compressImage(file, 640, 0.65);
         if (previewNewDriverCert) {
           previewNewDriverCert.src = compressed;
         }
@@ -2517,7 +2517,7 @@ document.addEventListener('DOMContentLoaded', () => {
           };
           reader.readAsDataURL(file);
         }
-        const compressed = await compressImage(file, 600, 0.75);
+        const compressed = await compressImage(file, 360, 0.65);
         state.editDriverPhoto = compressed;
         if (preview) preview.src = compressed;
       }
@@ -2558,7 +2558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsDataURL(file);
       }
-      const compressed = await compressImage(file, 900, 0.75);
+      const compressed = await compressImage(file, 640, 0.65);
       if (preview) {
         preview.src = compressed;
       }
