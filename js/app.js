@@ -618,7 +618,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div>
               <div class="driver-name">${driver.name || 'ยังไม่ระบุ'}</div>
               <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
-              <div style="margin-top:0.2rem;">${certBadge}</div>
+              <div style="margin-top:0.25rem; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                ${certBadge}
+                ${driver.certImage ? `<img src="${driver.certImage}" alt="ใบรับรอง" style="width:28px; height:20px; object-fit:cover; border-radius:3px; border:1px solid rgba(255,255,255,0.3); cursor:pointer;" onclick="event.stopPropagation(); window.viewForkliftDetails('${item.id}')" title="คลิกดูใบรับรองในรายละเอียดรถ">` : ''}
+              </div>
             </div>
           </div>
         </td>
@@ -775,13 +778,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
 
       const photoHtml = driver.photo
-        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan);">`
-        : `<div style="width:44px; height:44px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem;"><i class="fa-solid fa-user-tie"></i></div>`;
+        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูรายละเอียดผู้ขับ">`
+        : `<div style="width:44px; height:44px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem; margin:0 auto; cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ"><i class="fa-solid fa-user-tie"></i></div>`;
 
       const isCert = driver.certStatus === 'ผ่านการรับรอง';
       const certBadge = isCert
         ? `<span class="status-badge badge-ready" title="ผ่านการอบรมความปลอดภัย"><i class="fa-solid fa-certificate"></i> ผ่านการรับรอง</span>`
         : `<span class="status-badge badge-repair" title="รอดำเนินการ / ยังไม่มีใบรับรอง"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ</span>`;
+
+      const certThumb = driver.certImage
+        ? `<div style="display:flex; align-items:center; gap:0.4rem; margin-top:0.35rem;">
+             <img src="${driver.certImage}" alt="ใบรับรอง" style="width:44px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูใบเซอร์ขนาดเต็ม">
+             <span style="font-size:0.75rem; color:var(--haier-cyan); cursor:pointer; text-decoration:underline;" onclick="window.viewDriverDetails('${driver.id}')">ดูใบเซอร์</span>
+           </div>`
+        : `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem;"><i class="fa-solid fa-file-circle-xmark"></i> ยังไม่แนบภาพ</div>`;
 
       const assignedBadge = driver.assignedPlate && driver.assignedPlate.trim() !== ''
         ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${driver.assignedPlate}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate}</span>`
@@ -797,7 +807,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <td><span style="font-size:0.85rem;">${driver.company || '-'}</span></td>
         <td><span style="font-size:0.85rem;">${driver.department || '-'}</span></td>
         <td>${assignedBadge}</td>
-        <td>${certBadge}</td>
+        <td>
+          ${certBadge}
+          ${certThumb}
+        </td>
         <td style="text-align:center;">
           <div style="display:flex; gap:0.35rem; justify-content:center;">
             <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
@@ -1445,6 +1458,9 @@ document.addEventListener('DOMContentLoaded', () => {
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
+          // Fill white background for transparent PNG/SVG images so they don't turn black in jpeg
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
           resolve(canvas.toDataURL('image/jpeg', quality));
         };
@@ -1453,6 +1469,9 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       if (typeof fileOrDataUrl === 'string') {
+        if (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://')) {
+          return resolve(fileOrDataUrl);
+        }
         processImg(fileOrDataUrl);
       } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
         const reader = new FileReader();
@@ -1545,15 +1564,23 @@ document.addEventListener('DOMContentLoaded', () => {
     inputNewDriverPhoto.addEventListener('change', async () => {
       const file = inputNewDriverPhoto.files[0];
       if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (previewNewDriverPhoto) {
+            previewNewDriverPhoto.src = e.target.result;
+            previewNewDriverPhoto.style.display = 'block';
+          }
+          const content = boxNewDriverPhoto.querySelector('.photo-box-content');
+          if (content) content.style.display = 'none';
+          boxNewDriverPhoto.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+
         const compressed = await compressImage(file, 600, 0.75);
         state.newDriverPhoto = compressed;
         if (previewNewDriverPhoto) {
           previewNewDriverPhoto.src = compressed;
-          previewNewDriverPhoto.style.display = 'block';
         }
-        const content = boxNewDriverPhoto.querySelector('.photo-box-content');
-        if (content) content.style.display = 'none';
-        boxNewDriverPhoto.classList.add('has-image');
       }
     });
 
@@ -1606,13 +1633,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const driverName = (document.getElementById('new-driver-name')?.value || '').trim();
 
       if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (previewNewDriverCert) {
+            previewNewDriverCert.src = ev.target.result;
+            previewNewDriverCert.style.display = 'block';
+          }
+        };
+        reader.readAsDataURL(file);
+
         if (newDriverCertStatus) {
           newDriverCertStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ระบบ AI กำลังตรวจสอบความถูกต้องของใบรับรอง...`;
         }
         const compressed = await compressImage(file, 900, 0.75);
         if (previewNewDriverCert) {
           previewNewDriverCert.src = compressed;
-          previewNewDriverCert.style.display = 'block';
         }
         if (window.aiVerifier && typeof window.aiVerifier.verify === 'function') {
           const result = await window.aiVerifier.verify(compressed, { driverName });
@@ -2044,7 +2079,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div style="text-align:center;">
           ${driver.certImage
-            ? `<img src="${driver.certImage}" style="width:100%; max-height:160px; object-fit:contain; border-radius:6px; border:1px solid var(--surface-border);">`
+            ? `<a href="${driver.certImage}" target="_blank" title="คลิกเพื่อดูภาพขยายเต็มจอ">
+                 <img src="${driver.certImage}" style="width:100%; max-height:160px; object-fit:contain; border-radius:6px; border:1px solid var(--surface-border); transition:transform 0.2s ease;">
+               </a>
+               <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;"><i class="fa-solid fa-arrow-up-right-from-square"></i> คลิกดูภาพขยาย</div>`
             : `<div style="height:140px; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.2); border:1px dashed var(--surface-border); border-radius:6px; color:var(--text-muted); font-size:0.82rem;">ไม่มีภาพแนบใบรับรอง (รอดำเนินการ)</div>`
           }
         </div>
@@ -2089,7 +2127,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const certImageHtml = driver.certImage
       ? `<div style="margin-top:0.75rem; text-align:center;">
-           <img src="${driver.certImage}" alt="Certificate" style="max-height:180px; width:auto; border-radius:6px; border:1px solid var(--surface-border); box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+           <a href="${driver.certImage}" target="_blank" title="คลิกเพื่อดูภาพขยายเต็มจอ">
+             <img src="${driver.certImage}" alt="Certificate" style="max-height:220px; max-width:100%; object-fit:contain; border-radius:6px; border:1px solid var(--surface-border); box-shadow:0 4px 10px rgba(0,0,0,0.3); transition:transform 0.2s ease;">
+           </a>
+           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;"><i class="fa-solid fa-arrow-up-right-from-square"></i> คลิกที่รูปเพื่อดูภาพขนาดเต็ม</div>
          </div>`
       : `<div style="margin-top:0.5rem; font-size:0.8rem; color:var(--text-muted); text-align:center;"><i class="fa-solid fa-circle-info"></i> ยังไม่ได้แนบภาพถ่ายใบรับรอง</div>`;
 
@@ -2418,23 +2459,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // Edit Driver: Handle driver photo upload & removal
   const editDriverPhotoUpload = document.getElementById('edit-driver-photo-upload');
   if (editDriverPhotoUpload) {
-    editDriverPhotoUpload.addEventListener('change', () => {
+    editDriverPhotoUpload.addEventListener('change', async () => {
       const file = editDriverPhotoUpload.files[0];
       const preview = document.getElementById('edit-driver-photo-preview');
       const placeholder = document.getElementById('edit-driver-photo-placeholder');
       const btnRemove = document.getElementById('btn-remove-edit-driver-photo');
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          state.editDriverPhoto = e.target.result;
-          if (preview) {
+        if (preview) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
             preview.src = e.target.result;
             preview.style.display = 'block';
-          }
-          if (placeholder) placeholder.style.display = 'none';
-          if (btnRemove) btnRemove.style.display = 'inline-block';
-        };
-        reader.readAsDataURL(file);
+            if (placeholder) placeholder.style.display = 'none';
+            if (btnRemove) btnRemove.style.display = 'inline-block';
+          };
+          reader.readAsDataURL(file);
+        }
+        const compressed = await compressImage(file, 600, 0.75);
+        state.editDriverPhoto = compressed;
+        if (preview) preview.src = compressed;
       }
     });
   }
@@ -2464,29 +2507,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const driverName = document.getElementById('edit-driver-name').value.trim();
 
     if (file) {
-      statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบภาพ...`;
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        preview.src = ev.target.result;
-        preview.style.display = 'block';
-        if (window.aiVerifier && typeof window.aiVerifier.verify === 'function') {
-          const result = await window.aiVerifier.verify(ev.target.result, { driverName });
-          state.editDriverCert.image = ev.target.result;
-          state.editDriverCert.status = result.status;
-          const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
-          statusText.innerHTML = `ผลตรวจ: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
-        } else {
-          state.editDriverCert.image = ev.target.result;
-          state.editDriverCert.status = 'ผ่านการรับรอง';
-          statusText.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-check"></i> แนบภาพใบรับรองเรียบร้อยแล้ว</span>`;
-        }
-      };
-      reader.readAsDataURL(file);
+      if (statusText) statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบภาพ...`;
+      if (preview) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          preview.src = ev.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+      const compressed = await compressImage(file, 900, 0.75);
+      if (preview) {
+        preview.src = compressed;
+      }
+      if (window.aiVerifier && typeof window.aiVerifier.verify === 'function') {
+        const result = await window.aiVerifier.verify(compressed, { driverName });
+        state.editDriverCert.image = compressed;
+        state.editDriverCert.status = result.status;
+        const color = result.status === 'ผ่านการรับรอง' ? '#34d399' : '#f87171';
+        if (statusText) statusText.innerHTML = `ผลตรวจ: <strong style="color:${color};">${result.status}</strong> (${result.confidence}%)<br><span style="font-size:0.75rem; color:var(--text-secondary);">${result.details}</span>`;
+      } else {
+        state.editDriverCert.image = compressed;
+        state.editDriverCert.status = 'ผ่านการรับรอง';
+        if (statusText) statusText.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-check"></i> แนบภาพใบรับรองเรียบร้อยแล้ว</span>`;
+      }
     } else {
       state.editDriverCert.image = '';
       state.editDriverCert.status = 'รอดำเนินการ';
-      preview.style.display = 'none';
-      statusText.textContent = 'สถานะ: รอดำเนินการ (ไม่มีภาพแนบ)';
+      if (preview) preview.style.display = 'none';
+      if (statusText) statusText.textContent = 'สถานะ: รอดำเนินการ (ไม่มีภาพแนบ)';
     }
   });
 
@@ -2994,7 +3043,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div>
               <div class="driver-name">${driver.name || 'ยังไม่ระบุ'}</div>
               <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
-              <div style="margin-top:0.2rem;">${certBadge}</div>
+              <div style="margin-top:0.25rem; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                ${certBadge}
+                ${driver.certImage ? `<img src="${driver.certImage}" alt="ใบรับรอง" style="width:28px; height:20px; object-fit:cover; border-radius:3px; border:1px solid rgba(255,255,255,0.3); cursor:pointer;" onclick="event.stopPropagation(); window.viewForkliftDetails('${item.id}')" title="คลิกดูใบรับรองในรายละเอียดรถ">` : ''}
+              </div>
             </div>
           </div>
         </td>
@@ -3241,13 +3293,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
 
       const photoHtml = driver.photo
-        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan);">`
-        : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem;"><i class="fa-solid fa-user-tie"></i></div>`;
+        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูรายละเอียดผู้ขับ">`
+        : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem; margin:0 auto; cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ"><i class="fa-solid fa-user-tie"></i></div>`;
 
       const isCert = driver.certStatus === 'ผ่านการรับรอง';
       const certBadge = isCert
         ? `<span class="status-badge badge-ready" title="ผ่านการอบรมความปลอดภัย"><i class="fa-solid fa-certificate"></i> ผ่านการรับรอง</span>`
         : `<span class="status-badge badge-repair" title="รอดำเนินการ / ยังไม่มีใบรับรอง"><i class="fa-solid fa-hourglass-half"></i> รอดำเนินการ</span>`;
+
+      const certThumb = driver.certImage
+        ? `<div style="display:flex; align-items:center; gap:0.4rem; margin-top:0.35rem;">
+             <img src="${driver.certImage}" alt="ใบรับรอง" style="width:44px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูใบเซอร์ขนาดเต็ม">
+             <span style="font-size:0.75rem; color:var(--haier-cyan); cursor:pointer; text-decoration:underline;" onclick="window.viewDriverDetails('${driver.id}')">ดูใบเซอร์</span>
+           </div>`
+        : `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem;"><i class="fa-solid fa-file-circle-xmark"></i> ยังไม่แนบภาพ</div>`;
 
       const assignedBadge = driver.assignedPlate && driver.assignedPlate.trim() !== ''
         ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${driver.assignedPlate}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate}</span>`
@@ -3263,7 +3322,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <td><span style="font-size:0.85rem;">${driver.company || '-'}</span></td>
         <td><span style="font-size:0.85rem;">${driver.department || '-'}</span></td>
         <td>${assignedBadge}</td>
-        <td>${certBadge}</td>
+        <td>
+          ${certBadge}
+          ${certThumb}
+        </td>
         <td style="text-align:center;">
           <div class="action-btn-group" style="justify-content:center;">
             <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">

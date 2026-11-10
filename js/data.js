@@ -125,11 +125,28 @@ class ForkliftDataStore {
             console.warn('⚠️ ไม่สามารถอัปโหลดข้อมูลรถขึ้น Supabase ได้:', upErr);
           }
         } else {
-          this.saveAll(remoteData);
+          // Merge remote with local so locally stored photos/certs are preserved and not wiped out by empty cloud fields
+          const mergedForklifts = remoteData.map(remoteFl => {
+            const localMatch = localItems.find(l => l.id === remoteFl.id || l.plateNumber === remoteFl.plateNumber);
+            return {
+              ...remoteFl,
+              photos: {
+                ...(localMatch?.photos || {}),
+                ...(remoteFl.photos || {})
+              },
+              driver: {
+                ...(localMatch?.driver || {}),
+                ...(remoteFl.driver || {}),
+                photo: remoteFl.driver?.photo || localMatch?.driver?.photo || '',
+                certImage: remoteFl.driver?.certImage || localMatch?.driver?.certImage || ''
+              }
+            };
+          });
+          this.saveAll(mergedForklifts);
           window.dispatchEvent(new CustomEvent('forklift-data-synced', {
-            detail: { source: 'supabase', count: remoteData.length }
+            detail: { source: 'supabase', count: mergedForklifts.length }
           }));
-          console.log(`☁️ Supabase Cloud Synced: ${remoteData.length} forklifts loaded.`);
+          console.log(`☁️ Supabase Cloud Synced: ${mergedForklifts.length} forklifts loaded.`);
         }
       }
 
@@ -142,11 +159,26 @@ class ForkliftDataStore {
             console.log(`📤 ตรวจพบข้อมูลผู้ขับในเครื่อง ${localDrivers.length} รายการ กำลังนำขึ้น Supabase...`);
             await window.supabaseService.uploadLocalDrivers(localDrivers);
           } else {
-            this.saveAllDrivers(remoteDrivers);
+            // Merge remote with local so locally stored driver photos/certs are preserved and not wiped out by empty cloud fields
+            const mergedDrivers = remoteDrivers.map(remoteD => {
+              const localMatch = localDrivers.find(l => l.id === remoteD.id || (l.empId && l.empId === remoteD.empId));
+              return {
+                ...remoteD,
+                photo: remoteD.photo || localMatch?.photo || '',
+                certImage: remoteD.certImage || localMatch?.certImage || ''
+              };
+            });
+            // Also retain any local drivers not yet in remote
+            localDrivers.forEach(localD => {
+              if (!mergedDrivers.some(m => m.id === localD.id || (m.empId && m.empId === localD.empId))) {
+                mergedDrivers.push(localD);
+              }
+            });
+            this.saveAllDrivers(mergedDrivers);
             window.dispatchEvent(new CustomEvent('driver-data-synced', {
-              detail: { source: 'supabase', count: remoteDrivers.length }
+              detail: { source: 'supabase', count: mergedDrivers.length }
             }));
-            console.log(`☁️ Supabase Cloud Synced: ${remoteDrivers.length} drivers loaded.`);
+            console.log(`☁️ Supabase Cloud Synced: ${mergedDrivers.length} drivers loaded.`);
           }
         }
       }
@@ -177,12 +209,12 @@ class ForkliftDataStore {
       localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(drivers));
     } catch (e) {
       console.error('Failed to save drivers data:', e);
-      // Fallback for QuotaExceededError: strip large base64 image strings to ensure driver records are preserved
+      // Fallback for QuotaExceededError: only strip excessively huge uncompressed strings (>300KB)
       try {
         const lightweight = drivers.map(d => ({
           ...d,
-          photo: d.photo && d.photo.length > 50000 ? '' : d.photo,
-          certImage: d.certImage && d.certImage.length > 50000 ? '' : d.certImage
+          photo: d.photo && d.photo.length > 300000 ? '' : d.photo,
+          certImage: d.certImage && d.certImage.length > 300000 ? '' : d.certImage
         }));
         localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(lightweight));
         console.warn('⚠️ Saved lightweight driver records due to storage quota');
@@ -363,6 +395,20 @@ class ForkliftDataStore {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.error('Failed to save fleet data:', e);
+      try {
+        const lightweight = data.map(item => ({
+          ...item,
+          driver: item.driver ? {
+            ...item.driver,
+            photo: item.driver.photo && item.driver.photo.length > 300000 ? '' : item.driver.photo,
+            certImage: item.driver.certImage && item.driver.certImage.length > 300000 ? '' : item.driver.certImage
+          } : item.driver
+        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
+        console.warn('⚠️ Saved lightweight fleet records due to storage quota');
+      } catch (err2) {
+        console.error('Critical: unable to save even lightweight fleet data', err2);
+      }
     }
   }
 
