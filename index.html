@@ -84,6 +84,11 @@
           <span>ศูนย์แจ้งเตือน</span>
           <span class="tab-badge badge-alert" id="alert-tab-badge" style="display:none;">0</span>
         </button>
+
+        <button class="tab-btn" data-tab="print-plate-tab" id="nav-btn-print-plate">
+          <i class="fa-solid fa-print"></i>
+          <span>พิมพ์ทะเบียนรถ</span>
+        </button>
       </div>
     </nav>
 
@@ -1381,6 +1386,103 @@
 
       </section>
 
+      <!-- ================================================================== -->
+      <!-- TAB 6: PRINT FORKLIFT PLATE (พิมพ์ทะเบียนรถ A4 Landscape) -->
+      <!-- ================================================================== -->
+      <section id="print-plate-tab" class="tab-content">
+        <!-- Tab Header -->
+        <div class="page-header print-hide">
+          <div class="page-title-group">
+            <h2 class="page-title"><i class="fa-solid fa-print"></i> พิมพ์ป้ายทะเบียนรถ Forklift</h2>
+            <p class="page-subtitle">พิมพ์ป้ายแสดงข้อมูลประจำตัวรถสำหรับติดหน้ารถยก (ขนาดกระดาษ A4 แนวนอน - Landscape)</p>
+          </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="stat-card print-hide" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between;">
+            <div style="flex: 1; min-width: 280px;">
+              <label for="print-select-forklift" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.92rem; color: var(--haier-cyan);">
+                <i class="fa-solid fa-truck-ramp-box"></i> เลือกรถ Forklift ที่ต้องการพิมพ์ป้ายทะเบียน:
+              </label>
+              <select id="print-select-forklift" class="form-control" style="width: 100%; padding: 0.65rem 0.85rem; font-size: 0.95rem; border-radius: 6px; background: var(--surface-bg); color: var(--text-primary); border: 1px solid var(--surface-border);">
+                <option value="">-- กำลังโหลดข้อมูลรถ Forklift... --</option>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" id="btn-sync-print-data" class="btn btn-secondary" title="ดึงข้อมูลล่าสุดจาก Supabase Cloud">
+                <i class="fa-solid fa-arrows-rotate"></i> <span>ซิงค์ข้อมูล Supabase</span>
+              </button>
+              <button type="button" id="btn-print-plate" class="btn btn-primary" style="font-weight: 600; padding: 0.65rem 1.4rem;">
+                <i class="fa-solid fa-print"></i> <span>สั่งพิมพ์ป้าย (A4 Landscape)</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem; color: var(--text-muted);">
+            <div>
+              <i class="fa-solid fa-circle-info" style="color: var(--haier-cyan);"></i> รูปแบบการพิมพ์ถูกจัดให้ตรงตามมาตรฐาน: <strong>A4 แนวนอน (Landscape)</strong> พร้อมตัดส่วนควบคุมออกอัตโนมัติ
+            </div>
+            <div id="print-plate-car-info" style="color: #38bdf8; font-weight: 500;"></div>
+          </div>
+        </div>
+
+        <!-- Printable Canvas Container / Preview Sheet -->
+        <div class="print-sheet-wrapper">
+          <div id="printable-forklift-plate" class="forklift-plate-card">
+            <!-- Header Bar: Dark Blue, Centered White Bold Text -->
+            <div class="plate-header">
+              Haier Forklift
+            </div>
+
+            <!-- Body Frame: Split 2 columns -->
+            <div class="plate-body">
+              <!-- Left Column: Photos -->
+              <div class="plate-col-left">
+                <img id="print-plate-img" class="plate-photo-img" src="" alt="Forklift Photo" style="display: none;">
+                <div id="print-plate-placeholder" class="plate-photo-placeholder">
+                  Photos
+                </div>
+              </div>
+
+              <!-- Right Column: Info -->
+              <div class="plate-col-right">
+                <!-- Top Row: Plate Number -->
+                <div class="plate-row-top">
+                  <div id="print-plate-number" class="plate-number-text">plate_Number</div>
+                </div>
+
+                <!-- Bottom Row: Specs and Shifts -->
+                <div class="plate-row-bottom">
+                  <div class="plate-info-item">
+                    <span class="label">Energy Type :</span>
+                    <span id="print-plate-energy" class="value">energy_type</span>
+                  </div>
+
+                  <div class="plate-info-item">
+                    <span class="label">Lifting Capacity :</span>
+                    <span id="print-plate-capacity" class="value">lifting_capacity</span>
+                  </div>
+
+                  <div class="plate-shift-group">
+                    <div class="plate-shift-title">Work Shift :</div>
+                    <div class="plate-shift-row">
+                      <span class="shift-name">Day</span>
+                      <span class="shift-line"></span>
+                    </div>
+                    <div class="plate-shift-row">
+                      <span class="shift-name">Night</span>
+                      <span class="shift-line"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <!-- App Footer -->
@@ -1412,9 +1514,14 @@
         <!-- Content injected dynamically -->
       </div>
       <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
-        <button type="button" class="btn btn-danger btn-sm" id="btn-view-modal-delete">
-          <i class="fa-solid fa-trash-can"></i> ลบข้อมูลรถคันนี้
-        </button>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-view-modal-print">
+            <i class="fa-solid fa-print"></i> พิมพ์ป้ายทะเบียนรถ
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" id="btn-view-modal-delete">
+            <i class="fa-solid fa-trash-can"></i> ลบข้อมูลรถคันนี้
+          </button>
+        </div>
         <button type="button" class="btn btn-secondary btn-modal-close">ปิดหน้าต่าง</button>
       </div>
     </div>

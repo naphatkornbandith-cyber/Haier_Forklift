@@ -127,7 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
       image: '',
       status: 'รอดำเนินการ'
     },
-    editDriverPhoto: ''
+    editDriverPhoto: '',
+    selectedPlateForkliftId: ''
   };
 
   // DOM Elements
@@ -222,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else if (tabId === 'driver-reg-tab') {
       populateForkliftSelectOptions();
+    } else if (tabId === 'print-plate-tab') {
+      populatePrintForkliftOptions();
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -629,9 +632,14 @@ document.addEventListener('DOMContentLoaded', () => {
           ${statusBadge}
         </td>
         <td style="text-align: center;">
-          <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
-            <i class="fa-regular fa-eye"></i> ดูข้อมูล
-          </button>
+          <div style="display:flex; gap:0.35rem; justify-content:center;">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
+              <i class="fa-regular fa-eye"></i> ดูข้อมูล
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintForkliftPlate('${item.id}')" title="พิมพ์ป้ายทะเบียนรถ (A4 Landscape)">
+              <i class="fa-solid fa-print"></i> พิมพ์ป้าย
+            </button>
+          </div>
         </td>
       `;
 
@@ -3137,6 +3145,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
               <i class="fa-regular fa-eye"></i> ดู
             </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintForkliftPlate('${item.id}')" title="พิมพ์ป้ายทะเบียนรถ (A4 Landscape)">
+              <i class="fa-solid fa-print"></i> ป้าย
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverModal('${item.id}')" title="แก้ไขข้อมูลผู้ขับขี่">
               <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
             </button>
@@ -3444,6 +3455,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAdminPanel();
     populateForkliftSelectOptions();
     populateDriverSelectOptions();
+    populatePrintForkliftOptions();
     if (state.currentTab === 'alerts-tab') {
       renderAlertsCenter();
     }
@@ -3548,11 +3560,181 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 60000);
 
+  // --------------------------------------------------------------------------
+  // Print Forklift Plate (พิมพ์ป้ายทะเบียนรถ A4 Landscape) Controller
+  // --------------------------------------------------------------------------
+  const printSelectForklift = document.getElementById('print-select-forklift');
+  const btnPrintPlate = document.getElementById('btn-print-plate');
+  const btnSyncPrintData = document.getElementById('btn-sync-print-data');
+  const btnViewModalPrint = document.getElementById('btn-view-modal-print');
+
+  const printPlateNumber = document.getElementById('print-plate-number');
+  const printPlateEnergy = document.getElementById('print-plate-energy');
+  const printPlateCapacity = document.getElementById('print-plate-capacity');
+  const printPlateImg = document.getElementById('print-plate-img');
+  const printPlatePlaceholder = document.getElementById('print-plate-placeholder');
+  const printPlateCarInfo = document.getElementById('print-plate-car-info');
+
+  function populatePrintForkliftOptions() {
+    if (!printSelectForklift || !window.forkliftStore || typeof window.forkliftStore.getAll !== 'function') return;
+
+    const forklifts = window.forkliftStore.getAll();
+    const prevSelectedId = state.selectedPlateForkliftId || printSelectForklift.value;
+
+    printSelectForklift.innerHTML = '';
+    if (forklifts.length === 0) {
+      printSelectForklift.innerHTML = '<option value="">-- ยังไม่มีข้อมูลรถ Forklift ในระบบ --</option>';
+      state.selectedPlateForkliftId = '';
+      renderPrintPlateCard(null);
+      return;
+    }
+
+    forklifts.forEach(fl => {
+      const opt = document.createElement('option');
+      opt.value = fl.id;
+      const ownerLabel = fl.isSubcontractor ? `รถเช่า: ${fl.subcontractor || fl.ownerCompany || '-'}` : 'Haier Owned';
+      opt.textContent = `${fl.plateNumber} | ${fl.vehicleType} (${fl.energyType}, ${fl.liftingCapacity || '-'}) - ${ownerLabel}`;
+      printSelectForklift.appendChild(opt);
+    });
+
+    // Check if previously selected exists in current list
+    const hasPrev = forklifts.some(f => f.id === prevSelectedId);
+    if (hasPrev) {
+      state.selectedPlateForkliftId = prevSelectedId;
+      printSelectForklift.value = prevSelectedId;
+    } else {
+      state.selectedPlateForkliftId = forklifts[0].id;
+      printSelectForklift.value = forklifts[0].id;
+    }
+
+    renderPrintPlateCard(state.selectedPlateForkliftId);
+  }
+
+  function renderPrintPlateCard(forkliftId) {
+    if (!printPlateNumber || !printPlateEnergy || !printPlateCapacity) return;
+
+    const targetId = forkliftId || state.selectedPlateForkliftId || (printSelectForklift ? printSelectForklift.value : '');
+    const item = targetId && window.forkliftStore ? window.forkliftStore.getById(targetId) : null;
+
+    if (!item) {
+      printPlateNumber.textContent = 'plate_Number';
+      printPlateEnergy.textContent = 'energy_type';
+      printPlateCapacity.textContent = 'lifting_capacity';
+      if (printPlateImg) {
+        printPlateImg.src = '';
+        printPlateImg.style.display = 'none';
+      }
+      if (printPlatePlaceholder) {
+        printPlatePlaceholder.style.display = 'block';
+        printPlatePlaceholder.textContent = 'Photos';
+      }
+      if (printPlateCarInfo) printPlateCarInfo.textContent = '';
+      return;
+    }
+
+    // Set Plate Number (e.g. SP-001, FL-001)
+    printPlateNumber.textContent = item.plateNumber || 'plate_Number';
+
+    // Set Energy Type (e.g. ไฟฟ้า, LPG, ดีเซล)
+    printPlateEnergy.textContent = item.energyType || '-';
+
+    // Set Lifting Capacity (e.g. 1.5 ตัน, 2.5 ตัน)
+    printPlateCapacity.textContent = item.liftingCapacity || '-';
+
+    // Set Photos (check all photo fields in priority)
+    const photos = item.photos || {};
+    const photoSrc = photos.vehicle || photos.front || photos.side || photos.fullFront || item.photo;
+
+    if (photoSrc && photoSrc.trim() !== '') {
+      if (printPlateImg) {
+        printPlateImg.src = photoSrc;
+        printPlateImg.style.display = 'block';
+      }
+      if (printPlatePlaceholder) printPlatePlaceholder.style.display = 'none';
+    } else {
+      if (printPlateImg) {
+        printPlateImg.src = '';
+        printPlateImg.style.display = 'none';
+      }
+      if (printPlatePlaceholder) {
+        printPlatePlaceholder.style.display = 'block';
+        printPlatePlaceholder.textContent = 'Photos';
+      }
+    }
+
+    if (printPlateCarInfo) {
+      const typeStr = item.vehicleType || 'Forklift';
+      const ownerStr = item.isSubcontractor ? (item.subcontractor || item.ownerCompany) : 'Haier Owned';
+      printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${item.plateNumber}</strong> (${typeStr} | ${ownerStr})`;
+    }
+  }
+
+  // Quick navigation to print plate from anywhere in the app
+  window.openPrintForkliftPlate = function(forkliftId) {
+    state.selectedPlateForkliftId = forkliftId;
+    switchTab('print-plate-tab');
+    if (printSelectForklift) {
+      printSelectForklift.value = forkliftId;
+    }
+    renderPrintPlateCard(forkliftId);
+  };
+
+  // Dropdown selection change
+  if (printSelectForklift) {
+    printSelectForklift.addEventListener('change', (e) => {
+      state.selectedPlateForkliftId = e.target.value;
+      renderPrintPlateCard(e.target.value);
+    });
+  }
+
+  // Print Button Handler (Triggers browser native print dialog with A4 Landscape formatting)
+  if (btnPrintPlate) {
+    btnPrintPlate.addEventListener('click', () => {
+      const currentSelected = state.selectedPlateForkliftId || (printSelectForklift ? printSelectForklift.value : '');
+      if (!currentSelected && (!window.forkliftStore || window.forkliftStore.getAll().length === 0)) {
+        showToast('ยังไม่มีข้อมูลรถ Forklift สำหรับสั่งพิมพ์', 'warn');
+        return;
+      }
+      window.print();
+    });
+  }
+
+  // Sync latest data from Supabase button
+  if (btnSyncPrintData) {
+    btnSyncPrintData.addEventListener('click', async () => {
+      btnSyncPrintData.disabled = true;
+      btnSyncPrintData.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังซิงค์ข้อมูล Supabase...';
+      try {
+        if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
+          await window.forkliftStore.syncFromRemote();
+          showToast('ซิงค์ข้อมูลรถล่าสุดจาก Supabase Cloud เรียบร้อยแล้ว', 'success');
+        }
+        populatePrintForkliftOptions();
+      } catch (err) {
+        showToast(`การซิงค์ข้อมูลผิดพลาด: ${err.message}`, 'error');
+      } finally {
+        btnSyncPrintData.disabled = false;
+        btnSyncPrintData.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> <span>ซิงค์ข้อมูล Supabase</span>';
+      }
+    });
+  }
+
+  // Print button in Vehicle Details Modal
+  if (btnViewModalPrint) {
+    btnViewModalPrint.addEventListener('click', () => {
+      if (state.selectedForklift) {
+        document.querySelectorAll('.modal-backdrop').forEach(closeModal);
+        window.openPrintForkliftPlate(state.selectedForklift.id);
+      }
+    });
+  }
+
   // Initial render from local cache
   renderDashboard();
   renderDriverTable();
   populateDriverSelectOptions();
   populateForkliftSelectOptions();
+  populatePrintForkliftOptions();
 
   // Immediately sync latest data from Supabase Cloud on load
   if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
@@ -3562,6 +3744,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDriverTable();
         populateDriverSelectOptions();
         populateForkliftSelectOptions();
+        populatePrintForkliftOptions();
         if (state.currentTab === 'admin-tab') renderAdminPanel();
       }
     });
