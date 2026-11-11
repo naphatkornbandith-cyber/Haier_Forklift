@@ -1353,17 +1353,26 @@ body {
     margin-bottom: 0.8mm !important;
   }
 
+  .license-sign-container {
+    align-self: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin-top: auto !important;
+  }
+
   .sign-line {
     width: 38mm !important;
     height: 1.5px !important;
     background: #000000 !important;
     margin-left: auto !important;
+    margin-right: auto !important;
     margin-bottom: 0.8mm !important;
   }
 
   .sign-caption {
     font-size: 7.5pt !important;
     color: #000000 !important;
+    text-align: center !important;
   }
 }
 
@@ -1565,8 +1574,9 @@ body {
 }
 
 .license-sign-container {
-  align-self: flex-end;
-  text-align: right;
+  align-self: center;
+  text-align: center;
+  width: 100%;
   margin-top: auto;
   padding-top: 6px;
 }
@@ -1576,6 +1586,7 @@ body {
   height: 2px;
   background-color: #000000;
   margin-left: auto;
+  margin-right: auto;
   margin-bottom: 4px;
 }
 
@@ -1583,6 +1594,6 @@ body {
   font-size: 0.82rem;
   font-weight: 800;
   color: #000000;
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
 }
