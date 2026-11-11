@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
       populateForkliftSelectOptions();
     } else if (tabId === 'print-plate-tab') {
       const dynStyle = document.getElementById('dynamic-print-style');
-      if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 8mm; }';
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 5mm; }';
       populatePrintForkliftOptions();
       // ซิงค์ข้อมูลล่าสุดจาก Supabase Cloud เบื้องหลังอัตโนมัติ
       if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function' && navigator.onLine) {
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else if (tabId === 'print-driver-tab') {
       const dynStyle = document.getElementById('dynamic-print-style');
-      if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 6mm; }';
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 5mm; }';
       populateDriverSlotOptions();
       // ซิงค์ข้อมูลล่าสุดจาก Supabase Cloud เบื้องหลังอัตโนมัติ
       if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function' && navigator.onLine) {
@@ -3717,7 +3717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const dynStyle = document.getElementById('dynamic-print-style');
-      if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 8mm; }';
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 5mm; }';
       window.print();
     });
   }
@@ -3900,7 +3900,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       const dynStyle = document.getElementById('dynamic-print-style');
-      if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 6mm; }';
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 5mm; }';
       window.print();
     });
   }

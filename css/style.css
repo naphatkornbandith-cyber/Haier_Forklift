@@ -1118,6 +1118,7 @@ body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+    box-sizing: border-box !important;
   }
 
   html, body {
@@ -1127,6 +1128,8 @@ body {
     padding: 0 !important;
     width: 100% !important;
     height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
   }
 
   /* Hide app header, tabs, footer, controls, alerts, modals */
@@ -1147,6 +1150,7 @@ body {
     max-width: 100% !important;
     box-shadow: none !important;
     background: transparent !important;
+    overflow: hidden !important;
   }
 
   /* Hide other tabs, keep print tab visible */
@@ -1159,6 +1163,9 @@ body {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .print-sheet-wrapper {
@@ -1171,27 +1178,30 @@ body {
     border: none !important;
     box-shadow: none !important;
     width: 100% !important;
-    height: 100vh !important;
+    overflow: hidden !important;
   }
 
-  /* Exact A4 Landscape fit: 275mm x 188mm */
+  /* Exact A4 Landscape fit: 272mm x 182mm (Safe within 297mm x 210mm A4) */
   .forklift-plate-card {
-    width: 275mm !important;
-    height: 188mm !important;
-    max-width: 275mm !important;
-    max-height: 188mm !important;
+    width: 272mm !important;
+    height: 182mm !important;
+    max-width: 272mm !important;
+    max-height: 182mm !important;
     border: 4px solid #000000 !important;
     box-shadow: none !important;
     margin: 0 auto !important;
+    overflow: hidden !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .plate-header {
     background-color: #0b1a3d !important;
     color: #ffffff !important;
-    font-size: 34pt !important;
-    padding: 10mm 0 !important;
+    font-size: 32pt !important;
+    padding: 8mm 0 !important;
     border-bottom: 4px solid #000000 !important;
   }
 
@@ -1201,7 +1211,7 @@ body {
 
   .plate-col-left {
     border-right: 4px solid #000000 !important;
-    padding: 5mm !important;
+    padding: 4mm !important;
   }
 
   .plate-photo-placeholder {
@@ -1218,27 +1228,27 @@ body {
   }
 
   .plate-number-text {
-    font-size: 44pt !important;
+    font-size: 42pt !important;
     text-align: center !important;
     width: 100% !important;
   }
 
   .plate-row-bottom {
-    padding: 8mm 10mm !important;
+    padding: 6mm 10mm !important;
   }
 
   .plate-info-item {
-    font-size: 19pt !important;
+    font-size: 18pt !important;
   }
 
   .plate-shift-title {
-    font-size: 19pt !important;
-    margin-bottom: 4mm !important;
+    font-size: 18pt !important;
+    margin-bottom: 3.5mm !important;
   }
 
   .plate-shift-row {
-    font-size: 19pt !important;
-    margin-bottom: 5mm !important;
+    font-size: 18pt !important;
+    margin-bottom: 4.5mm !important;
   }
 
   .plate-shift-row .shift-name {
@@ -1251,7 +1261,7 @@ body {
     margin-left: 4mm !important;
   }
 
-  /* Driver License A4 Portrait Print Rules */
+  /* Driver License A4 Portrait Print Rules (Guaranteed Exactly 1 Page: 196mm x 276mm within 210mm x 297mm) */
   .driver-sheet-wrapper {
     display: block !important;
     padding: 0 !important;
@@ -1260,19 +1270,25 @@ body {
     border: none !important;
     box-shadow: none !important;
     width: 100% !important;
+    overflow: hidden !important;
   }
 
   .driver-a4-portrait-sheet {
-    width: 198mm !important;
-    height: 284mm !important;
-    max-width: 198mm !important;
-    max-height: 284mm !important;
+    width: 196mm !important;
+    height: 276mm !important;
+    max-width: 196mm !important;
+    max-height: 276mm !important;
     margin: 0 auto !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
+    overflow: hidden !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   .driver-boxes-grid {
@@ -1283,13 +1299,15 @@ body {
     grid-template-rows: repeat(4, 1fr) !important;
     border: 2px solid #000000 !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .driver-box-slot {
-    height: 71mm !important;
-    min-height: 71mm !important;
-    max-height: 71mm !important;
+    height: 69mm !important;
+    min-height: 69mm !important;
+    max-height: 69mm !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .driver-box-slot:nth-child(odd) {
@@ -1309,6 +1327,7 @@ body {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    overflow: hidden !important;
   }
 
   .license-boxes-empty-title {
@@ -1321,36 +1340,37 @@ body {
   .driver-license-card {
     width: 100% !important;
     height: 100% !important;
+    overflow: hidden !important;
   }
 
   .license-header {
     background-color: #0b1a3d !important;
     color: #ffffff !important;
-    font-size: 11pt !important;
-    padding: 2.2mm 0 !important;
+    font-size: 10pt !important;
+    padding: 1.8mm 0 !important;
     border-bottom: 2px solid #000000 !important;
   }
 
   .license-col-photo {
     width: 40% !important;
     border-right: 2px solid #000000 !important;
-    padding: 2mm !important;
+    padding: 1.5mm !important;
   }
 
   .license-photo-placeholder {
-    font-size: 12pt !important;
+    font-size: 11pt !important;
     color: #000000 !important;
   }
 
   .license-col-info {
     width: 60% !important;
-    padding: 2.5mm 3.5mm !important;
+    padding: 2mm 3mm !important;
   }
 
   .license-info-row {
-    font-size: 8.5pt !important;
-    line-height: 1.35 !important;
-    margin-bottom: 0.8mm !important;
+    font-size: 8pt !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.6mm !important;
   }
 
   .license-sign-container {
@@ -1358,19 +1378,20 @@ body {
     text-align: center !important;
     width: 100% !important;
     margin-top: auto !important;
+    padding-top: 1mm !important;
   }
 
   .sign-line {
-    width: 38mm !important;
-    height: 1.5px !important;
+    width: 36mm !important;
+    height: 1.2px !important;
     background: #000000 !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    margin-bottom: 0.8mm !important;
+    margin-bottom: 0.6mm !important;
   }
 
   .sign-caption {
-    font-size: 7.5pt !important;
+    font-size: 7.2pt !important;
     color: #000000 !important;
     text-align: center !important;
   }
