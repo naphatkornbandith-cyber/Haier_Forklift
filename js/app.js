@@ -128,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
       status: 'รอดำเนินการ'
     },
     editDriverPhoto: '',
-    selectedPlateForkliftId: ''
+    selectedPlateForkliftId: '',
+    driverPrintSlots: Array(8).fill('')
   };
 
   // DOM Elements
@@ -224,10 +225,20 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (tabId === 'driver-reg-tab') {
       populateForkliftSelectOptions();
     } else if (tabId === 'print-plate-tab') {
+      const dynStyle = document.getElementById('dynamic-print-style');
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 8mm; }';
       populatePrintForkliftOptions();
       // ซิงค์ข้อมูลล่าสุดจาก Supabase Cloud เบื้องหลังอัตโนมัติ
       if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function' && navigator.onLine) {
         window.forkliftStore.syncFromRemote().catch(e => console.warn('Print tab auto-sync warning:', e));
+      }
+    } else if (tabId === 'print-driver-tab') {
+      const dynStyle = document.getElementById('dynamic-print-style');
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 6mm; }';
+      populateDriverSlotOptions();
+      // ซิงค์ข้อมูลล่าสุดจาก Supabase Cloud เบื้องหลังอัตโนมัติ
+      if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function' && navigator.onLine) {
+        window.forkliftStore.syncFromRemote().catch(e => console.warn('Driver print auto-sync warning:', e));
       }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -827,6 +838,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="display:flex; gap:0.35rem; justify-content:center;">
             <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
               <i class="fa-regular fa-eye"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintDriverLicense('${driver.id}')" title="พิมพ์บัตรผู้ขับ (A4 Portrait)">
+              <i class="fa-solid fa-id-badge"></i>
             </button>
             ${state.isAdmin ? `
             <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ (Admin เท่านั้น)">
@@ -3435,6 +3449,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
               <i class="fa-regular fa-eye"></i> ดู
             </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintDriverLicense('${driver.id}')" title="พิมพ์บัตรผู้ขับ (A4 Portrait)">
+              <i class="fa-solid fa-id-badge"></i> บัตร
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ">
               <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
             </button>
@@ -3482,6 +3499,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderDriverTable();
     populateDriverSelectOptions();
     populateForkliftSelectOptions();
+    populateDriverSlotOptions();
     if (state.isAdmin) renderAdminPanel();
     const dashDriversCount = document.getElementById('dash-drivers-count');
     if (dashDriversCount && window.forkliftStore.getAllDrivers) {
@@ -3698,6 +3716,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('ยังไม่มีข้อมูลรถ Forklift สำหรับสั่งพิมพ์', 'warn');
         return;
       }
+      const dynStyle = document.getElementById('dynamic-print-style');
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 8mm; }';
       window.print();
     });
   }
@@ -3712,12 +3732,196 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --------------------------------------------------------------------------
+  // Print Driver License (พิมพ์บัตรผู้ขับ A4 Portrait 2x4) Controller
+  // --------------------------------------------------------------------------
+  const driverBoxesGrid = document.getElementById('driver-boxes-grid');
+  const btnPrintDriverLicenses = document.getElementById('btn-print-driver-licenses');
+  const btnAutofillDriverSlots = document.getElementById('btn-autofill-driver-slots');
+  const btnClearDriverSlots = document.getElementById('btn-clear-driver-slots');
+  const badgeDriverSlotsCount = document.getElementById('badge-driver-slots-count');
+  const btnViewDriverPrintLicense = document.getElementById('btn-view-driver-print-license');
+
+  function updateDriverSlotsBadge() {
+    if (!badgeDriverSlotsCount) return;
+    const filledCount = state.driverPrintSlots.filter(id => id && id.trim() !== '').length;
+    badgeDriverSlotsCount.innerHTML = `<i class="fa-solid fa-id-card"></i> เลือกแล้ว ${filledCount} / 8 ช่อง`;
+  }
+
+  function renderDriverLicenseGrid() {
+    if (!driverBoxesGrid || !window.forkliftStore) return;
+
+    const allDrivers = window.forkliftStore.getAllDrivers ? window.forkliftStore.getAllDrivers() : [];
+    driverBoxesGrid.innerHTML = '';
+
+    for (let i = 0; i < 8; i++) {
+      const slotEl = document.createElement('div');
+      slotEl.className = 'driver-box-slot';
+      slotEl.dataset.slotIndex = i;
+
+      const selectedDriverId = state.driverPrintSlots[i] || '';
+      const driver = selectedDriverId ? allDrivers.find(d => d.id === selectedDriverId) : null;
+
+      // Slot Selector Bar (Screen only, hidden on print)
+      const selectBar = document.createElement('div');
+      selectBar.className = 'slot-select-bar print-hide';
+
+      let optionsHtml = '<option value="">-- ว่าง (แสดงตามแบบ Boxes) --</option>';
+      allDrivers.forEach(d => {
+        const isSel = d.id === selectedDriverId ? 'selected' : '';
+        const dept = d.department ? ` (${d.department})` : '';
+        optionsHtml += `<option value="${d.id}" ${isSel}>${d.name} [${d.empId}]${dept}</option>`;
+      });
+
+      selectBar.innerHTML = `
+        <span class="slot-number-badge"><i class="fa-solid fa-thumbtack"></i> ช่องที่ ${i + 1}</span>
+        <select class="slot-driver-select" data-slot-index="${i}">
+          ${optionsHtml}
+        </select>
+      `;
+
+      // Content Wrapper
+      const contentWrapper = document.createElement('div');
+      contentWrapper.className = `slot-content-wrapper ${driver ? 'has-card' : 'empty-slot'}`;
+
+      if (driver) {
+        // Render Image 1: Haier Forklift Operator License
+        const photoHtml = driver.photo
+          ? `<img class="license-photo-img" src="${driver.photo}" alt="${driver.name}">`
+          : `<div class="license-photo-placeholder">photo</div>`;
+
+        contentWrapper.innerHTML = `
+          <div class="driver-license-card">
+            <div class="license-header">
+              Haier Forklift Operator License
+            </div>
+            <div class="license-body">
+              <div class="license-col-photo">
+                ${photoHtml}
+              </div>
+              <div class="license-col-info">
+                <div class="license-info-row">
+                  <span class="l-label">ชื่อ-นามสกุล :</span>
+                  <span class="l-val">${driver.name || '-'}</span>
+                </div>
+                <div class="license-info-row">
+                  <span class="l-label">รหัสพนักงาน :</span>
+                  <span class="l-val">${driver.empId || '-'}</span>
+                </div>
+                <div class="license-info-row">
+                  <span class="l-label">แผนก :</span>
+                  <span class="l-val">${driver.department || '-'}</span>
+                </div>
+                <div class="license-info-row">
+                  <span class="l-label">บริษัท :</span>
+                  <span class="l-val">${driver.company || '-'}</span>
+                </div>
+                <div class="license-sign-container">
+                  <div class="sign-line"></div>
+                  <div class="sign-caption">รับรองจากฝ่าย Triaining</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        // Render Image 2: Empty Box with Centered Text
+        contentWrapper.innerHTML = `
+          <div class="license-boxes-empty-title">
+            Haier Forklift Operator License
+          </div>
+        `;
+      }
+
+      slotEl.appendChild(selectBar);
+      slotEl.appendChild(contentWrapper);
+      driverBoxesGrid.appendChild(slotEl);
+    }
+
+    updateDriverSlotsBadge();
+
+    // Attach change event listeners to all 8 dropdowns
+    const selects = driverBoxesGrid.querySelectorAll('.slot-driver-select');
+    selects.forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const slotIdx = parseInt(e.target.dataset.slotIndex, 10);
+        state.driverPrintSlots[slotIdx] = e.target.value;
+        renderDriverLicenseGrid();
+      });
+    });
+  }
+
+  function populateDriverSlotOptions() {
+    renderDriverLicenseGrid();
+  }
+
+  // Quick navigation to print a driver license
+  window.openPrintDriverLicense = function(driverId) {
+    if (!state.driverPrintSlots) state.driverPrintSlots = Array(8).fill('');
+    // Put driver into Slot 1
+    state.driverPrintSlots[0] = driverId;
+    switchTab('print-driver-tab');
+    renderDriverLicenseGrid();
+  };
+
+  // Auto-fill first 8 drivers
+  if (btnAutofillDriverSlots) {
+    btnAutofillDriverSlots.addEventListener('click', () => {
+      const allDrivers = window.forkliftStore.getAllDrivers ? window.forkliftStore.getAllDrivers() : [];
+      if (allDrivers.length === 0) {
+        showToast('ยังไม่มีข้อมูลผู้ขับขี่ในระบบสำหรับเติมอัตโนมัติ', 'info');
+        return;
+      }
+      for (let i = 0; i < 8; i++) {
+        state.driverPrintSlots[i] = allDrivers[i] ? allDrivers[i].id : '';
+      }
+      renderDriverLicenseGrid();
+      const count = state.driverPrintSlots.filter(Boolean).length;
+      showToast(`เติมข้อมูลผู้ขับขี่ ${count} คนแรกลงใน 8 ช่องเรียบร้อยแล้ว`, 'success');
+    });
+  }
+
+  // Clear all slots
+  if (btnClearDriverSlots) {
+    btnClearDriverSlots.addEventListener('click', () => {
+      state.driverPrintSlots = Array(8).fill('');
+      renderDriverLicenseGrid();
+      showToast('ล้างการเลือกผู้ขับในทุกช่องเรียบร้อยแล้ว', 'info');
+    });
+  }
+
+  // Print button handler (A4 Portrait)
+  if (btnPrintDriverLicenses) {
+    btnPrintDriverLicenses.addEventListener('click', () => {
+      const filled = state.driverPrintSlots.filter(id => id && id.trim() !== '');
+      if (filled.length === 0) {
+        if (!confirm('ยังไม่ได้เลือกผู้ขับขี่ในช่องใดเลย คุณต้องการสั่งพิมพ์เค้าโครงกล่องเปล่า (Haier Forklift Operator License Boxes) หรือไม่?')) {
+          return;
+        }
+      }
+      const dynStyle = document.getElementById('dynamic-print-style');
+      if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 6mm; }';
+      window.print();
+    });
+  }
+
+  // Print button in Driver Details Modal
+  if (btnViewDriverPrintLicense) {
+    btnViewDriverPrintLicense.addEventListener('click', () => {
+      if (selectedDriverIdForView) {
+        closeModal(modalViewDriverDetails);
+        window.openPrintDriverLicense(selectedDriverIdForView);
+      }
+    });
+  }
+
   // Initial render from local cache
   renderDashboard();
   renderDriverTable();
   populateDriverSelectOptions();
   populateForkliftSelectOptions();
   populatePrintForkliftOptions();
+  populateDriverSlotOptions();
 
   // Immediately sync latest data from Supabase Cloud on load
   if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
@@ -3728,6 +3932,7 @@ document.addEventListener('DOMContentLoaded', () => {
         populateDriverSelectOptions();
         populateForkliftSelectOptions();
         populatePrintForkliftOptions();
+        populateDriverSlotOptions();
         if (state.currentTab === 'admin-tab') renderAdminPanel();
       }
     });

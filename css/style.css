@@ -1154,7 +1154,7 @@ body {
     display: none !important;
   }
 
-  #print-plate-tab {
+  .tab-content.active {
     display: block !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -1250,4 +1250,339 @@ body {
     background-color: #000000 !important;
     margin-left: 4mm !important;
   }
+
+  /* Driver License A4 Portrait Print Rules */
+  .driver-sheet-wrapper {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+  }
+
+  .driver-a4-portrait-sheet {
+    width: 198mm !important;
+    height: 284mm !important;
+    max-width: 198mm !important;
+    max-height: 284mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .driver-boxes-grid {
+    width: 100% !important;
+    height: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: repeat(4, 1fr) !important;
+    border: 2px solid #000000 !important;
+    box-sizing: border-box !important;
+  }
+
+  .driver-box-slot {
+    height: 71mm !important;
+    min-height: 71mm !important;
+    max-height: 71mm !important;
+    box-sizing: border-box !important;
+  }
+
+  .driver-box-slot:nth-child(odd) {
+    border-right: 2px solid #000000 !important;
+  }
+
+  .driver-box-slot:not(:nth-child(7)):not(:nth-child(8)) {
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  .slot-select-bar {
+    display: none !important;
+  }
+
+  .slot-content-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .license-boxes-empty-title {
+    font-size: 13pt !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    text-align: center !important;
+  }
+
+  .driver-license-card {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .license-header {
+    background-color: #0b1a3d !important;
+    color: #ffffff !important;
+    font-size: 11pt !important;
+    padding: 2.2mm 0 !important;
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  .license-col-photo {
+    width: 40% !important;
+    border-right: 2px solid #000000 !important;
+    padding: 2mm !important;
+  }
+
+  .license-photo-placeholder {
+    font-size: 12pt !important;
+    color: #000000 !important;
+  }
+
+  .license-col-info {
+    width: 60% !important;
+    padding: 2.5mm 3.5mm !important;
+  }
+
+  .license-info-row {
+    font-size: 8.5pt !important;
+    line-height: 1.35 !important;
+    margin-bottom: 0.8mm !important;
+  }
+
+  .sign-line {
+    width: 38mm !important;
+    height: 1.5px !important;
+    background: #000000 !important;
+    margin-left: auto !important;
+    margin-bottom: 0.8mm !important;
+  }
+
+  .sign-caption {
+    font-size: 7.5pt !important;
+    color: #000000 !important;
+  }
+}
+
+/* ==========================================================================
+   PRINT DRIVER LICENSE TAB & A4 PORTRAIT 2x4 GRID STYLES (SCREEN)
+   ========================================================================== */
+.driver-sheet-wrapper {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px dashed var(--surface-border);
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: auto;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.driver-a4-portrait-sheet {
+  width: 100%;
+  max-width: 820px;
+  min-height: 1140px;
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  padding: 24px;
+  margin: 0 auto;
+  font-family: 'Prompt', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+}
+
+.driver-boxes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, 1fr);
+  border: 3px solid #000000;
+  background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.driver-box-slot {
+  min-height: 265px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #ffffff;
+}
+
+.driver-box-slot:nth-child(odd) {
+  border-right: 3px solid #000000;
+}
+
+.driver-box-slot:not(:nth-child(7)):not(:nth-child(8)) {
+  border-bottom: 3px solid #000000;
+}
+
+/* Slot Control Bar (Screen only, hidden on print) */
+.slot-select-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 6px 10px;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  font-size: 0.78rem;
+  z-index: 2;
+}
+
+.slot-number-badge {
+  font-weight: 700;
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+.slot-driver-select {
+  padding: 3px 6px;
+  font-size: 0.78rem;
+  border-radius: 4px;
+  background: #1e293b;
+  color: #ffffff;
+  border: 1px solid #475569;
+  width: 100%;
+  max-width: 220px;
+}
+
+/* Slot Content Area */
+.slot-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #ffffff;
+}
+
+/* Empty Placeholder (Matching Image 2: Centered Title) */
+.slot-content-wrapper.empty-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: #ffffff;
+}
+
+.license-boxes-empty-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #000000;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Filled Driver License Card (Matching Image 1) */
+.driver-license-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.license-header {
+  background-color: #0b1a3d;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 8px 6px;
+  border-bottom: 3px solid #000000;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.license-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: #ffffff;
+}
+
+.license-col-photo {
+  width: 41%;
+  border-right: 3px solid #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.license-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.license-photo-placeholder {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #000000;
+  text-align: center;
+}
+
+.license-col-info {
+  width: 59%;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 14px 12px 14px;
+  box-sizing: border-box;
+}
+
+.license-info-row {
+  font-size: 0.95rem;
+  color: #000000;
+  line-height: 1.45;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.license-info-row .l-label {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.license-info-row .l-val {
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.license-sign-container {
+  align-self: flex-end;
+  text-align: right;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.sign-line {
+  width: 155px;
+  height: 2px;
+  background-color: #000000;
+  margin-left: auto;
+  margin-bottom: 4px;
+}
+
+.sign-caption {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #000000;
+  text-align: right;
+  white-space: nowrap;
 }
