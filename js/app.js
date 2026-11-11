@@ -225,6 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
       populateForkliftSelectOptions();
     } else if (tabId === 'print-plate-tab') {
       populatePrintForkliftOptions();
+      // ซิงค์ข้อมูลล่าสุดจาก Supabase Cloud เบื้องหลังอัตโนมัติ
+      if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function' && navigator.onLine) {
+        window.forkliftStore.syncFromRemote().catch(e => console.warn('Print tab auto-sync warning:', e));
+      }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -3565,7 +3569,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   const printSelectForklift = document.getElementById('print-select-forklift');
   const btnPrintPlate = document.getElementById('btn-print-plate');
-  const btnSyncPrintData = document.getElementById('btn-sync-print-data');
   const btnViewModalPrint = document.getElementById('btn-view-modal-print');
 
   const printPlateNumber = document.getElementById('print-plate-number');
@@ -3696,26 +3699,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       window.print();
-    });
-  }
-
-  // Sync latest data from Supabase button
-  if (btnSyncPrintData) {
-    btnSyncPrintData.addEventListener('click', async () => {
-      btnSyncPrintData.disabled = true;
-      btnSyncPrintData.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังซิงค์ข้อมูล Supabase...';
-      try {
-        if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function') {
-          await window.forkliftStore.syncFromRemote();
-          showToast('ซิงค์ข้อมูลรถล่าสุดจาก Supabase Cloud เรียบร้อยแล้ว', 'success');
-        }
-        populatePrintForkliftOptions();
-      } catch (err) {
-        showToast(`การซิงค์ข้อมูลผิดพลาด: ${err.message}`, 'error');
-      } finally {
-        btnSyncPrintData.disabled = false;
-        btnSyncPrintData.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> <span>ซิงค์ข้อมูล Supabase</span>';
-      }
     });
   }
 
