@@ -1020,7 +1020,9 @@ body {
   border-bottom: 4px solid #000000;
   display: flex;
   align-items: center;
-  padding: 0 28px;
+  justify-content: center;
+  text-align: center;
+  padding: 0 20px;
   box-sizing: border-box;
   background: #ffffff;
 }
@@ -1032,6 +1034,8 @@ body {
   line-height: 1.1;
   word-break: break-word;
   letter-spacing: -0.5px;
+  text-align: center;
+  width: 100%;
 }
 
 /* Right Column - Bottom Row: Specs and Shifts */
@@ -1207,10 +1211,16 @@ body {
   .plate-row-top {
     border-bottom: 4px solid #000000 !important;
     padding: 0 10mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
 
   .plate-number-text {
     font-size: 44pt !important;
+    text-align: center !important;
+    width: 100% !important;
   }
 
   .plate-row-bottom {
