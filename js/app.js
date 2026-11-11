@@ -4,6 +4,40 @@
  * form submission, photo uploads, AI verification, and modals.
  */
 
+/**
+ * Escape user-provided text before inserting into HTML (ป้องกัน XSS / HTML Injection)
+ * แปลง & < > " ' ` ให้เป็นตัวอักษรธรรมดา เบราว์เซอร์จะไม่ตีความเป็นคำสั่ง HTML
+ */
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;');
+}
+
+/**
+ * Escape a value used as a JS string argument inside an inline HTML attribute,
+ * e.g. onclick="fn('${jsAttr(id)}')" — escapes for JS first, then for HTML.
+ */
+function jsAttr(value) {
+  if (value === null || value === undefined) return '';
+  const jsSafe = String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\r?\n/g, '\\n')
+    .replace(/</g, '\\x3C')
+    .replace(/>/g, '\\x3E');
+  return escapeHtml(jsSafe);
+}
+
+window.escapeHtml = escapeHtml;
+window.jsAttr = jsAttr;
+
 document.addEventListener('DOMContentLoaded', () => {
   // ─────────────────────────────────────────────────────────────
   // Pie/Donut Chart instances (Chart.js) — kept outside state
@@ -602,14 +636,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       tr.innerHTML = `
         <td>
-          <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
-          ${item.frameNo ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Frame: <code>${item.frameNo}</code></div>` : ''}
+          <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(item.plateNumber)}</span>
+          ${item.frameNo ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Frame: <code>${escapeHtml(item.frameNo)}</code></div>` : ''}
           ${incompleteBadge}
         </td>
         <td>
-          <div style="font-weight:600; color:var(--text-primary);">${item.vehicleType}</div>
+          <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(item.vehicleType)}</div>
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-            ${item.liftingCapacity ? `พิกัดยก: ${item.liftingCapacity}` : 'ไม่ระบุน้ำหนัก'}
+            ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}
           </div>
         </td>
         <td>
@@ -617,13 +651,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ${lpgTag}
         </td>
         <td>
-          <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${item.ownerCompany}</div>
+          <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${escapeHtml(item.ownerCompany)}</div>
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            <i class="fa-solid fa-building"></i> ${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')}
+            <i class="fa-solid fa-building"></i> ${escapeHtml(item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned'))}
           </div>
           ${item.isSubcontractor && item.contractExpiryDate ? `
             <div style="font-size:0.72rem; color:#38bdf8; margin-top:2px;">
-              <i class="fa-solid fa-calendar-xmark"></i> หมดสัญญา: ${item.contractExpiryDate}
+              <i class="fa-solid fa-calendar-xmark"></i> หมดสัญญา: ${escapeHtml(item.contractExpiryDate)}
             </div>
           ` : ''}
         </td>
@@ -634,11 +668,11 @@ document.addEventListener('DOMContentLoaded', () => {
               : `<div style="width:38px; height:38px; border-radius:50%; background:rgba(0,160,233,0.15); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1rem; flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`
             }
             <div>
-              <div class="driver-name">${driver.name || 'ยังไม่ระบุ'}</div>
-              <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
+              <div class="driver-name">${escapeHtml(driver.name || 'ยังไม่ระบุ')}</div>
+              <div class="driver-sub">รหัส: ${escapeHtml(driver.empId || '-')} | ${escapeHtml(driver.department || '-')}</div>
               <div style="margin-top:0.25rem; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
                 ${certBadge}
-                ${driver.certImage ? `<img src="${driver.certImage}" alt="ใบรับรอง" style="width:28px; height:20px; object-fit:cover; border-radius:3px; border:1px solid rgba(255,255,255,0.3); cursor:pointer;" onclick="event.stopPropagation(); window.viewForkliftDetails('${item.id}')" title="คลิกดูใบรับรองในรายละเอียดรถ">` : ''}
+                ${driver.certImage ? `<img src="${driver.certImage}" alt="ใบรับรอง" style="width:28px; height:20px; object-fit:cover; border-radius:3px; border:1px solid rgba(255,255,255,0.3); cursor:pointer;" onclick="event.stopPropagation(); window.viewForkliftDetails('${jsAttr(item.id)}')" title="คลิกดูใบรับรองในรายละเอียดรถ">` : ''}
               </div>
             </div>
           </div>
@@ -648,10 +682,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td style="text-align: center;">
           <div style="display:flex; gap:0.35rem; justify-content:center;">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${jsAttr(item.id)}')" title="ดูรายละเอียดฉบับเต็ม">
               <i class="fa-regular fa-eye"></i> ดูข้อมูล
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openPrintForkliftPlate('${item.id}')" title="พิมพ์ป้ายทะเบียนรถ (A4 Landscape)">
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintForkliftPlate('${jsAttr(item.id)}')" title="พิมพ์ป้ายทะเบียนรถ (A4 Landscape)">
               <i class="fa-solid fa-print"></i> พิมพ์ป้าย
             </button>
           </div>
@@ -801,8 +835,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
 
       const photoHtml = driver.photo
-        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูรายละเอียดผู้ขับ">`
-        : `<div style="width:44px; height:44px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem; margin:0 auto; cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ"><i class="fa-solid fa-user-tie"></i></div>`;
+        ? `<img src="${driver.photo}" alt="${escapeHtml(driver.name)}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); cursor:pointer;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="คลิกเพื่อดูรายละเอียดผู้ขับ">`
+        : `<div style="width:44px; height:44px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem; margin:0 auto; cursor:pointer;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="ดูรายละเอียดผู้ขับ"><i class="fa-solid fa-user-tie"></i></div>`;
 
       const isCert = driver.certStatus === 'ผ่านการรับรอง';
       const certBadge = isCert
@@ -811,24 +845,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const certThumb = driver.certImage
         ? `<div style="display:flex; align-items:center; gap:0.4rem; margin-top:0.35rem;">
-             <img src="${driver.certImage}" alt="ใบรับรอง" style="width:44px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูใบเซอร์ขนาดเต็ม">
-             <span style="font-size:0.75rem; color:var(--haier-cyan); cursor:pointer; text-decoration:underline;" onclick="window.viewDriverDetails('${driver.id}')">ดูใบเซอร์</span>
+             <img src="${driver.certImage}" alt="ใบรับรอง" style="width:44px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="คลิกเพื่อดูใบเซอร์ขนาดเต็ม">
+             <span style="font-size:0.75rem; color:var(--haier-cyan); cursor:pointer; text-decoration:underline;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')">ดูใบเซอร์</span>
            </div>`
         : `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem;"><i class="fa-solid fa-file-circle-xmark"></i> ยังไม่แนบภาพ</div>`;
 
       const assignedBadge = driver.assignedPlate && driver.assignedPlate.trim() !== ''
-        ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${driver.assignedPlate}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate}</span>`
+        ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${jsAttr(driver.assignedPlate)}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(driver.assignedPlate)}</span>`
         : `<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-minus"></i> ยังไม่ระบุ</span>`;
 
       tr.innerHTML = `
         <td style="text-align:center;">${photoHtml}</td>
-        <td><span class="plate-tag" style="font-size:0.8rem;">${driver.empId || '-'}</span></td>
+        <td><span class="plate-tag" style="font-size:0.8rem;">${escapeHtml(driver.empId || '-')}</span></td>
         <td>
-          <div style="font-weight:600; color:var(--text-primary); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')">${driver.name}</div>
-          ${driver.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-comment-dots"></i> ${driver.notes}</div>` : ''}
+          <div style="font-weight:600; color:var(--text-primary); cursor:pointer;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')">${escapeHtml(driver.name)}</div>
+          ${driver.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-comment-dots"></i> ${escapeHtml(driver.notes)}</div>` : ''}
         </td>
-        <td><span style="font-size:0.85rem;">${driver.company || '-'}</span></td>
-        <td><span style="font-size:0.85rem;">${driver.department || '-'}</span></td>
+        <td><span style="font-size:0.85rem;">${escapeHtml(driver.company || '-')}</span></td>
+        <td><span style="font-size:0.85rem;">${escapeHtml(driver.department || '-')}</span></td>
         <td>${assignedBadge}</td>
         <td>
           ${certBadge}
@@ -836,17 +870,17 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td style="text-align:center;">
           <div style="display:flex; gap:0.35rem; justify-content:center;">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="ดูรายละเอียดผู้ขับ">
               <i class="fa-regular fa-eye"></i>
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openPrintDriverLicense('${driver.id}')" title="พิมพ์บัตรผู้ขับ (A4 Portrait)">
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintDriverLicense('${jsAttr(driver.id)}')" title="พิมพ์บัตรผู้ขับ (A4 Portrait)">
               <i class="fa-solid fa-id-badge"></i>
             </button>
             ${state.isAdmin ? `
-            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ (Admin เท่านั้น)">
+            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${jsAttr(driver.id)}')" title="แก้ไขข้อมูลผู้ขับ (Admin เท่านั้น)">
               <i class="fa-solid fa-user-pen"></i>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${(driver.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="ลบผู้ขับขี่ (Admin เท่านั้น)">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${jsAttr(driver.id)}', '${jsAttr(driver.name)}')" title="ลบผู้ขับขี่ (Admin เท่านั้น)">
               <i class="fa-solid fa-trash"></i>
             </button>
             ` : `<span style="font-size:0.72rem; color:var(--text-muted); padding:0 0.4rem;"><i class="fa-solid fa-lock"></i> Admin</span>`}
@@ -1005,11 +1039,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
           alertBox.innerHTML = `
             <div class="alert-box-top">
-              <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+              <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(item.plateNumber)}</span>
               ${alertTopBadge}
             </div>
             <div class="alert-desc-text">
-              <strong>${item.vehicleType}</strong> | สังกัด: ${item.ownerCompany} (${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')})
+              <strong>${escapeHtml(item.vehicleType)}</strong> | สังกัด: ${escapeHtml(item.ownerCompany)} (${escapeHtml(item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned'))})
               ${hasLpgAlert ? `
                 <div style="margin-top:0.35rem; color: ${isOverdue ? '#fca5a5' : '#fbbf24'}; font-size:0.82rem;">
                   <i class="fa-solid fa-fire"></i> ${lpgStatus.text}
@@ -1025,14 +1059,14 @@ document.addEventListener('DOMContentLoaded', () => {
               </span>
               ${item.lastInspectionDate ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-calendar-check"></i> ตรวจล่าสุด: ${item.lastInspectionDate}</span>` : ''}
               ${lpgStatus.isLpg ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-calendar-xmark"></i> ครบรอบ 1 ปี: ${lpgStatus.dueDateStr || '-'}</span>` : ''}
-              ${item.frameNo ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-fingerprint"></i> Frame: ${item.frameNo}</span>` : ''}
+              ${item.frameNo ? `<span class="filter-pill" style="font-size:0.72rem;"><i class="fa-solid fa-fingerprint"></i> Frame: ${escapeHtml(item.frameNo)}</span>` : ''}
             </div>
             <div class="alert-action-footer">
-              <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
+              <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${jsAttr(item.id)}')">
                 <i class="fa-regular fa-eye"></i> ดูข้อมูล
               </button>
               ${state.isAdmin ? `
-              <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}', ${hasLpgAlert})">
+              <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${jsAttr(item.id)}', ${hasLpgAlert})">
                 <i class="fa-solid fa-clipboard-check"></i> ${hasLpgAlert ? 'บันทึกตรวจเช็คทันที' : 'อัปเดตข้อมูลรถ/ภาพ'}
               </button>
               ` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Admin เท่านั้น</span>`}
@@ -1070,24 +1104,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
           alertBox.innerHTML = `
             <div class="alert-box-top">
-              <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+              <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(item.plateNumber)}</span>
               ${driverBadge}
             </div>
             <div class="alert-desc-text">
               <div style="font-weight:600; color:var(--text-primary); margin-bottom:0.25rem;">
-                <i class="fa-solid fa-user"></i> ${driver?.name && driver.name !== 'ยังไม่ระบุ' ? driver.name : '<span style="color:#f87171;">ยังไม่มีผู้ขับประจำรถ</span>'}
+                <i class="fa-solid fa-user"></i> ${driver?.name && driver.name !== 'ยังไม่ระบุ' ? escapeHtml(driver.name) : '<span style="color:#f87171;">ยังไม่มีผู้ขับประจำรถ</span>'}
               </div>
               <div style="font-size:0.8rem; color:var(--text-muted);">
-                รหัสพนักงาน: ${driver?.empId || '-'} | แผนก: ${driver?.department || item.ownerCompany || '-'}
+                รหัสพนักงาน: ${escapeHtml(driver?.empId || '-')} | แผนก: ${escapeHtml(driver?.department || item.ownerCompany || '-')}
               </div>
               <div style="margin-top:0.4rem;">${issueBadges}</div>
             </div>
             <div class="alert-action-footer">
-              <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
+              <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${jsAttr(item.id)}')">
                 <i class="fa-regular fa-eye"></i> ดูข้อมูล
               </button>
               ${state.isAdmin ? `
-              <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${item.id}')" style="background:#8b5cf6; border-color:#8b5cf6;">
+              <button class="btn btn-primary btn-sm" onclick="window.openEditDriverModal('${jsAttr(item.id)}')" style="background:#8b5cf6; border-color:#8b5cf6;">
                 <i class="fa-solid fa-id-card"></i> ${isMissingDriver ? 'ระบุผู้ขับขี่' : 'จัดการใบเซอร์คนขับ'}
               </button>
               ` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Admin เท่านั้น</span>`}
@@ -1112,26 +1146,26 @@ document.addEventListener('DOMContentLoaded', () => {
             alertBox.className = `alert-item-box ${isContractExpired ? 'alert-lpg-urgent' : 'alert-lpg-warning'}`;
             alertBox.innerHTML = `
               <div class="alert-box-top">
-                <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
+                <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(item.plateNumber)}</span>
                 <span class="status-badge ${isContractExpired ? 'badge-lpg-overdue' : 'badge-lpg-warn'}">
                   <i class="fa-solid ${isContractExpired ? 'fa-triangle-exclamation' : 'fa-clock'}"></i>
                   ${isContractExpired ? `หมดสัญญาแล้ว (${rentalStatus.overdueDays || 0} วัน)` : `เหลือสัญญาอีก ${rentalStatus.daysRemaining} วัน`}
                 </span>
               </div>
               <div class="alert-desc-text">
-                <strong>${item.vehicleType}</strong> | บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor || 'ผู้ให้บริการภายนอก'}</strong>
+                <strong>${escapeHtml(item.vehicleType)}</strong> | บริษัทผู้ให้เช่า: <strong>${escapeHtml(item.ownerCompany || item.subcontractor || 'ผู้ให้บริการภายนอก')}</strong>
                 <br>
                 <span style="color: ${isContractExpired ? '#fca5a5' : '#38bdf8'}; font-size:0.82rem;">
                   <i class="fa-solid fa-file-contract"></i> ${rentalStatus.text} (วันหมดสัญญา: ${rentalStatus.expiryDateStr || item.contractExpiryDate || '-'})
                 </span>
-                ${item.frameNo ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Frame No.: <code>${item.frameNo}</code></div>` : ''}
+                ${item.frameNo ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Frame No.: <code>${escapeHtml(item.frameNo)}</code></div>` : ''}
               </div>
               <div class="alert-action-footer">
-                <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')">
+                <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${jsAttr(item.id)}')">
                   <i class="fa-regular fa-eye"></i> ดูข้อมูล
                 </button>
                 ${state.isAdmin ? `
-                <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')">
+                <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${jsAttr(item.id)}')">
                   <i class="fa-solid fa-file-contract"></i> จัดการ/ต่อสัญญา
                 </button>
                 ${isContractExpired && item.status !== 'หมดสัญญาเช่า' ? `
@@ -1326,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (duplicateFrameAlert) {
           duplicateFrameAlert.classList.add('show');
           if (duplicateFrameMsg) {
-            duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${val}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
+            duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${escapeHtml(val)}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
           }
         }
       } else {
@@ -1351,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
       regPlateInput.classList.add('is-invalid');
       regPlateInput.classList.remove('is-valid');
       duplicateAlert.classList.add('show');
-      duplicateAlertMsg.innerHTML = `เลขทะเบียน <strong>"${val}"</strong> เคยมีการบันทึกข้อมูลในระบบแล้ว จะไม่สามารถลงทะเบียนซ้ำได้อีก แต่สามารถแก้ไขข้อมูลผู้ขับและสถานะได้ในหน้า Dash Board`;
+      duplicateAlertMsg.innerHTML = `เลขทะเบียน <strong>"${escapeHtml(val)}"</strong> เคยมีการบันทึกข้อมูลในระบบแล้ว จะไม่สามารถลงทะเบียนซ้ำได้อีก แต่สามารถแก้ไขข้อมูลผู้ขับและสถานะได้ในหน้า Dash Board`;
     } else {
       regPlateInput.classList.remove('is-invalid');
       regPlateInput.classList.add('is-valid');
@@ -1840,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (duplicateFrameAlert) {
           duplicateFrameAlert.classList.add('show');
           if (duplicateFrameMsg) {
-            duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${frameNo}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
+            duplicateFrameMsg.innerHTML = `หมายเลขตัวถัง <strong>"${escapeHtml(frameNo)}"</strong> เคยลงทะเบียนแล้วในระบบ จะไม่สามารถลงซ้ำได้`;
           }
         }
         regFrameNoInput?.focus();
@@ -2058,13 +2092,13 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="stat-card" style="margin-bottom:1.5rem;">
         <h4 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--haier-cyan);"><i class="fa-solid fa-circle-info"></i> ข้อมูลจำเพาะของรถ</h4>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; font-size:0.85rem;">
-          <div><span style="color:var(--text-muted);">Frame No.:</span> <strong>${item.frameNo || '-'}</strong></div>
-          <div><span style="color:var(--text-muted);">ประเภทรถ:</span> <strong>${item.vehicleType}</strong></div>
-          <div><span style="color:var(--text-muted);">ระบบพลังงาน:</span> <strong>${item.energyType}</strong></div>
-          <div><span style="color:var(--text-muted);">ความสามารถยก:</span> <strong>${item.liftingCapacity || '-'}</strong></div>
-          <div><span style="color:var(--text-muted);">เจ้าของรถ:</span> <strong>${item.ownerCompany}</strong></div>
-          <div><span style="color:var(--text-muted);">ซัพพลายเออร์:</span> <strong>${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')}</strong></div>
-          ${item.isSubcontractor ? `<div><span style="color:var(--text-muted);">วันหมดสัญญาเช่า:</span> <strong>${item.contractExpiryDate || '-'}</strong></div>` : ''}
+          <div><span style="color:var(--text-muted);">Frame No.:</span> <strong>${escapeHtml(item.frameNo || '-')}</strong></div>
+          <div><span style="color:var(--text-muted);">ประเภทรถ:</span> <strong>${escapeHtml(item.vehicleType)}</strong></div>
+          <div><span style="color:var(--text-muted);">ระบบพลังงาน:</span> <strong>${escapeHtml(item.energyType)}</strong></div>
+          <div><span style="color:var(--text-muted);">ความสามารถยก:</span> <strong>${escapeHtml(item.liftingCapacity || '-')}</strong></div>
+          <div><span style="color:var(--text-muted);">เจ้าของรถ:</span> <strong>${escapeHtml(item.ownerCompany)}</strong></div>
+          <div><span style="color:var(--text-muted);">ซัพพลายเออร์:</span> <strong>${escapeHtml(item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned'))}</strong></div>
+          ${item.isSubcontractor ? `<div><span style="color:var(--text-muted);">วันหมดสัญญาเช่า:</span> <strong>${escapeHtml(item.contractExpiryDate || '-')}</strong></div>` : ''}
           <div><span style="color:var(--text-muted);">วันที่ขึ้นทะเบียน:</span> <strong>${item.registrationDate || '-'}</strong></div>
           <div><span style="color:var(--text-muted);">ตรวจสภาพล่าสุด:</span> <strong>${item.lastInspectionDate || '-'}</strong></div>
         </div>
@@ -2080,7 +2114,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="margin-top:1rem; padding:0.75rem; background:rgba(56, 189, 248, 0.1); border-left:3px solid #38bdf8; border-radius:4px;">
             <strong><i class="fa-solid fa-file-contract"></i> สัญญาเช่ารถ (Rental Contract):</strong>
             <div style="font-size:0.82rem; margin-top:2px;">
-              วันหมดสัญญา: <strong>${item.contractExpiryDate}</strong>
+              วันหมดสัญญา: <strong>${escapeHtml(item.contractExpiryDate)}</strong>
               ${(() => {
                 const cs = window.forkliftStore.getRentalContractStatus(item);
                 if (cs.alertLevel === 'expired') {
@@ -2112,12 +2146,12 @@ document.addEventListener('DOMContentLoaded', () => {
               : `<div style="width:50px; height:50px; border-radius:50%; background:rgba(0,160,233,0.15); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.4rem; flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`
             }
             <div>
-              <div style="font-size:1.05rem; font-weight:700; color:#fff;"><i class="fa-solid fa-id-card"></i> ${driver.name || 'ยังไม่ระบุ'}</div>
-              <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.15rem;">รหัสพนักงาน: <strong>${driver.empId || '-'}</strong></div>
+              <div style="font-size:1.05rem; font-weight:700; color:#fff;"><i class="fa-solid fa-id-card"></i> ${escapeHtml(driver.name || 'ยังไม่ระบุ')}</div>
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.15rem;">รหัสพนักงาน: <strong>${escapeHtml(driver.empId || '-')}</strong></div>
             </div>
           </div>
-          <div style="font-size:0.85rem; color:var(--text-secondary);">สังกัด: <strong>${driver.company || '-'}</strong></div>
-          <div style="font-size:0.85rem; color:var(--text-secondary);">แผนก: <strong>${driver.department || '-'}</strong></div>
+          <div style="font-size:0.85rem; color:var(--text-secondary);">สังกัด: <strong>${escapeHtml(driver.company || '-')}</strong></div>
+          <div style="font-size:0.85rem; color:var(--text-secondary);">แผนก: <strong>${escapeHtml(driver.department || '-')}</strong></div>
           
           <div style="margin-top:0.85rem;">
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.25rem;">สถานะใบรับรองการอบรม:</div>
@@ -2188,24 +2222,24 @@ document.addEventListener('DOMContentLoaded', () => {
       : `<div style="margin-top:0.5rem; font-size:0.8rem; color:var(--text-muted); text-align:center;"><i class="fa-solid fa-circle-info"></i> ยังไม่ได้แนบภาพถ่ายใบรับรอง</div>`;
 
     const assignedPlateHtml = driver.assignedPlate && driver.assignedPlate.trim() !== ''
-      ? `<span class="plate-tag" style="cursor:pointer;" onclick="closeModal(modalViewDriverDetails); window.viewAssignedForklift('${driver.assignedPlate}');"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate} (คลิกเพื่อดูรถ)</span>`
+      ? `<span class="plate-tag" style="cursor:pointer;" onclick="closeModal(modalViewDriverDetails); window.viewAssignedForklift('${jsAttr(driver.assignedPlate)}');"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate} (คลิกเพื่อดูรถ)</span>`
       : `<span style="color:var(--text-muted); font-size:0.85rem;">ยังไม่มอบหมายรถประจำ</span>`;
 
     viewDriverModalBody.innerHTML = `
       <div style="text-align:center; margin-bottom:1.25rem;">
         ${photoHtml}
-        <h3 style="margin-top:0.75rem; font-size:1.2rem; color:var(--text-primary); font-weight:700;">${driver.name}</h3>
-        <div style="display:inline-block; margin-top:0.25rem;"><span class="plate-tag">${driver.empId || '-'}</span></div>
+        <h3 style="margin-top:0.75rem; font-size:1.2rem; color:var(--text-primary); font-weight:700;">${escapeHtml(driver.name)}</h3>
+        <div style="display:inline-block; margin-top:0.25rem;"><span class="plate-tag">${escapeHtml(driver.empId || '-')}</span></div>
       </div>
 
       <div class="stat-card" style="margin-bottom:1rem; padding:1rem;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; font-size:0.88rem;">
-          <div><strong><i class="fa-solid fa-building" style="color:var(--haier-cyan);"></i> สังกัดบริษัท:</strong><br>${driver.company || '-'}</div>
-          <div><strong><i class="fa-solid fa-sitemap" style="color:var(--haier-cyan);"></i> แผนก:</strong><br>${driver.department || '-'}</div>
+          <div><strong><i class="fa-solid fa-building" style="color:var(--haier-cyan);"></i> สังกัดบริษัท:</strong><br>${escapeHtml(driver.company || '-')}</div>
+          <div><strong><i class="fa-solid fa-sitemap" style="color:var(--haier-cyan);"></i> แผนก:</strong><br>${escapeHtml(driver.department || '-')}</div>
           <div><strong><i class="fa-solid fa-truck-ramp-box" style="color:var(--haier-cyan);"></i> รถที่ขับประจำ:</strong><br>${assignedPlateHtml}</div>
           <div><strong><i class="fa-regular fa-calendar-check" style="color:var(--haier-cyan);"></i> วันที่ขึ้นทะเบียน:</strong><br>${driver.registrationDate ? new Date(driver.registrationDate).toLocaleDateString('th-TH') : '-'}</div>
         </div>
-        ${driver.notes ? `<div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.08); font-size:0.85rem; color:var(--text-secondary);"><strong>หมายเหตุ:</strong> ${driver.notes}</div>` : ''}
+        ${driver.notes ? `<div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.08); font-size:0.85rem; color:var(--text-secondary);"><strong>หมายเหตุ:</strong> ${escapeHtml(driver.notes)}</div>` : ''}
       </div>
 
       <div class="stat-card" style="padding:1rem;">
@@ -2732,7 +2766,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const rentalStatus = window.forkliftStore.getRentalContractStatus(item);
       if (rentalSection && rentalText) {
         rentalSection.style.display = 'block';
-        rentalText.innerHTML = `บริษัทผู้ให้เช่า: <strong>${item.ownerCompany || item.subcontractor}</strong> | ${rentalStatus.text}${rentalStatus.alertLevel === 'expired' && item.status !== 'หมดสัญญาเช่า' ? '<br><span style="color:#fca5a5; font-size:0.75rem;"><i class="fa-solid fa-circle-info"></i> สัญญาเช่าสิ้นสุดแล้ว สามารถเปลี่ยนสถานะด้านล่างเป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" เพื่อแยกออกจากยอดรถพร้อมใช้งานในโรงงาน</span>' : ''}`;
+        rentalText.innerHTML = `บริษัทผู้ให้เช่า: <strong>${escapeHtml(item.ownerCompany || item.subcontractor)}</strong> | ${rentalStatus.text}${rentalStatus.alertLevel === 'expired' && item.status !== 'หมดสัญญาเช่า' ? '<br><span style="color:#fca5a5; font-size:0.75rem;"><i class="fa-solid fa-circle-info"></i> สัญญาเช่าสิ้นสุดแล้ว สามารถเปลี่ยนสถานะด้านล่างเป็น "หมดสัญญาเช่า / ส่งคืนแล้ว" เพื่อแยกออกจากยอดรถพร้อมใช้งานในโรงงาน</span>' : ''}`;
       }
     } else {
       if (rentalGroup) rentalGroup.style.display = 'none';
@@ -3114,14 +3148,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       tr.innerHTML = `
         <td>
-          <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${item.plateNumber}</span>
-          ${item.frameNo ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Frame: <code>${item.frameNo}</code></div>` : ''}
+          <span class="plate-tag"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(item.plateNumber)}</span>
+          ${item.frameNo ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Frame: <code>${escapeHtml(item.frameNo)}</code></div>` : ''}
           ${incompleteBadge}
         </td>
         <td>
-          <div style="font-weight:600; color:var(--text-primary);">${item.vehicleType}</div>
+          <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(item.vehicleType)}</div>
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-            ${item.liftingCapacity ? `พิกัดยก: ${item.liftingCapacity}` : 'ไม่ระบุน้ำหนัก'}
+            ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}
           </div>
         </td>
         <td>
@@ -3129,13 +3163,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ${lpgTag}
         </td>
         <td>
-          <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${item.ownerCompany}</div>
+          <div style="font-weight:500; font-size:0.85rem; color:var(--text-primary);">${escapeHtml(item.ownerCompany)}</div>
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            <i class="fa-solid fa-building"></i> ${item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned')}
+            <i class="fa-solid fa-building"></i> ${escapeHtml(item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned'))}
           </div>
           ${item.isSubcontractor && item.contractExpiryDate ? `
             <div style="font-size:0.72rem; color:#38bdf8; margin-top:2px;">
-              <i class="fa-solid fa-calendar-xmark"></i> หมดสัญญา: ${item.contractExpiryDate}
+              <i class="fa-solid fa-calendar-xmark"></i> หมดสัญญา: ${escapeHtml(item.contractExpiryDate)}
             </div>
           ` : ''}
         </td>
@@ -3146,11 +3180,11 @@ document.addEventListener('DOMContentLoaded', () => {
               : `<div style="width:38px; height:38px; border-radius:50%; background:rgba(0,160,233,0.15); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1rem; flex-shrink:0;"><i class="fa-solid fa-user"></i></div>`
             }
             <div>
-              <div class="driver-name">${driver.name || 'ยังไม่ระบุ'}</div>
-              <div class="driver-sub">รหัส: ${driver.empId || '-'} | ${driver.department || '-'}</div>
+              <div class="driver-name">${escapeHtml(driver.name || 'ยังไม่ระบุ')}</div>
+              <div class="driver-sub">รหัส: ${escapeHtml(driver.empId || '-')} | ${escapeHtml(driver.department || '-')}</div>
               <div style="margin-top:0.25rem; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
                 ${certBadge}
-                ${driver.certImage ? `<img src="${driver.certImage}" alt="ใบรับรอง" style="width:28px; height:20px; object-fit:cover; border-radius:3px; border:1px solid rgba(255,255,255,0.3); cursor:pointer;" onclick="event.stopPropagation(); window.viewForkliftDetails('${item.id}')" title="คลิกดูใบรับรองในรายละเอียดรถ">` : ''}
+                ${driver.certImage ? `<img src="${driver.certImage}" alt="ใบรับรอง" style="width:28px; height:20px; object-fit:cover; border-radius:3px; border:1px solid rgba(255,255,255,0.3); cursor:pointer;" onclick="event.stopPropagation(); window.viewForkliftDetails('${jsAttr(item.id)}')" title="คลิกดูใบรับรองในรายละเอียดรถ">` : ''}
               </div>
             </div>
           </div>
@@ -3160,19 +3194,19 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td>
           <div class="action-btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${item.id}')" title="ดูรายละเอียดฉบับเต็ม">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewForkliftDetails('${jsAttr(item.id)}')" title="ดูรายละเอียดฉบับเต็ม">
               <i class="fa-regular fa-eye"></i> ดู
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openPrintForkliftPlate('${item.id}')" title="พิมพ์ป้ายทะเบียนรถ (A4 Landscape)">
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintForkliftPlate('${jsAttr(item.id)}')" title="พิมพ์ป้ายทะเบียนรถ (A4 Landscape)">
               <i class="fa-solid fa-print"></i> ป้าย
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverModal('${item.id}')" title="แก้ไขข้อมูลผู้ขับขี่">
+            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverModal('${jsAttr(item.id)}')" title="แก้ไขข้อมูลผู้ขับขี่">
               <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
             </button>
-            <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${item.id}')" title="แก้ไขสถานะรถและบันทึกการตรวจเช็ค">
+            <button class="btn btn-primary btn-sm" onclick="window.openUpdateStatusModal('${jsAttr(item.id)}')" title="แก้ไขสถานะรถและบันทึกการตรวจเช็ค">
               <i class="fa-solid fa-screwdriver-wrench"></i> สถานะ/ตรวจเช็ค
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${item.id}', '${(item.plateNumber || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="ลบข้อมูลรถคันนี้">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteForkliftItem('${jsAttr(item.id)}', '${jsAttr(item.plateNumber)}')" title="ลบข้อมูลรถคันนี้">
               <i class="fa-solid fa-trash-can"></i> ลบ
             </button>
           </div>
@@ -3243,7 +3277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           if (adminLoginError) {
             adminLoginError.style.display = 'block';
-            adminLoginError.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${authResult?.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง'}`;
+            adminLoginError.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${escapeHtml(authResult?.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง')}`;
           }
           if (adminPasswordInput) {
             adminPasswordInput.select();
@@ -3252,7 +3286,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         if (adminLoginError) {
           adminLoginError.style.display = 'block';
-          adminLoginError.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> การเข้าสู่ระบบผิดพลาด: ${err.message}`;
+          adminLoginError.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> การเข้าสู่ระบบผิดพลาด: ${escapeHtml(err.message)}`;
         }
       } finally {
         if (btnAdminLoginSubmit) {
@@ -3411,8 +3445,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
 
       const photoHtml = driver.photo
-        ? `<img src="${driver.photo}" alt="${driver.name}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูรายละเอียดผู้ขับ">`
-        : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem; margin:0 auto; cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ"><i class="fa-solid fa-user-tie"></i></div>`;
+        ? `<img src="${driver.photo}" alt="${escapeHtml(driver.name)}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--haier-cyan); cursor:pointer;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="คลิกเพื่อดูรายละเอียดผู้ขับ">`
+        : `<div style="width:40px; height:40px; border-radius:50%; background:rgba(0,160,233,0.1); border:1px dashed var(--haier-cyan); display:flex; align-items:center; justify-content:center; color:var(--haier-cyan); font-size:1.1rem; margin:0 auto; cursor:pointer;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="ดูรายละเอียดผู้ขับ"><i class="fa-solid fa-user-tie"></i></div>`;
 
       const isCert = driver.certStatus === 'ผ่านการรับรอง';
       const certBadge = isCert
@@ -3421,24 +3455,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const certThumb = driver.certImage
         ? `<div style="display:flex; align-items:center; gap:0.4rem; margin-top:0.35rem;">
-             <img src="${driver.certImage}" alt="ใบรับรอง" style="width:44px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="window.viewDriverDetails('${driver.id}')" title="คลิกเพื่อดูใบเซอร์ขนาดเต็ม">
-             <span style="font-size:0.75rem; color:var(--haier-cyan); cursor:pointer; text-decoration:underline;" onclick="window.viewDriverDetails('${driver.id}')">ดูใบเซอร์</span>
+             <img src="${driver.certImage}" alt="ใบรับรอง" style="width:44px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.3);" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="คลิกเพื่อดูใบเซอร์ขนาดเต็ม">
+             <span style="font-size:0.75rem; color:var(--haier-cyan); cursor:pointer; text-decoration:underline;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')">ดูใบเซอร์</span>
            </div>`
         : `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem;"><i class="fa-solid fa-file-circle-xmark"></i> ยังไม่แนบภาพ</div>`;
 
       const assignedBadge = driver.assignedPlate && driver.assignedPlate.trim() !== ''
-        ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${driver.assignedPlate}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${driver.assignedPlate}</span>`
+        ? `<span class="plate-tag" style="cursor:pointer;" onclick="window.viewAssignedForklift('${jsAttr(driver.assignedPlate)}')" title="คลิกเพื่อดูข้อมูลรถประจำ"><i class="fa-solid fa-truck-ramp-box"></i> ${escapeHtml(driver.assignedPlate)}</span>`
         : `<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-minus"></i> ยังไม่ระบุ</span>`;
 
       tr.innerHTML = `
         <td style="text-align:center;">${photoHtml}</td>
-        <td><span class="plate-tag" style="font-size:0.8rem;">${driver.empId || '-'}</span></td>
+        <td><span class="plate-tag" style="font-size:0.8rem;">${escapeHtml(driver.empId || '-')}</span></td>
         <td>
-          <div style="font-weight:600; color:var(--text-primary); cursor:pointer;" onclick="window.viewDriverDetails('${driver.id}')">${driver.name}</div>
-          ${driver.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-comment-dots"></i> ${driver.notes}</div>` : ''}
+          <div style="font-weight:600; color:var(--text-primary); cursor:pointer;" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')">${escapeHtml(driver.name)}</div>
+          ${driver.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-regular fa-comment-dots"></i> ${escapeHtml(driver.notes)}</div>` : ''}
         </td>
-        <td><span style="font-size:0.85rem;">${driver.company || '-'}</span></td>
-        <td><span style="font-size:0.85rem;">${driver.department || '-'}</span></td>
+        <td><span style="font-size:0.85rem;">${escapeHtml(driver.company || '-')}</span></td>
+        <td><span style="font-size:0.85rem;">${escapeHtml(driver.department || '-')}</span></td>
         <td>${assignedBadge}</td>
         <td>
           ${certBadge}
@@ -3446,16 +3480,16 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td style="text-align:center;">
           <div class="action-btn-group" style="justify-content:center;">
-            <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${driver.id}')" title="ดูรายละเอียดผู้ขับ">
+            <button class="btn btn-secondary btn-sm" onclick="window.viewDriverDetails('${jsAttr(driver.id)}')" title="ดูรายละเอียดผู้ขับ">
               <i class="fa-regular fa-eye"></i> ดู
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openPrintDriverLicense('${driver.id}')" title="พิมพ์บัตรผู้ขับ (A4 Portrait)">
+            <button class="btn btn-secondary btn-sm" onclick="window.openPrintDriverLicense('${jsAttr(driver.id)}')" title="พิมพ์บัตรผู้ขับ (A4 Portrait)">
               <i class="fa-solid fa-id-badge"></i> บัตร
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${driver.id}')" title="แก้ไขข้อมูลผู้ขับ">
+            <button class="btn btn-secondary btn-sm" onclick="window.openEditDriverDirect('${jsAttr(driver.id)}')" title="แก้ไขข้อมูลผู้ขับ">
               <i class="fa-solid fa-user-pen"></i> แก้ไขผู้ขับ
             </button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${driver.id}', '${(driver.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="ลบข้อมูลผู้ขับ">
+            <button class="btn btn-danger btn-sm" onclick="window.deleteDriverItem('${jsAttr(driver.id)}', '${jsAttr(driver.name)}')" title="ลบข้อมูลผู้ขับ">
               <i class="fa-solid fa-trash-can"></i> ลบ
             </button>
           </div>
@@ -3527,7 +3561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (type === 'error') icon = 'fa-circle-exclamation';
     if (type === 'warn') icon = 'fa-triangle-exclamation';
 
-    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${escapeHtml(message)}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -3686,7 +3720,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (printPlateCarInfo) {
       const typeStr = item.vehicleType || 'Forklift';
       const ownerStr = item.isSubcontractor ? (item.subcontractor || item.ownerCompany) : 'Haier Owned';
-      printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${item.plateNumber}</strong> (${typeStr} | ${ownerStr})`;
+      printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${escapeHtml(item.plateNumber)}</strong> (${escapeHtml(typeStr)} | ${escapeHtml(ownerStr)})`;
     }
   }
 
@@ -3787,7 +3821,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (driver) {
         // Render Image 1: Haier Forklift Operator License
         const photoHtml = driver.photo
-          ? `<img class="license-photo-img" src="${driver.photo}" alt="${driver.name}">`
+          ? `<img class="license-photo-img" src="${driver.photo}" alt="${escapeHtml(driver.name)}">`
           : `<div class="license-photo-placeholder">photo</div>`;
 
         contentWrapper.innerHTML = `
@@ -3802,19 +3836,19 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="license-col-info">
                 <div class="license-info-row">
                   <span class="l-label">ชื่อ-นามสกุล :</span>
-                  <span class="l-val">${driver.name || '-'}</span>
+                  <span class="l-val">${escapeHtml(driver.name || '-')}</span>
                 </div>
                 <div class="license-info-row">
                   <span class="l-label">รหัสพนักงาน :</span>
-                  <span class="l-val">${driver.empId || '-'}</span>
+                  <span class="l-val">${escapeHtml(driver.empId || '-')}</span>
                 </div>
                 <div class="license-info-row">
                   <span class="l-label">แผนก :</span>
-                  <span class="l-val">${driver.department || '-'}</span>
+                  <span class="l-val">${escapeHtml(driver.department || '-')}</span>
                 </div>
                 <div class="license-info-row">
                   <span class="l-label">บริษัท :</span>
-                  <span class="l-val">${driver.company || '-'}</span>
+                  <span class="l-val">${escapeHtml(driver.company || '-')}</span>
                 </div>
                 <div class="license-sign-container">
                   <div class="sign-line"></div>

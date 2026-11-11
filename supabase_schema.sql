@@ -117,7 +117,32 @@ WITH CHECK (true);
 
 ALTER PUBLICATION supabase_realtime ADD TABLE drivers;
 
--- 8. Optional: Storage Bucket for Forklift Photos & Certificates
--- You can create a public bucket named 'forklift-media' in the Supabase Storage dashboard
--- Insert into storage.buckets (id, name, public) VALUES ('forklift-media', 'forklift-media', true) ON CONFLICT DO NOTHING;
+-- ==============================================================================
+-- 8. Supabase Storage Bucket for Forklift Photos & Certificates (ย้ายรูปไป Storage)
+-- สร้าง Public Bucket ชื่อ 'forklift-assets' สำหรับเก็บภาพถ่ายตัวรถ, ภาพคนขับ และใบรับรอง AI
+-- ==============================================================================
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('forklift-assets', 'forklift-assets', true) 
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- นโยบายเปิดให้ทุกคนอ่าน/ดูรูปภาพได้สาธารณะ (Public Read)
+DROP POLICY IF EXISTS "Public Access forklift-assets" ON storage.objects;
+CREATE POLICY "Public Access forklift-assets" ON storage.objects
+FOR SELECT USING (bucket_id = 'forklift-assets');
+
+-- นโยบายอนุญาตให้อัปโหลดภาพขึ้น Storage ได้ (Public Upload)
+DROP POLICY IF EXISTS "Public Upload forklift-assets" ON storage.objects;
+CREATE POLICY "Public Upload forklift-assets" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'forklift-assets');
+
+-- นโยบายอนุญาตให้อัปเดตรูปภาพ (Public Update)
+DROP POLICY IF EXISTS "Public Update forklift-assets" ON storage.objects;
+CREATE POLICY "Public Update forklift-assets" ON storage.objects
+FOR UPDATE USING (bucket_id = 'forklift-assets');
+
+-- นโยบายอนุญาตให้ลบรูปภาพ (Public Delete)
+DROP POLICY IF EXISTS "Public Delete forklift-assets" ON storage.objects;
+CREATE POLICY "Public Delete forklift-assets" ON storage.objects
+FOR DELETE USING (bucket_id = 'forklift-assets');
+
 

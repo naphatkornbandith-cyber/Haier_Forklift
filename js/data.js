@@ -506,6 +506,8 @@ class ForkliftDataStore {
     if (window.supabaseService && window.supabaseService.isConfigured()) {
       try {
         await window.supabaseService.updateDriverRow(id, drivers[idx]);
+        // Re-save to persist Supabase Storage URLs to LocalStorage
+        this.saveAllDrivers(drivers);
       } catch (e) {
         console.warn('Supabase updateDriverRow warning:', e);
       }
@@ -822,6 +824,8 @@ class ForkliftDataStore {
     if (window.supabaseService && window.supabaseService.isConfigured()) {
       try {
         await window.supabaseService.update(id, all[index]);
+        // Re-save to persist Supabase Storage URLs to LocalStorage
+        this.saveAll(all);
       } catch (e) {
         console.warn('Supabase update warning:', e);
       }
@@ -853,6 +857,8 @@ class ForkliftDataStore {
     if (window.supabaseService && window.supabaseService.isConfigured()) {
       try {
         await window.supabaseService.update(id, all[index]);
+        // Re-save to persist Supabase Storage URLs to LocalStorage
+        this.saveAll(all);
       } catch (e) {
         console.warn('Supabase update warning:', e);
       }

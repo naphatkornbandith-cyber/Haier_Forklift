@@ -201,6 +201,129 @@
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Supabase Storage Operations (Images & Certificates)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Upload an image (base64 Data URL or File/Blob) to Supabase Storage bucket.
+     * Gracefully falls back to the original base64 string if offline or if the bucket is not available.
+     * @param {string|Blob|File} fileOrDataUrl
+     * @param {string} filePath - path inside the bucket, e.g. "vehicles/FL-001_12345.jpg"
+     * @param {string} bucket - default 'forklift-assets'
+     * @returns {Promise<string>} Public URL of uploaded image, or fallback base64
+     */
+    async uploadImage(fileOrDataUrl, filePath, bucket = 'forklift-assets') {
+      if (!fileOrDataUrl) return '';
+      // Already an HTTP / HTTPS URL
+      if (typeof fileOrDataUrl === 'string' && (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://'))) {
+        return fileOrDataUrl;
+      }
+      // If client is not ready or offline, safely return original base64
+      if (!this.isConfigured() || !this.client || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        return fileOrDataUrl;
+      }
+
+      try {
+        let blob;
+        let contentType = 'image/jpeg';
+
+        if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+          const parts = fileOrDataUrl.split(',');
+          const mimeMatch = parts[0].match(/:(.*?);/);
+          if (mimeMatch) contentType = mimeMatch[1];
+          const bstr = atob(parts[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          blob = new Blob([u8arr], { type: contentType });
+        } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+          blob = fileOrDataUrl;
+          if (fileOrDataUrl.type) contentType = fileOrDataUrl.type;
+        } else {
+          return fileOrDataUrl;
+        }
+
+        const { data, error } = await this.client.storage
+          .from(bucket)
+          .upload(filePath, blob, {
+            contentType,
+            upsert: true
+          });
+
+        if (error) {
+          console.warn(`⚠️ Supabase Storage upload skipped/failed (${filePath}):`, error.message);
+          return fileOrDataUrl;
+        }
+
+        const { data: publicData } = this.client.storage
+          .from(bucket)
+          .getPublicUrl(filePath);
+
+        if (publicData && publicData.publicUrl) {
+          console.log(`✅ Uploaded image to Supabase Storage (${bucket}):`, publicData.publicUrl);
+          return publicData.publicUrl;
+        }
+
+        return fileOrDataUrl;
+      } catch (err) {
+        console.warn(`⚠️ Supabase Storage upload error (${filePath}):`, err);
+        return fileOrDataUrl;
+      }
+    }
+
+    /**
+     * Auto-upload vehicle photo and assigned driver photos in a forklift item to Supabase Storage
+     */
+    async uploadForkliftAssets(item) {
+      if (!item) return item;
+      const safeId = (item.plateNumber || item.id || 'fl').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const timestamp = Date.now();
+
+      // Vehicle photo
+      if (item.photos && item.photos.vehicle && typeof item.photos.vehicle === 'string' && item.photos.vehicle.startsWith('data:')) {
+        const path = `vehicles/${safeId}_${timestamp}.jpg`;
+        item.photos.vehicle = await this.uploadImage(item.photos.vehicle, path);
+      }
+
+      // Assigned driver photos if nested inside forklift
+      if (item.driver) {
+        const safeDriver = (item.driver.empId || item.driver.driverId || 'drv').replace(/[^a-zA-Z0-9_-]/g, '_');
+        if (item.driver.photo && typeof item.driver.photo === 'string' && item.driver.photo.startsWith('data:')) {
+          const path = `drivers/${safeDriver}_photo_${timestamp}.jpg`;
+          item.driver.photo = await this.uploadImage(item.driver.photo, path);
+        }
+        if (item.driver.certImage && typeof item.driver.certImage === 'string' && item.driver.certImage.startsWith('data:')) {
+          const path = `certs/${safeDriver}_cert_${timestamp}.jpg`;
+          item.driver.certImage = await this.uploadImage(item.driver.certImage, path);
+        }
+      }
+
+      return item;
+    }
+
+    /**
+     * Auto-upload driver profile photo and training certificate to Supabase Storage
+     */
+    async uploadDriverAssets(driver) {
+      if (!driver) return driver;
+      const safeDriver = (driver.empId || driver.id || 'drv').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const timestamp = Date.now();
+
+      if (driver.photo && typeof driver.photo === 'string' && driver.photo.startsWith('data:')) {
+        const path = `drivers/${safeDriver}_photo_${timestamp}.jpg`;
+        driver.photo = await this.uploadImage(driver.photo, path);
+      }
+      if (driver.certImage && typeof driver.certImage === 'string' && driver.certImage.startsWith('data:')) {
+        const path = `certs/${safeDriver}_cert_${timestamp}.jpg`;
+        driver.certImage = await this.uploadImage(driver.certImage, path);
+      }
+
+      return driver;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Supabase CRUD Operations
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -233,6 +356,9 @@
      */
     async insert(item) {
       if (!this.isConfigured() || !this.client) return null;
+
+      // Auto-upload images to Supabase Storage if base64 data URLs
+      await this.uploadForkliftAssets(item);
 
       const row = this.toDbRow(item);
       let { data, error } = await this.client
@@ -272,6 +398,9 @@
      */
     async update(id, updatedItem) {
       if (!this.isConfigured() || !this.client) return null;
+
+      // Auto-upload images to Supabase Storage if base64 data URLs
+      await this.uploadForkliftAssets(updatedItem);
 
       const row = this.toDbRow(updatedItem);
       // Remove id from update payload
@@ -446,6 +575,10 @@
 
     async insertDriver(driver) {
       if (!this.isConfigured() || !this.client) return null;
+
+      // Auto-upload images to Supabase Storage if base64 data URLs
+      await this.uploadDriverAssets(driver);
+
       const row = this.driverToDbRow(driver);
       const { data, error } = await this.client
         .from('drivers')
@@ -464,6 +597,10 @@
 
     async updateDriverRow(id, updatedDriver) {
       if (!this.isConfigured() || !this.client) return null;
+
+      // Auto-upload images to Supabase Storage if base64 data URLs
+      await this.uploadDriverAssets(updatedDriver);
+
       const row = this.driverToDbRow(updatedDriver);
       delete row.id;
       const { data, error } = await this.client
@@ -497,6 +634,9 @@
       if (!this.isConfigured() || !this.client) return;
       if (!localDrivers || localDrivers.length === 0) return;
       try {
+        for (const d of localDrivers) {
+          await this.uploadDriverAssets(d);
+        }
         const rows = localDrivers.map(d => this.driverToDbRow(d));
         await this.client
           .from('drivers')
@@ -583,6 +723,11 @@
 
       if (!localItems || localItems.length === 0) {
         return { count: 0, message: 'ไม่มีข้อมูลในเครื่องที่จะอัปโหลด' };
+      }
+
+      // Auto-upload images in items to Supabase Storage
+      for (const item of localItems) {
+        await this.uploadForkliftAssets(item);
       }
 
       const rows = localItems.map(item => this.toDbRow(item));
