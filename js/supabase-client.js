@@ -448,16 +448,23 @@
       try {
         const { data, error } = await this.client
           .from('forklifts')
-          .select('id, plate_number, department, energy_type, lifting_capacity, photos')
+          .select('id, plate_number, department, energy_type, lifting_capacity, max_lifting_height, photos')
           .eq('id', id)
           .maybeSingle();
 
         if (error) {
-          // If department column doesn't exist yet on remote table
+          // If max_lifting_height or department column doesn't exist yet on remote table (Postgres 42703)
           if (error.code === '42703') {
+            const fallbackCols = ['id', 'plate_number', 'energy_type', 'lifting_capacity', 'photos'];
+            if (!error.message || !error.message.includes('department')) {
+              fallbackCols.push('department');
+            }
+            if (!error.message || !error.message.includes('max_lifting_height')) {
+              fallbackCols.push('max_lifting_height');
+            }
             const fallback = await this.client
               .from('forklifts')
-              .select('id, plate_number, energy_type, lifting_capacity, photos')
+              .select(fallbackCols.join(', '))
               .eq('id', id)
               .maybeSingle();
             return fallback.data || null;

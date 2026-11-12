@@ -1238,17 +1238,17 @@ body {
   }
 
   .plate-info-item {
-    font-size: 18pt !important;
+    font-size: 17pt !important;
   }
 
   .plate-shift-title {
-    font-size: 18pt !important;
+    font-size: 17pt !important;
     margin-bottom: 3.5mm !important;
   }
 
   .plate-shift-row {
-    font-size: 18pt !important;
-    margin-bottom: 4.5mm !important;
+    font-size: 17pt !important;
+    margin-bottom: 4mm !important;
   }
 
   .plate-shift-row .shift-name {

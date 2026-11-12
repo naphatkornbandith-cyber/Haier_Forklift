@@ -3712,6 +3712,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const printPlateDepartment = document.getElementById('print-plate-department');
   const printPlateEnergy = document.getElementById('print-plate-energy');
   const printPlateCapacity = document.getElementById('print-plate-capacity');
+  const printPlateMaxHeight = document.getElementById('print-plate-max-height');
   const printPlateImg = document.getElementById('print-plate-img');
   const printPlatePlaceholder = document.getElementById('print-plate-placeholder');
   const printPlateCarInfo = document.getElementById('print-plate-car-info');
@@ -3763,6 +3764,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (printPlateDepartment) printPlateDepartment.textContent = 'department';
       printPlateEnergy.textContent = 'energy_type';
       printPlateCapacity.textContent = 'lifting_capacity';
+      if (printPlateMaxHeight) printPlateMaxHeight.textContent = 'max_lifting_height';
       if (printPlateImg) {
         printPlateImg.src = '';
         printPlateImg.style.display = 'none';
@@ -3788,6 +3790,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set Lifting Capacity (e.g. 1.5 ตัน, 2.5 ตัน)
     printPlateCapacity.textContent = item.liftingCapacity || '-';
+
+    // Set Max Lifting Height (e.g. 3.0 เมตร, 4.5 เมตร)
+    if (printPlateMaxHeight) {
+      printPlateMaxHeight.textContent = item.maxLiftingHeight || '-';
+    }
 
     // Set Photos (check all photo fields in priority)
     const photos = item.photos || {};
@@ -3839,6 +3846,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (remoteRow.lifting_capacity && remoteRow.lifting_capacity !== item.liftingCapacity) {
           item.liftingCapacity = remoteRow.lifting_capacity;
           if (printPlateCapacity) printPlateCapacity.textContent = item.liftingCapacity;
+          hasChange = true;
+        }
+        if (remoteRow.max_lifting_height && remoteRow.max_lifting_height !== item.maxLiftingHeight) {
+          item.maxLiftingHeight = remoteRow.max_lifting_height;
+          if (printPlateMaxHeight) printPlateMaxHeight.textContent = item.maxLiftingHeight;
           hasChange = true;
         }
 
