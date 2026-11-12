@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS forklifts (
   vehicle_type TEXT,
   energy_type TEXT,
   lifting_capacity TEXT,
+  department TEXT,                         -- แผนกที่ใช้งาน (UT, RM-WH, FG, TF หรืออื่นๆ)
   owner_company TEXT,
   subcontractor TEXT,
   is_subcontractor BOOLEAN DEFAULT false,
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS forklifts (
 -- เพิ่มคอลัมน์ในกรณีตารางเดิมมีอยู่แล้ว (Migration)
 ALTER TABLE forklifts ADD COLUMN IF NOT EXISTS frame_no TEXT;
 ALTER TABLE forklifts ADD COLUMN IF NOT EXISTS contract_expiry_date DATE;
+ALTER TABLE forklifts ADD COLUMN IF NOT EXISTS department TEXT;
 
 -- 2. Create Index on plate_number and status for fast querying
 CREATE INDEX IF NOT EXISTS idx_forklifts_plate ON forklifts(plate_number);

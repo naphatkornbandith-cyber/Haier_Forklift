@@ -514,9 +514,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchPlate = (item.plateNumber || '').toLowerCase().includes(q);
         const matchType = (item.vehicleType || '').toLowerCase().includes(q);
         const matchEnergy = (item.energyType || '').toLowerCase().includes(q);
+        const matchDept = (item.department || '').toLowerCase().includes(q);
         const matchOwner = (item.ownerCompany || '').toLowerCase().includes(q) || (item.subcontractor || '').toLowerCase().includes(q);
         const matchDriver = (item.driver?.name || '').toLowerCase().includes(q);
-        if (!matchPlate && !matchType && !matchEnergy && !matchOwner && !matchDriver) return false;
+        if (!matchPlate && !matchType && !matchEnergy && !matchDept && !matchOwner && !matchDriver) return false;
       }
 
       // Filter pills
@@ -645,6 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
             ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}
           </div>
+          ${item.department ? `<div style="font-size:0.75rem; color:var(--haier-cyan); margin-top:2px;"><i class="fa-solid fa-sitemap"></i> แผนก: <strong>${escapeHtml(item.department)}</strong></div>` : ''}
         </td>
         <td>
           ${energyBadge}
@@ -1343,6 +1345,21 @@ document.addEventListener('DOMContentLoaded', () => {
     btnOwnerRental.addEventListener('click', () => setOwnershipType('rental'));
   }
 
+  // Handle Custom Department toggle for Forklift Registration (ทั้งรถบริษัทและรถเช่า)
+  const regDeptSelect = document.getElementById('reg-department');
+  const regDeptCustom = document.getElementById('reg-department-custom');
+  if (regDeptSelect && regDeptCustom) {
+    regDeptSelect.addEventListener('change', () => {
+      if (regDeptSelect.value === 'custom') {
+        regDeptCustom.style.display = 'block';
+        regDeptCustom.focus();
+      } else {
+        regDeptCustom.style.display = 'none';
+        regDeptCustom.value = '';
+      }
+    });
+  }
+
   // Real-time Frame No. (หมายเลขตัวถัง) validation - ห้ามซ้ำกัน
   if (regFrameNoInput) {
     regFrameNoInput.addEventListener('input', () => {
@@ -1917,6 +1934,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const ownerCompanyEl = document.getElementById('reg-owner-company');
       const ownerCompanyVal = ownerCompanyEl ? ownerCompanyEl.value.trim() : '';
 
+      // Validate department (สำหรับทั้งรถของบริษัทและรถเช่า)
+      const regDeptSelect = document.getElementById('reg-department');
+      const regDeptCustom = document.getElementById('reg-department-custom');
+      let department = (regDeptSelect?.value || '').trim();
+      if (department === 'custom') {
+        department = (regDeptCustom?.value || '').trim();
+      }
+      if (!department || department === '---กรุณาระบุแผนก---') {
+        showToast('กรุณาระบุแผนกที่ใช้งานรถ Forklift', 'error');
+        if (regDeptSelect?.value === 'custom') {
+          regDeptCustom?.focus();
+        } else {
+          regDeptSelect?.focus();
+        }
+        return;
+      }
+
       // Validate rental specific fields
       let contractExpiryDate = null;
       if (isSub) {
@@ -1986,6 +2020,7 @@ document.addEventListener('DOMContentLoaded', () => {
         vehicleType,
         energyType,
         liftingCapacity,
+        department,
         ownerCompany,
         subcontractor,
         isSubcontractor: isSub,
@@ -2009,6 +2044,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Reset Form
       regForm.reset();
+      if (regDeptSelect) regDeptSelect.value = '';
+      if (regDeptCustom) {
+        regDeptCustom.value = '';
+        regDeptCustom.style.display = 'none';
+      }
       regPlateInput.classList.remove('is-valid', 'is-invalid');
       duplicateAlert.classList.remove('show');
       if (regFrameNoInput) {
@@ -2094,6 +2134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; font-size:0.85rem;">
           <div><span style="color:var(--text-muted);">Frame No.:</span> <strong>${escapeHtml(item.frameNo || '-')}</strong></div>
           <div><span style="color:var(--text-muted);">ประเภทรถ:</span> <strong>${escapeHtml(item.vehicleType)}</strong></div>
+          <div><span style="color:var(--text-muted);">แผนกที่ใช้งาน:</span> <strong>${escapeHtml(item.department || '-')}</strong></div>
           <div><span style="color:var(--text-muted);">ระบบพลังงาน:</span> <strong>${escapeHtml(item.energyType)}</strong></div>
           <div><span style="color:var(--text-muted);">ความสามารถยก:</span> <strong>${escapeHtml(item.liftingCapacity || '-')}</strong></div>
           <div><span style="color:var(--text-muted);">เจ้าของรถ:</span> <strong>${escapeHtml(item.ownerCompany)}</strong></div>
@@ -2743,6 +2784,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('update-inspection-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('update-notes').value = item.notes || '';
 
+    const deptSelect = document.getElementById('update-department');
+    if (deptSelect) {
+      deptSelect.value = item.department || '';
+    }
+
     const lpgSection = document.getElementById('update-lpg-alert-section');
     const lpgStatus = window.forkliftStore.getLpgStatus(item);
     if (lpgSection) {
@@ -2790,6 +2836,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const status = document.getElementById('update-status-select').value;
     const inspectionDate = document.getElementById('update-inspection-date').value;
     const notes = document.getElementById('update-notes').value.trim();
+    const updateDeptEl = document.getElementById('update-department');
+    const department = updateDeptEl ? (updateDeptEl.value || undefined) : undefined;
 
     const item = window.forkliftStore.getById(id);
     let contractExpiryDate = undefined;
@@ -2805,7 +2853,8 @@ document.addEventListener('DOMContentLoaded', () => {
         status,
         inspectionDate,
         notes,
-        contractExpiryDate
+        contractExpiryDate,
+        department
       });
 
       showToast(`บันทึกการตรวจเช็คและอัปเดตข้อมูลรถเรียบร้อยแล้ว`, 'success');
@@ -3037,9 +3086,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchPlate = (item.plateNumber || '').toLowerCase().includes(q);
         const matchType = (item.vehicleType || '').toLowerCase().includes(q);
         const matchEnergy = (item.energyType || '').toLowerCase().includes(q);
+        const matchDept = (item.department || '').toLowerCase().includes(q);
         const matchOwner = (item.ownerCompany || '').toLowerCase().includes(q) || (item.subcontractor || '').toLowerCase().includes(q);
         const matchDriver = (item.driver?.name || '').toLowerCase().includes(q);
-        if (!matchPlate && !matchType && !matchEnergy && !matchOwner && !matchDriver) return false;
+        if (!matchPlate && !matchType && !matchEnergy && !matchDept && !matchOwner && !matchDriver) return false;
       }
 
       // Filter pills
@@ -3157,6 +3207,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
             ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}
           </div>
+          ${item.department ? `<div style="font-size:0.75rem; color:var(--haier-cyan); margin-top:2px;"><i class="fa-solid fa-sitemap"></i> แผนก: <strong>${escapeHtml(item.department)}</strong></div>` : ''}
         </td>
         <td>
           ${energyBadge}
@@ -3647,8 +3698,9 @@ document.addEventListener('DOMContentLoaded', () => {
     forklifts.forEach(fl => {
       const opt = document.createElement('option');
       opt.value = fl.id;
+      const deptLabel = fl.department ? ` [${fl.department}]` : '';
       const ownerLabel = fl.isSubcontractor ? `รถเช่า: ${fl.subcontractor || fl.ownerCompany || '-'}` : 'Haier Owned';
-      opt.textContent = `${fl.plateNumber} | ${fl.vehicleType} (${fl.energyType}, ${fl.liftingCapacity || '-'}) - ${ownerLabel}`;
+      opt.textContent = `${fl.plateNumber}${deptLabel} | ${fl.vehicleType} (${fl.energyType}, ${fl.liftingCapacity || '-'}) - ${ownerLabel}`;
       printSelectForklift.appendChild(opt);
     });
 
@@ -3720,7 +3772,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (printPlateCarInfo) {
       const typeStr = item.vehicleType || 'Forklift';
       const ownerStr = item.isSubcontractor ? (item.subcontractor || item.ownerCompany) : 'Haier Owned';
-      printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${escapeHtml(item.plateNumber)}</strong> (${escapeHtml(typeStr)} | ${escapeHtml(ownerStr)})`;
+      const deptStr = item.department ? ` [แผนก: ${item.department}]` : '';
+      printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${escapeHtml(item.plateNumber)}</strong>${escapeHtml(deptStr)} (${escapeHtml(typeStr)} | ${escapeHtml(ownerStr)})`;
     }
   }
 

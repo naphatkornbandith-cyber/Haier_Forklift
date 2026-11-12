@@ -839,7 +839,7 @@ class ForkliftDataStore {
   }
 
   // Condition requirement: แก้ไขสถานะ และ บันทึกการตรวจเช็คล่าสุด ได้จากหน้า Dash Board
-  async updateStatusAndInspection(id, { status, inspectionDate, notes, checklist, contractExpiryDate }) {
+  async updateStatusAndInspection(id, { status, inspectionDate, notes, checklist, contractExpiryDate, department }) {
     const all = this.getAll();
     const index = all.findIndex(item => item.id === id);
     if (index === -1) throw new Error('ไม่พบข้อมูลรถโฟล์คลิฟท์ที่ต้องการแก้ไข');
@@ -848,6 +848,7 @@ class ForkliftDataStore {
     if (inspectionDate) all[index].lastInspectionDate = inspectionDate;
     if (contractExpiryDate !== undefined) all[index].contractExpiryDate = contractExpiryDate;
     if (notes !== undefined) all[index].notes = notes;
+    if (department !== undefined) all[index].department = department;
     if (checklist) all[index].checklist = { ...all[index].checklist, ...checklist };
     
     all[index].updatedAt = new Date().toISOString();

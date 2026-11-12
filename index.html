@@ -782,6 +782,24 @@
                   <span class="form-hint" id="hint-reg-company">ล็อกชื่อบริษัทสำหรับรถของบริษัท</span>
                 </div>
 
+                <!-- แผนกที่ใช้งาน (Department) - สำหรับทั้งรถเช่าและรถของบริษัท -->
+                <div class="form-group" id="reg-department-group">
+                  <label class="form-label" for="reg-department">
+                    แผนกที่ใช้งาน / สังกัด (Department) <span class="required">*</span>
+                  </label>
+                  <select id="reg-department" class="form-control" required>
+                    <option value="" selected>---กรุณาระบุแผนก---</option>
+                    <option value="UT">UT</option>
+                    <option value="RM-WH">RM-WH</option>
+                    <option value="FG">FG</option>
+                    <option value="TF">TF</option>
+                    <option value="custom">อื่นๆ (ระบุเอง)...</option>
+                  </select>
+                  <input type="text" id="reg-department-custom" class="form-control" 
+                         placeholder="ระบุชื่อแผนกที่ใช้งาน..." style="display:none; margin-top:0.4rem;">
+                  <span class="form-hint">ระบุแผนกที่รถ Forklift ประจำการอยู่ (สำหรับทั้งรถเช่าและรถของบริษัท)</span>
+                </div>
+
                 <!-- ประเภทรถ -->
                 <div class="form-group">
                   <label class="form-label" for="reg-type">
@@ -1735,6 +1753,19 @@
             </label>
             <input type="date" id="update-contract-expiry" class="form-control">
             <span class="form-hint">แก้ไขหรือระบุวันสิ้นสุดสัญญาเช่าใหม่เมื่อมีการต่อสัญญารถเช่า</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="update-department">
+              <i class="fa-solid fa-sitemap" style="color:var(--haier-cyan);"></i> แผนกที่ใช้งาน (Department)
+            </label>
+            <select id="update-department" class="form-control">
+              <option value="">-- ไม่ระบุ / คงเดิม --</option>
+              <option value="UT">UT</option>
+              <option value="RM-WH">RM-WH</option>
+              <option value="FG">FG</option>
+              <option value="TF">TF</option>
+            </select>
           </div>
 
           <div class="form-group" style="margin-bottom:1rem;">

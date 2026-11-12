@@ -160,6 +160,7 @@
         vehicle_type: item.vehicleType || '',
         energy_type: item.energyType || '',
         lifting_capacity: item.liftingCapacity || '',
+        department: item.department || '',
         owner_company: item.ownerCompany || '',
         subcontractor: item.subcontractor || '',
         is_subcontractor: Boolean(item.isSubcontractor),
@@ -184,6 +185,7 @@
         vehicleType: row.vehicle_type || '',
         energyType: row.energy_type || '',
         liftingCapacity: row.lifting_capacity || '',
+        department: row.department || '',
         ownerCompany: row.owner_company || '',
         subcontractor: row.subcontractor || '',
         isSubcontractor: Boolean(row.is_subcontractor),
@@ -366,11 +368,12 @@
         .insert([row])
         .select();
 
-      // Fallback: If remote table schema is missing optional columns (e.g. contract_expiry_date or frame_no)
+      // Fallback: If remote table schema is missing optional columns (e.g. department, contract_expiry_date, frame_no)
       if (error && error.code === '42703') {
         console.warn('⚠️ Supabase schema missing optional column, retrying insert with fallback...');
         const fallbackRow = { ...row };
-        delete fallbackRow.contract_expiry_date;
+        if (error.message && error.message.includes('department')) delete fallbackRow.department;
+        if (error.message && error.message.includes('contract_expiry_date')) delete fallbackRow.contract_expiry_date;
         const retry = await this.client.from('forklifts').insert([fallbackRow]).select();
         data = retry.data;
         error = retry.error;
@@ -412,10 +415,11 @@
         .eq('id', id)
         .select();
 
-      // Fallback: If remote table schema is missing optional columns
+      // Fallback: If remote table schema is missing optional columns (e.g. department, contract_expiry_date)
       if (error && error.code === '42703') {
         const fallbackRow = { ...row };
-        delete fallbackRow.contract_expiry_date;
+        if (error.message && error.message.includes('department')) delete fallbackRow.department;
+        if (error.message && error.message.includes('contract_expiry_date')) delete fallbackRow.contract_expiry_date;
         const retry = await this.client.from('forklifts').update(fallbackRow).eq('id', id).select();
         data = retry.data;
         error = retry.error;
@@ -735,12 +739,13 @@
         .from('forklifts')
         .upsert(rows, { onConflict: 'id' });
 
-      // Fallback if contract_expiry_date column does not exist yet in Supabase table
-      if (error && (error.code === '42703' || (error.message && error.message.includes('contract_expiry_date')))) {
-        console.warn('⚠️ Column contract_expiry_date not found during batch upload, retrying without it...');
+      // Fallback if optional columns (department, contract_expiry_date) do not exist yet in Supabase table
+      if (error && error.code === '42703') {
+        console.warn('⚠️ Column missing during batch upload, retrying without it...');
         const fallbackRows = rows.map(r => {
           const copy = { ...r };
-          delete copy.contract_expiry_date;
+          if (error.message && error.message.includes('department')) delete copy.department;
+          if (error.message && error.message.includes('contract_expiry_date')) delete copy.contract_expiry_date;
           return copy;
         });
         const retry = await this.client
