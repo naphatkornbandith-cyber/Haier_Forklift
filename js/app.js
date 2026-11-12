@@ -262,10 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const dynStyle = document.getElementById('dynamic-print-style');
       if (dynStyle) dynStyle.textContent = '@page { size: A4 landscape; margin: 5mm; }';
       populatePrintForkliftOptions();
-      // ซิงค์ข้อมูลล่าสุดจาก Supabase Cloud เบื้องหลังอัตโนมัติ
-      if (window.forkliftStore && typeof window.forkliftStore.syncFromRemote === 'function' && navigator.onLine) {
-        window.forkliftStore.syncFromRemote().catch(e => console.warn('Print tab auto-sync warning:', e));
-      }
     } else if (tabId === 'print-driver-tab') {
       const dynStyle = document.getElementById('dynamic-print-style');
       if (dynStyle) dynStyle.textContent = '@page { size: A4 portrait; margin: 5mm; }';
@@ -3675,6 +3671,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnViewModalPrint = document.getElementById('btn-view-modal-print');
 
   const printPlateNumber = document.getElementById('print-plate-number');
+  const printPlateDepartment = document.getElementById('print-plate-department');
   const printPlateEnergy = document.getElementById('print-plate-energy');
   const printPlateCapacity = document.getElementById('print-plate-capacity');
   const printPlateImg = document.getElementById('print-plate-img');
@@ -3725,6 +3722,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!item) {
       printPlateNumber.textContent = 'plate_Number';
+      if (printPlateDepartment) printPlateDepartment.textContent = 'department';
       printPlateEnergy.textContent = 'energy_type';
       printPlateCapacity.textContent = 'lifting_capacity';
       if (printPlateImg) {
@@ -3741,6 +3739,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set Plate Number (e.g. SP-001, FL-001)
     printPlateNumber.textContent = item.plateNumber || 'plate_Number';
+
+    // Set Department
+    if (printPlateDepartment) {
+      printPlateDepartment.textContent = item.department || '-';
+    }
 
     // Set Energy Type (e.g. ไฟฟ้า, LPG, ดีเซล)
     printPlateEnergy.textContent = item.energyType || '-';
@@ -3774,6 +3777,52 @@ document.addEventListener('DOMContentLoaded', () => {
       const ownerStr = item.isSubcontractor ? (item.subcontractor || item.ownerCompany) : 'Haier Owned';
       const deptStr = item.department ? ` [แผนก: ${item.department}]` : '';
       printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${escapeHtml(item.plateNumber)}</strong>${escapeHtml(deptStr)} (${escapeHtml(typeStr)} | ${escapeHtml(ownerStr)})`;
+    }
+
+    // Egress Optimization: Targeted single-vehicle query (< 0.3 KB payload)
+    // Fetches latest department and specs in the background without downloading entire database
+    if (window.supabaseService && typeof window.supabaseService.fetchForkliftPrintData === 'function' && navigator.onLine) {
+      window.supabaseService.fetchForkliftPrintData(item.id).then(remoteRow => {
+        if (!remoteRow) return;
+        const currentSelected = state.selectedPlateForkliftId || (printSelectForklift ? printSelectForklift.value : '');
+        if (currentSelected !== item.id) return;
+
+        let hasChange = false;
+        if (remoteRow.department !== undefined && remoteRow.department !== item.department) {
+          item.department = remoteRow.department;
+          if (printPlateDepartment) printPlateDepartment.textContent = item.department || '-';
+          hasChange = true;
+        }
+        if (remoteRow.energy_type && remoteRow.energy_type !== item.energyType) {
+          item.energyType = remoteRow.energy_type;
+          if (printPlateEnergy) printPlateEnergy.textContent = item.energyType;
+          hasChange = true;
+        }
+        if (remoteRow.lifting_capacity && remoteRow.lifting_capacity !== item.liftingCapacity) {
+          item.liftingCapacity = remoteRow.lifting_capacity;
+          if (printPlateCapacity) printPlateCapacity.textContent = item.liftingCapacity;
+          hasChange = true;
+        }
+
+        if (hasChange) {
+          if (printPlateCarInfo) {
+            const typeStr = item.vehicleType || 'Forklift';
+            const ownerStr = item.isSubcontractor ? (item.subcontractor || item.ownerCompany) : 'Haier Owned';
+            const deptStr = item.department ? ` [แผนก: ${item.department}]` : '';
+            printPlateCarInfo.innerHTML = `<i class="fa-solid fa-circle-check"></i> พร้อมพิมพ์ป้าย: <strong>${escapeHtml(item.plateNumber)}</strong>${escapeHtml(deptStr)} (${escapeHtml(typeStr)} | ${escapeHtml(ownerStr)})`;
+          }
+          if (window.forkliftStore) {
+            const all = window.forkliftStore.getAll();
+            const idx = all.findIndex(f => f.id === item.id);
+            if (idx !== -1) {
+              all[idx] = { ...all[idx], ...item };
+              window.forkliftStore.saveAll(all);
+            }
+          }
+        }
+      }).catch(err => {
+        console.warn('Silent print data sync error:', err);
+      });
     }
   }
 

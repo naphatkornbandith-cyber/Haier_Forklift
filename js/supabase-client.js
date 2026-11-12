@@ -434,6 +434,42 @@
     }
 
     /**
+     * Minimal targeted fetch for printing a forklift plate (Egress < 0.3 KB)
+     * Fetches only necessary columns for a single vehicle, bypassing heavy JSON checklist / driver trees
+     */
+    async fetchForkliftPrintData(id) {
+      if (!this.isConfigured() || !this.client || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        return null;
+      }
+      try {
+        const { data, error } = await this.client
+          .from('forklifts')
+          .select('id, plate_number, department, energy_type, lifting_capacity, photos')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (error) {
+          // If department column doesn't exist yet on remote table
+          if (error.code === '42703') {
+            const fallback = await this.client
+              .from('forklifts')
+              .select('id, plate_number, energy_type, lifting_capacity, photos')
+              .eq('id', id)
+              .maybeSingle();
+            return fallback.data || null;
+          }
+          console.warn('fetchForkliftPrintData error:', error.message);
+          return null;
+        }
+
+        return data;
+      } catch (err) {
+        console.warn('fetchForkliftPrintData exception:', err);
+        return null;
+      }
+    }
+
+    /**
      * Delete a forklift from Supabase
      */
     async delete(id) {
