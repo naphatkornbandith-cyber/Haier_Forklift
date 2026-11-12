@@ -160,6 +160,7 @@
         vehicle_type: item.vehicleType || '',
         energy_type: item.energyType || '',
         lifting_capacity: item.liftingCapacity || '',
+        max_lifting_height: item.maxLiftingHeight || '',
         department: item.department || '',
         owner_company: item.ownerCompany || '',
         subcontractor: item.subcontractor || '',
@@ -185,6 +186,7 @@
         vehicleType: row.vehicle_type || '',
         energyType: row.energy_type || '',
         liftingCapacity: row.lifting_capacity || '',
+        maxLiftingHeight: row.max_lifting_height || '',
         department: row.department || '',
         ownerCompany: row.owner_company || '',
         subcontractor: row.subcontractor || '',
@@ -368,10 +370,11 @@
         .insert([row])
         .select();
 
-      // Fallback: If remote table schema is missing optional columns (e.g. department, contract_expiry_date, frame_no)
+      // Fallback: If remote table schema is missing optional columns (e.g. department, max_lifting_height, contract_expiry_date, frame_no)
       if (error && error.code === '42703') {
         console.warn('⚠️ Supabase schema missing optional column, retrying insert with fallback...');
         const fallbackRow = { ...row };
+        if (error.message && error.message.includes('max_lifting_height')) delete fallbackRow.max_lifting_height;
         if (error.message && error.message.includes('department')) delete fallbackRow.department;
         if (error.message && error.message.includes('contract_expiry_date')) delete fallbackRow.contract_expiry_date;
         const retry = await this.client.from('forklifts').insert([fallbackRow]).select();
@@ -415,9 +418,10 @@
         .eq('id', id)
         .select();
 
-      // Fallback: If remote table schema is missing optional columns (e.g. department, contract_expiry_date)
+      // Fallback: If remote table schema is missing optional columns (e.g. department, max_lifting_height, contract_expiry_date)
       if (error && error.code === '42703') {
         const fallbackRow = { ...row };
+        if (error.message && error.message.includes('max_lifting_height')) delete fallbackRow.max_lifting_height;
         if (error.message && error.message.includes('department')) delete fallbackRow.department;
         if (error.message && error.message.includes('contract_expiry_date')) delete fallbackRow.contract_expiry_date;
         const retry = await this.client.from('forklifts').update(fallbackRow).eq('id', id).select();

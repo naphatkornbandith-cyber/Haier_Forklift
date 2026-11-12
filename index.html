@@ -847,6 +847,29 @@
                   </select>
                 </div>
 
+                <!-- ความสูงในการยกสูงสุด (Max Lifting Height) -->
+                <div class="form-group" id="reg-max-lifting-height-group">
+                  <label class="form-label" for="reg-max-lifting-height">
+                    ความสูงในการยกสูงสุด (Max Lifting Height) <span class="required">*</span>
+                  </label>
+                  <select id="reg-max-lifting-height" class="form-control" required>
+                    <option value="3.0 เมตร" selected>3.0 เมตร (3,000 mm - เสามาตรฐาน)</option>
+                    <option value="3.3 เมตร">3.3 เมตร (3,300 mm)</option>
+                    <option value="3.5 เมตร">3.5 เมตร (3,500 mm)</option>
+                    <option value="4.0 เมตร">4.0 เมตร (4,000 mm)</option>
+                    <option value="4.5 เมตร">4.5 เมตร (4,500 mm - เสา 3 ท่อน Triplex)</option>
+                    <option value="4.8 เมตร">4.8 เมตร (4,800 mm)</option>
+                    <option value="5.0 เมตร">5.0 เมตร (5,000 mm)</option>
+                    <option value="5.5 เมตร">5.5 เมตร (5,500 mm)</option>
+                    <option value="6.0 เมตร">6.0 เมตร (6,000 mm)</option>
+                    <option value="7.0 เมตร">7.0 เมตร (7,000 mm)</option>
+                    <option value="custom">อื่นๆ (ระบุความสูงเอง)...</option>
+                  </select>
+                  <input type="text" id="reg-max-lifting-height-custom" class="form-control" 
+                         placeholder="เช่น 4.2 เมตร หรือ 4200 mm..." style="display:none; margin-top:0.4rem;">
+                  <span class="form-hint">ระบุความสูงในการยกสูงสุดของเสารถยก (สำหรับทั้งรถเช่าและรถของบริษัท)</span>
+                </div>
+
                 <!-- วันหมดสัญญาเช่า (เฉพาะกรณีรถเช่า พร้อมแจ้งเตือนล่วงหน้า 1 เดือน) -->
                 <div class="form-group" id="reg-contract-expiry-group" style="display:none;">
                   <label class="form-label" for="reg-contract-expiry">

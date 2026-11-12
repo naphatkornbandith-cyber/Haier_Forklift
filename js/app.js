@@ -640,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(item.vehicleType)}</div>
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-            ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}
+            ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}${item.maxLiftingHeight ? ` | สูงสุด: ${escapeHtml(item.maxLiftingHeight)}` : ''}
           </div>
           ${item.department ? `<div style="font-size:0.75rem; color:var(--haier-cyan); margin-top:2px;"><i class="fa-solid fa-sitemap"></i> แผนก: <strong>${escapeHtml(item.department)}</strong></div>` : ''}
         </td>
@@ -1356,6 +1356,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Handle Custom Max Lifting Height toggle for Forklift Registration (ทั้งรถบริษัทและรถเช่า)
+  const regMaxHeightSelect = document.getElementById('reg-max-lifting-height');
+  const regMaxHeightCustom = document.getElementById('reg-max-lifting-height-custom');
+  if (regMaxHeightSelect && regMaxHeightCustom) {
+    regMaxHeightSelect.addEventListener('change', () => {
+      if (regMaxHeightSelect.value === 'custom') {
+        regMaxHeightCustom.style.display = 'block';
+        regMaxHeightCustom.focus();
+      } else {
+        regMaxHeightCustom.style.display = 'none';
+        regMaxHeightCustom.value = '';
+      }
+    });
+  }
+
   // Real-time Frame No. (หมายเลขตัวถัง) validation - ห้ามซ้ำกัน
   if (regFrameNoInput) {
     regFrameNoInput.addEventListener('input', () => {
@@ -1927,6 +1942,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ? capacityEl.value 
         : '1.5 ตัน';
 
+      // Validate & Extract Max Lifting Height (สำหรับทั้งรถของบริษัทและรถเช่า)
+      const regMaxHeightSelect = document.getElementById('reg-max-lifting-height');
+      const regMaxHeightCustom = document.getElementById('reg-max-lifting-height-custom');
+      let maxLiftingHeight = (regMaxHeightSelect?.value || '').trim();
+      if (maxLiftingHeight === 'custom') {
+        maxLiftingHeight = (regMaxHeightCustom?.value || '').trim();
+        if (!maxLiftingHeight) {
+          showToast('กรุณาระบุความสูงในการยกสูงสุดของรถ Forklift', 'error');
+          regMaxHeightCustom?.focus();
+          return;
+        }
+      }
+      if (!maxLiftingHeight) {
+        maxLiftingHeight = '3.0 เมตร';
+      }
+
       const ownerCompanyEl = document.getElementById('reg-owner-company');
       const ownerCompanyVal = ownerCompanyEl ? ownerCompanyEl.value.trim() : '';
 
@@ -2016,6 +2047,7 @@ document.addEventListener('DOMContentLoaded', () => {
         vehicleType,
         energyType,
         liftingCapacity,
+        maxLiftingHeight,
         department,
         ownerCompany,
         subcontractor,
@@ -2044,6 +2076,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (regDeptCustom) {
         regDeptCustom.value = '';
         regDeptCustom.style.display = 'none';
+      }
+      if (regMaxHeightSelect) regMaxHeightSelect.value = '3.0 เมตร';
+      if (regMaxHeightCustom) {
+        regMaxHeightCustom.value = '';
+        regMaxHeightCustom.style.display = 'none';
       }
       regPlateInput.classList.remove('is-valid', 'is-invalid');
       duplicateAlert.classList.remove('show');
@@ -2133,6 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div><span style="color:var(--text-muted);">แผนกที่ใช้งาน:</span> <strong>${escapeHtml(item.department || '-')}</strong></div>
           <div><span style="color:var(--text-muted);">ระบบพลังงาน:</span> <strong>${escapeHtml(item.energyType)}</strong></div>
           <div><span style="color:var(--text-muted);">ความสามารถยก:</span> <strong>${escapeHtml(item.liftingCapacity || '-')}</strong></div>
+          <div><span style="color:var(--text-muted);">ความสูงยกสูงสุด:</span> <strong>${escapeHtml(item.maxLiftingHeight || '-')}</strong></div>
           <div><span style="color:var(--text-muted);">เจ้าของรถ:</span> <strong>${escapeHtml(item.ownerCompany)}</strong></div>
           <div><span style="color:var(--text-muted);">ซัพพลายเออร์:</span> <strong>${escapeHtml(item.subcontractor || (item.isSubcontractor ? 'รถเช่า' : 'Haier Owned'))}</strong></div>
           ${item.isSubcontractor ? `<div><span style="color:var(--text-muted);">วันหมดสัญญาเช่า:</span> <strong>${escapeHtml(item.contractExpiryDate || '-')}</strong></div>` : ''}
@@ -3201,7 +3239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(item.vehicleType)}</div>
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-            ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}
+            ${item.liftingCapacity ? `พิกัดยก: ${escapeHtml(item.liftingCapacity)}` : 'ไม่ระบุน้ำหนัก'}${item.maxLiftingHeight ? ` | สูงสุด: ${escapeHtml(item.maxLiftingHeight)}` : ''}
           </div>
           ${item.department ? `<div style="font-size:0.75rem; color:var(--haier-cyan); margin-top:2px;"><i class="fa-solid fa-sitemap"></i> แผนก: <strong>${escapeHtml(item.department)}</strong></div>` : ''}
         </td>
