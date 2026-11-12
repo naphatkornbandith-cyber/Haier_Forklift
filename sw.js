@@ -1,5 +1,5 @@
 // Service Worker for Haier Forklift PWA App
-const CACHE_NAME = 'haier-forklift-cache-v10';
+const CACHE_NAME = 'haier-forklift-cache-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

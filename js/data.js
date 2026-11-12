@@ -38,16 +38,19 @@ class ForkliftDataStore {
     this.isSyncing = false;
     this.memoryFleet = null;
     this.memoryDrivers = null;
+    this.lastSyncTimestamp = 0;
+    this.SYNC_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes cooldown to minimize Supabase Egress
+    this.isMigratingImages = false;
     this.init();
-    // Auto-sync from remote if Supabase is available
+    // Auto-sync from remote if Supabase is available (initial load forces sync)
     setTimeout(() => {
-      this.syncFromRemote();
+      this.syncFromRemote(true);
       this.setupRealtimeSync();
     }, 200);
 
-    // Auto-sync whenever user switches back to this browser tab or unlocks device
+    // Auto-sync whenever user switches back to this browser tab (checked against cooldown)
     window.addEventListener('focus', () => {
-      this.syncFromRemote();
+      this.syncFromRemote(false);
     });
   }
 
@@ -102,9 +105,130 @@ class ForkliftDataStore {
 
   setupRealtimeSync() {
     if (window.supabaseService && typeof window.supabaseService.subscribeToChanges === 'function') {
-      window.supabaseService.subscribeToChanges((payload) => {
-        this.syncFromRemote();
+      window.supabaseService.subscribeToChanges((table, payload) => {
+        this.handleRealtimeEvent(table, payload);
       });
+    }
+  }
+
+  /**
+   * Handle granular Realtime updates without re-fetching entire tables (Saves 100% Query Egress)
+   */
+  handleRealtimeEvent(table, payload) {
+    if (!payload || !payload.eventType) {
+      this.syncFromRemote(true);
+      return;
+    }
+
+    const { eventType, new: newRow, old: oldRow } = payload;
+    console.log(`⚡ Realtime event: [${table}] ${eventType} - Granular update applied (0 KB database query egress)`);
+
+    if (table === 'forklifts') {
+      const items = this.getAll();
+      if (eventType === 'DELETE') {
+        const targetId = oldRow?.id;
+        if (targetId) {
+          const filtered = items.filter(it => it.id !== targetId);
+          this.saveAll(filtered);
+          window.dispatchEvent(new CustomEvent('forklift-data-synced', {
+            detail: { source: 'realtime-delete', count: filtered.length }
+          }));
+        }
+      } else if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        if (newRow && window.supabaseService && typeof window.supabaseService.fromDbRow === 'function') {
+          const item = window.supabaseService.fromDbRow(newRow);
+          const idx = items.findIndex(it => it.id === item.id || it.plateNumber === item.plateNumber);
+          if (idx !== -1) {
+            items[idx] = { ...items[idx], ...item };
+          } else {
+            items.unshift(item);
+          }
+          this.saveAll(items);
+          window.dispatchEvent(new CustomEvent('forklift-data-synced', {
+            detail: { source: 'realtime-upsert', count: items.length }
+          }));
+        }
+      }
+    } else if (table === 'drivers') {
+      const drivers = this.getAllDrivers();
+      if (eventType === 'DELETE') {
+        const targetId = oldRow?.id;
+        if (targetId) {
+          const filtered = drivers.filter(d => d.id !== targetId);
+          this.saveAllDrivers(filtered);
+          window.dispatchEvent(new CustomEvent('driver-data-synced', {
+            detail: { source: 'realtime-delete', count: filtered.length }
+          }));
+          window.dispatchEvent(new CustomEvent('forklift-data-synced', {
+            detail: { source: 'realtime-driver-delete' }
+          }));
+        }
+      } else if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        if (newRow && window.supabaseService && typeof window.supabaseService.driverFromDbRow === 'function') {
+          const driver = window.supabaseService.driverFromDbRow(newRow);
+          const idx = drivers.findIndex(d => d.id === driver.id || (d.empId && d.empId === driver.empId));
+          if (idx !== -1) {
+            drivers[idx] = { ...drivers[idx], ...driver };
+          } else {
+            drivers.unshift(driver);
+          }
+          this.saveAllDrivers(drivers);
+          window.dispatchEvent(new CustomEvent('driver-data-synced', {
+            detail: { source: 'realtime-upsert', count: drivers.length }
+          }));
+          window.dispatchEvent(new CustomEvent('forklift-data-synced', {
+            detail: { source: 'realtime-driver-upsert' }
+          }));
+        }
+      }
+    }
+  }
+
+  /**
+   * Background migration: converts any legacy Base64 images stored in DB/LocalStorage
+   * into Supabase Storage URLs. Runs gently in background without blocking user actions.
+   */
+  async migrateLegacyImagesToStorage() {
+    if (this.isMigratingImages || !window.supabaseService || !window.supabaseService.isConfigured() || !navigator.onLine) {
+      return;
+    }
+    this.isMigratingImages = true;
+
+    try {
+      // 1. Check forklifts
+      const forklifts = this.getAll();
+      for (const fl of forklifts) {
+        if (fl.photos && fl.photos.vehicle && typeof fl.photos.vehicle === 'string' && fl.photos.vehicle.startsWith('data:')) {
+          console.log(`🖼️ Migrating vehicle photo for "${fl.plateNumber}" to Supabase Storage to save Egress...`);
+          await window.supabaseService.uploadForkliftAssets(fl);
+          await window.supabaseService.update(fl.id, fl).catch(e => console.warn(e));
+          this.saveAll(forklifts);
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      // 2. Check drivers
+      const drivers = this.getAllDrivers();
+      for (const drv of drivers) {
+        let changed = false;
+        if (drv.photo && typeof drv.photo === 'string' && drv.photo.startsWith('data:')) {
+          changed = true;
+        }
+        if (drv.certImage && typeof drv.certImage === 'string' && drv.certImage.startsWith('data:')) {
+          changed = true;
+        }
+        if (changed) {
+          console.log(`🖼️ Migrating driver photos for "${drv.name}" (${drv.empId}) to Supabase Storage...`);
+          await window.supabaseService.uploadDriverAssets(drv);
+          await window.supabaseService.updateDriverRow(drv.id, drv).catch(e => console.warn(e));
+          this.saveAllDrivers(drivers);
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+    } catch (e) {
+      console.warn('Image migration background task ended:', e);
+    } finally {
+      this.isMigratingImages = false;
     }
   }
 
@@ -165,13 +289,21 @@ class ForkliftDataStore {
 
   /**
    * Sync data from Supabase Cloud to local cache (forklifts & drivers)
+   * With cooldown throttling to minimize redundant Egress usage
    */
-  async syncFromRemote() {
+  async syncFromRemote(force = false) {
     if (!window.supabaseService || !window.supabaseService.isConfigured()) {
       return false;
     }
     if (this.isSyncing) {
       return false;
+    }
+
+    const now = Date.now();
+    if (!force && (now - this.lastSyncTimestamp) < this.SYNC_COOLDOWN_MS) {
+      const waitSec = Math.round((this.SYNC_COOLDOWN_MS - (now - this.lastSyncTimestamp)) / 1000);
+      console.log(`⚡ Cooldown active (${waitSec}s remaining). Skipping full table sync to save Egress. Relying on Supabase Realtime.`);
+      return true;
     }
 
     try {
@@ -329,6 +461,9 @@ class ForkliftDataStore {
           }
         }
       }
+      this.lastSyncTimestamp = Date.now();
+      // Background migration of legacy Base64 images to Storage (saves future Egress)
+      setTimeout(() => this.migrateLegacyImagesToStorage(), 2500);
       return true;
     } catch (err) {
       console.warn('⚠️ Supabase syncFromRemote warning:', err);
